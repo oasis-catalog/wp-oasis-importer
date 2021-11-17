@@ -211,7 +211,8 @@ if (is_admin()) {
                 <p>Для включения автоматического обновления каталога необходимо в панели управления Хостингом добавить
                     crontab задачу:<br/>
                     <br/>
-                    <code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php</code>
+                    <code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>
+                        cron_import.php</code>
                 </p>
                 <br/>
             <?php endif; ?>
@@ -477,14 +478,18 @@ if (is_admin()) {
         <?php
     }
 
-    add_submenu_page(
-        null,
-        'oasis-update-category',
-        'oasis-update-category',
-        'manage_categories',
-        'oasis-update-category',
-        'oasis_mi_oasis_update_category'
-    );
+    add_action('admin_menu', 'action_oasis_update_category');
+    function action_oasis_update_category($context)
+    {
+        add_submenu_page(
+            'tools.php',
+            'oasis-update-category',
+            'oasis-update-category',
+            'manage_categories',
+            'oasis-update-category',
+            'oasis_mi_oasis_update_category'
+        );
+    }
 
     /**
      *
