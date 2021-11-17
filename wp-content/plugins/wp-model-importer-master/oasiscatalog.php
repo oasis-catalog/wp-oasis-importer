@@ -378,7 +378,8 @@ if (is_admin()) {
         }
 
         $options = get_option('oasis_mi_options');
-        $selectedCategories = array_filter($options['oasis_mi_category_map']);
+
+        $selectedCategories = !empty($options['oasis_mi_category_map']) ? array_filter($options['oasis_mi_category_map']) : [];
 
         if (empty($selectedCategories) || !isset($selectedCategories[$term->term_id])) {
             return $actions;
