@@ -20,7 +20,7 @@ include_once(OASIS_MI_PATH . 'functions.php');
 
 $options = get_option('oasis_mi_options');
 $api_key = $options['oasis_mi_api_key'];
-$selectedCategories = array_filter($options['oasis_mi_category_map']);
+$selectedCategories = !empty($options['oasis_mi_category_map']) ? array_filter($options['oasis_mi_category_map']) : [];
 
 $loopArray = array_values($selectedCategories);
 if ($selectedUserCategory) {
