@@ -80,7 +80,15 @@ function oasis_mi_settings_init() {
 		]
 	);
 
-	if ( OASIS_MI_API_VALIDATE ) {
+	$options = get_option( 'oasis_mi_options' );
+
+	if ( empty( $options['oasis_mi_api_key'] ) ) {
+		?>
+        <div class="notice notice-error">
+            <p><strong>Укажите API ключ!</strong></p>
+        </div>
+		<?php
+	} elseif ( OASIS_MI_API_VALIDATE ) {
 		add_settings_field(
 			'oasis_mi_currency',
 			'Валюта',
@@ -89,6 +97,105 @@ function oasis_mi_settings_init() {
 			'oasis_mi_section_developers',
 			[
 				'label_for' => 'oasis_mi_currency',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_categories',
+			'Категории',
+			'oasis_mi_categories_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_categories',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_no_vat',
+			'Без НДС',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_no_vat',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_not_on_order',
+			'Под заказ',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_not_on_order',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_price_from',
+			'Цена от',
+			'oasis_mi_price_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_price_from',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_price_to',
+			'Цена до',
+			'oasis_mi_price_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_price_to',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_rating',
+			'Тип',
+			'oasis_mi_rating_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_rating',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_warehouse_moscow',
+			'На складе в Москве',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_warehouse_moscow',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_warehouse_europe',
+			'На складе в Европе',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_warehouse_europe',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_remote_warehouse',
+			'На удаленном складе',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_remote_warehouse',
 			]
 		);
 
@@ -129,10 +236,27 @@ function oasis_mi_api_user_id_cb( $args ) {
 
     <input type="text" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
-           maxlength="255" style="width: 300px;"/>
+           maxlength="255" style="width: 120px;"/>
 
     <p class="description">После указания user id можно будет выгружать заказы в Oasis</p>
 	<?php
+}
+
+function oasis_mi_categories_cb( $args ) {
+	$options    = get_option( 'oasis_mi_options' );
+	$categories = Oasis::getCategoriesOasis();
+
+	foreach ( $categories as $category ) {
+		if ( $category->level === 1 ) {
+			?>
+
+            <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $category->id; ?>]"
+                   type="checkbox"<?php echo checked( 1, $options[ $args['label_for'] ][ $category->id ], false ); ?> value="1"
+                   class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $category->id ); ?>"/>
+            <label for="<?php echo esc_attr( $args['label_for'] . '-' . $category->id ); ?>" class="option"><?php echo $category->name; ?></label><br/>
+			<?php
+		}
+	}
 }
 
 function oasis_mi_currency_cb( $args ) {
@@ -157,14 +281,40 @@ function oasis_mi_currency_cb( $args ) {
 	<?php
 }
 
-function oasis_mi_category_map_cb( $args ) {
+function oasis_mi_checbox_cb( $args ) {
 	$options = get_option( 'oasis_mi_options' );
-	if ( empty( $options['oasis_mi_api_key'] ) ) {
-		echo '<p class="description">Укажите ключ!</p>';
+	$checked = $options[ $args['label_for'] ];
+	?>
+    <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
+           class="code"/>
+	<?php
+}
 
-		return;
-	}
+function oasis_mi_price_cb( $args ) {
+	$options = get_option( 'oasis_mi_options' );
+	?>
 
+    <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
+           maxlength="255" style="width: 120px;"/>
+	<?php
+}
+
+function oasis_mi_rating_cb( $args ) {
+	$options = get_option( 'oasis_mi_options' );
+	?>
+
+    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-control col-sm-6">
+        <option value="">---Выбрать---</option>
+        <option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>>Только новинки</option>
+        <option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>>Только хиты</option>
+        <option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>>Только со скидкой</option>
+    </select>
+	<?php
+}
+
+function oasis_mi_category_map_cb( $args ) {
+	$options         = get_option( 'oasis_mi_options' );
 	$oasisCategories = get_oasis_categories( $options['oasis_mi_api_key'] );
 
 	echo '<table class="wp-list-table widefat fixed striped tags ui-sortable">';

@@ -9,19 +9,37 @@ class Oasis {
 		$this->options = get_option( 'oasis_mi_options' );
 	}
 
-	public static function getCategoriesOasis( array $args = [] ) {
-		return Oasis::curl_query( 'categories', $args );
+	/**
+	 * Get categories oasis
+	 *
+	 * @return array
+	 */
+	public static function getCategoriesOasis(): array {
+		return Oasis::curl_query( 'categories' );
 	}
 
-	public static function getCurrenciesOasis( array $args = [] ) {
-		return Oasis::curl_query( 'currencies', $args );
+	/**
+	 * Get currencies oasis
+	 *
+	 * @return array
+	 */
+	public static function getCurrenciesOasis(): array {
+		return Oasis::curl_query( 'currencies' );
 	}
 
-	public static function curl_query( $type, array $args = [] ) {
+	/**
+	 * Get api data
+	 *
+	 * @param $type
+	 * @param array $args
+	 *
+	 * @return array
+	 */
+	public static function curl_query( $type, array $args = [] ): array {
 		$options = get_option( 'oasis_mi_options' );
 
 		if ( empty( $options['oasis_mi_api_key'] ) ) {
-			return false;
+			return [];
 		}
 
 		$args_pref = [
@@ -37,9 +55,14 @@ class Oasis {
 		$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 		curl_close( $ch );
 
-		return $http_code === 200 ? $result : false;
+		return $http_code === 200 ? $result : [];
 	}
 
+	/**
+	 * Debug func
+	 *
+	 * @param $data
+	 */
 	public static function d( $data ) {
 		echo '<pre>';
 		print_r( $data, false );
