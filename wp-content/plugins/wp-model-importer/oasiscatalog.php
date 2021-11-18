@@ -208,11 +208,9 @@ if (is_admin()) {
         <div class="wrap">
             <h1><?= esc_html('Настройка импорта моделей Oasis'); ?></h1>
             <?php if (!empty($options['oasis_mi_api_key'])) : ?>
-                <p>Для включения автоматического обновления каталога необходимо в панели управления Хостингом добавить
-                    crontab задачу:<br/>
+                <p>Для включения автоматического обновления каталога необходимо в панели управления Хостингом добавить crontab задачу:<br/>
                     <br/>
-                    <code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>
-                        cron_import.php</code>
+                    <code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php</code>
                 </p>
                 <br/>
             <?php endif; ?>
@@ -244,7 +242,7 @@ if (is_admin()) {
             return $actions;
         }
 
-        $post_status = (isset($_REQUEST['post_status']) ? $_REQUEST['post_status'] : false);
+        $post_status = ($_REQUEST['post_status'] ?? false);
         if (!empty($post_status)) {
             if ($post_status == 'trash') {
                 return $actions;
