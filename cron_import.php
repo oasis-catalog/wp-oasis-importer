@@ -2,7 +2,7 @@
 
 /** Set up WordPress environment */
 require_once( __DIR__ . '/../../../wp-load.php' );
-require_once __DIR__ . '/src/Controller/Oasis.php';
+require_once( __DIR__ . '/src/Controller/Oasis.php' );
 
 use OasisImport\Controller\Oasis\Oasis;
 
@@ -16,17 +16,16 @@ class OasisCron extends Oasis {
 			'long'  => [ 'key:', 'up' ],
 		];
 
-		// Default values
-		$errors  = '';
-		$options = getopt( $params['short'], $params['long'] );
+		$errors     = '';
+		$cliOptions = getopt( $params['short'], $params['long'] );
 
-		if ( isset( $options['key'] ) || isset( $options['k'] ) ) {
-			define( 'CRON_KEY', $options['key'] ?? $options['k'] );
+		if ( isset( $cliOptions['key'] ) || isset( $cliOptions['k'] ) ) {
+			define( 'CRON_KEY', $cliOptions['key'] ?? $cliOptions['k'] );
 		} else {
 			$errors = 'key required';
 		}
 
-		if ( isset( $options['up'] ) || isset( $options['u'] ) ) {
+		if ( isset( $cliOptions['up'] ) || isset( $cliOptions['u'] ) ) {
 			$this->cronUp = true;
 		}
 
@@ -46,8 +45,9 @@ Errors: " . $errors . PHP_EOL;
 			die( $help );
 		}
 
-		$options = get_option( 'oasis_mi_options' );
-		define( 'API_KEY', $options['oasis_mi_api_key'] );
+		parent::__construct();
+
+		define( 'API_KEY', $this->options['oasis_mi_api_key'] );
 
 		if ( CRON_KEY !== md5( API_KEY ) ) {
 			die( 'Error' );
@@ -57,6 +57,14 @@ Errors: " . $errors . PHP_EOL;
 	}
 
 	public function doExecute() {
+		if ( $this->cronUp ) {
+			$this->cronUpStock();
+		} else {
+			$this->cronUpProduct();
+		}
+	}
+
+	public function cronUpProduct() {
 		set_time_limit( 0 );
 		ini_set( 'memory_limit', '2G' );
 
@@ -69,58 +77,44 @@ Errors: " . $errors . PHP_EOL;
 
 		include_once( __DIR__ . '/functions.php' );
 
-		$options            = get_option( 'oasis_mi_options' );
-		$api_key            = $options['oasis_mi_api_key'];
-		$selectedCategories = ! empty( $options['oasis_mi_category_map'] ) ? array_filter( $options['oasis_mi_category_map'] ) : [];
+		$selectedCategories = ! empty( $this->options['oasis_mi_category_map'] ) ? array_filter( $this->options['oasis_mi_category_map'] ) : [];
 
 		$loopArray = array_values( $selectedCategories );
 		if ( $selectedUserCategory ) {
 			$loopArray = [ $selectedUserCategory ];
 		}
 
-		if ( $api_key && $selectedCategories ) {
-			$oasisCategories = get_oasis_categories( $api_key );
+		if ( $selectedCategories ) {
+			$oasisCategories = get_oasis_categories( API_KEY );
 
 			foreach ( $loopArray as $oasisCategory ) {
-				$params = [
-					'format'   => 'json',
-					'fieldset' => 'full',
-					'category' => $oasisCategory,
-					'no_vat'   => 0,
-					'extend'   => 'is_visible',
-					'key'      => $api_key,
-				];
+				$products = $this->getOasisProducts( [ 'limit' => 1, 'extend' => 'is_visible' ] );
 
-				$products = json_decode(
-					file_get_contents( 'https://api.oasiscatalog.com/v4/products?' . http_build_query( $params ) ),
-					true
-				);
-
-				$models = [];
+				$group_ids = [];
 				foreach ( $products as $product ) {
-					$models[ $product['group_id'] ][ $product['id'] ] = $product;
+					$group_ids[ $product->group_id ][ $product->id ] = $product;
 				}
 
-				$total = count( array_keys( $models ) );
+				$total = count( array_keys( $group_ids ) );
 				$count = 0;
-				foreach ( $models as $model_id => $model ) {
-					echo '[' . date( 'c' ) . '] Начало обработки модели ' . $model_id . PHP_EOL;
+				foreach ( $group_ids as $group_id => $model ) {
+					echo '[' . date( 'c' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
 					$selectedCategory = [];
 
 					$firstProduct = reset( $model );
 					foreach ( $selectedCategories as $k => $v ) {
-						if ( in_array( $v, $firstProduct['categories_array'] ) || in_array( $v, $firstProduct['full_categories'] ) ) {
+						if ( in_array( $v, $firstProduct->categories_array ) || in_array( $v, $firstProduct->full_categories ) ) {
 							$selectedCategory[] = $k;
 						}
 					}
 					if ( empty( $selectedCategory ) ) {
 						foreach ( $selectedCategories as $k => $v ) {
 							$selectedCategory = array_merge( $selectedCategory,
-								recursiveCheckCategories( $k, $v, $oasisCategories, $firstProduct['categories_array'] ) );
+								recursiveCheckCategories( $k, $v, $oasisCategories, $firstProduct->categories_array ) );
 						}
 					}
 
-					upsert_model( $model_id, $model, $selectedCategory, true );
+					upsert_model( $group_id, $model, $selectedCategory, true );
 					$count ++;
 					echo '[' . date( 'c' ) . '] Done  ' . $count . ' from ' . $total . PHP_EOL;
 				}
@@ -128,6 +122,10 @@ Errors: " . $errors . PHP_EOL;
 		}
 
 		echo '[' . date( 'c' ) . '] Окончание обновления товаров' . PHP_EOL;
+	}
+
+	public function cronUpStock() {
+		echo 'cronUpStock';
 	}
 }
 

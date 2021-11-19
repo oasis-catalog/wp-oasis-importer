@@ -238,18 +238,16 @@ function oasis_mi_api_user_id_cb( $args ) {
 
 function oasis_mi_categories_cb( $args ) {
 	$options    = get_option( 'oasis_mi_options' );
-	$categories = Oasis::getCategoriesOasis();
+	$categories = Oasis::getOasisMainCategories();
 
-	foreach ( $categories as $category ) {
-		if ( $category->level === 1 ) {
-			?>
+	foreach ( $categories as $key => $value ) {
+        ?>
 
-            <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $category->id; ?>]"
-                   type="checkbox"<?php echo checked( 1, $options[ $args['label_for'] ][ $category->id ], false ); ?> value="1"
-                   class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $category->id ); ?>"/>
-            <label for="<?php echo esc_attr( $args['label_for'] . '-' . $category->id ); ?>" class="option"><?php echo $category->name; ?></label><br/>
-			<?php
-		}
+        <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $key; ?>]"
+               type="checkbox"<?php echo checked( 1, $options[ $args['label_for'] ][ $key ], false ); ?> value="1"
+               class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>"/>
+        <label for="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>" class="option"><?php echo $value; ?></label><br/>
+        <?php
 	}
 }
 
@@ -328,7 +326,7 @@ function oasis_mi_recursive_category( $parent_id, $level, $args, $options, $oasi
 		     get_oasis_categories_tree(
 			     $oasisCategories,
 			     0, 0,
-			     ( isset( $options[ $args['label_for'] ][ $wp_category->term_id ] ) ? $options[ $args['label_for'] ][ $wp_category->term_id ] : '' )
+			     ( $options[ $args['label_for'] ][ $wp_category->term_id ] ?? '' )
 		     ) .
 		     '</select></td></tr>';
 		oasis_mi_recursive_category( $wp_category->term_id, $level + 1, $args, $options, $oasisCategories );
@@ -418,22 +416,23 @@ if ( is_admin() ) {
 
         <div class="wrap">
             <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
-			<?php if ( ! empty( $options['oasis_mi_api_key'] ) && OASIS_MI_API_VALIDATE) { ?>
+			<?php if ( ! empty( $options['oasis_mi_api_key'] ) && OASIS_MI_API_VALIDATE ) { ?>
                 <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
-                <strong>Не разглашайте эти данные!</strong></p>
-                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php --key=<?php echo md5($options['oasis_mi_api_key']); ?></code> - загрузка/обновление товаров 1 раз в сутки</p><br/>
-                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php --key=<?php echo md5($options['oasis_mi_api_key']); ?> --up</code> - обновление остатков 1 раз в 30 минут
-                </p>
-                <br/>
-			<?php
-            } elseif (! empty( $options['oasis_mi_api_key'] ) && !OASIS_MI_API_VALIDATE) {
+                    <strong>Не разглашайте эти данные!</strong></p>
+                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
+                        --key=<?php echo md5( $options['oasis_mi_api_key'] ); ?></code> - загрузка/обновление товаров 1 раз в сутки</p><br/>
+                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
+                        --key=<?php echo md5( $options['oasis_mi_api_key'] ); ?> --up</code> - обновление остатков 1 раз в 30 минут
+                </p><br/>
+				<?php
+			} elseif ( ! empty( $options['oasis_mi_api_key'] ) && ! OASIS_MI_API_VALIDATE ) {
 				?>
                 <div class="notice notice-error">
                     <p><strong>Не корректный API ключ, для корректной работы укажите существующий API ключ</strong></p>
                 </div>
 				<?php
 			}
-            ?>
+			?>
 
             <form action="options.php" method="post" class="oasis-mi-form">
 				<?php
