@@ -209,12 +209,6 @@ function oasis_mi_settings_init() {
 				'label_for' => 'oasis_mi_category_map',
 			]
 		);
-	} else {
-		?>
-        <div class="notice notice-error">
-            <p><strong>Не корректный API ключ, для корректной работы укажите существующий API ключ</strong></p>
-        </div>
-		<?php
 	}
 }
 
@@ -424,13 +418,22 @@ if ( is_admin() ) {
 
         <div class="wrap">
             <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
-			<?php if ( ! empty( $options['oasis_mi_api_key'] ) ) : ?>
-                <p>Для включения автоматического обновления каталога необходимо в панели управления Хостингом добавить crontab задачу:<br/>
-                    <br/>
-                    <code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php</code>
+			<?php if ( ! empty( $options['oasis_mi_api_key'] ) && OASIS_MI_API_VALIDATE) { ?>
+                <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
+                <strong>Не разглашайте эти данные!</strong></p>
+                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php --key=<?php echo md5($options['oasis_mi_api_key']); ?></code> - загрузка/обновление товаров 1 раз в сутки</p><br/>
+                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php --key=<?php echo md5($options['oasis_mi_api_key']); ?> --up</code> - обновление остатков 1 раз в 30 минут
                 </p>
                 <br/>
-			<?php endif; ?>
+			<?php
+            } elseif (! empty( $options['oasis_mi_api_key'] ) && !OASIS_MI_API_VALIDATE) {
+				?>
+                <div class="notice notice-error">
+                    <p><strong>Не корректный API ключ, для корректной работы укажите существующий API ключ</strong></p>
+                </div>
+				<?php
+			}
+            ?>
 
             <form action="options.php" method="post" class="oasis-mi-form">
 				<?php
