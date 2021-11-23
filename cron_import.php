@@ -73,7 +73,6 @@ Errors: " . $errors . PHP_EOL;
 		include_once( __DIR__ . '/functions.php' );
 
 		$products   = $this->getOasisProducts();
-		$products   = $this->getOasisProducts( [ 'limit' => 100, 'extend' => 'is_visible' ] );
 		$categories = Oasis::getCategoriesOasis();
 
 		$group_ids = [];
