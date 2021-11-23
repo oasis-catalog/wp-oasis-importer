@@ -10,7 +10,109 @@ class Oasis {
 	}
 
 	/**
-	 * Get prosucta oasis
+	 * Get id category woocommerce
+	 *
+	 * @param $categories
+	 * @param $categoryId
+	 *
+	 * @return int
+	 */
+	public static function getCategoryId( $categories, $categoryId ): int {
+		$terms = self::getTermsByCatId( $categoryId );
+
+		if ( ! $terms ) {
+			$category      = self::searchObject( $categories, $categoryId );
+			$parentTermsId = 0;
+
+			if ( ! is_null( $category->parent_id ) ) {
+				$parentTerms = self::getTermsByCatId( $category->parent_id );
+
+				if ( $parentTerms ) {
+					$parentTermsId = $parentTerms->term_id;
+				} else {
+					$parentTermsId = self::getCategoryId( $categories, $category->parent_id );
+				}
+			}
+
+			$result = self::addCategory( $category, $parentTermsId );
+		} else {
+			$result = (int) $terms->term_id;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Add category
+	 *
+	 * @param $category
+	 * @param $parentTermsId
+	 *
+	 * @return int
+	 */
+	public static function addCategory( $category, $parentTermsId ): int {
+		require_once ABSPATH . '/wp-admin/includes/taxonomy.php';
+
+		$data = [
+			'cat_name'             => $category->name,
+			'category_description' => '',
+			'category_nicename'    => $category->slug,
+			'category_parent'      => $parentTermsId,
+			'taxonomy'             => 'product_cat',
+		];
+
+		$result = wp_insert_category( $data );
+		update_term_meta( $result, 'oasis_cat_id', $category->id );
+
+		return $result;
+	}
+
+	/**
+	 * Get terms by oasis id category
+	 *
+	 * @param $categoryId
+	 *
+	 * @return object|array
+	 */
+	public static function getTermsByCatId( $categoryId ) {
+		$args = [
+			'taxonomy'   => [ 'product_cat' ],
+			'hide_empty' => false,
+			'meta_query' => [
+				[
+					'key'   => 'oasis_cat_id',
+					'value' => $categoryId,
+				]
+			],
+		];
+
+		$terms = get_terms( $args );
+
+		return $terms ? reset( $terms ) : [];
+	}
+
+	/**
+	 * Search object by id
+	 *
+	 * @param $data
+	 * @param $id
+	 *
+	 * @return false|mixed|null
+	 */
+	public static function searchObject( $data, $id ) {
+		$neededObject = array_filter( $data, function ( $e ) use ( $id ) {
+			return $e->id == $id;
+		} );
+
+		if ( ! $neededObject ) {
+			return false;
+		}
+
+		return array_shift( $neededObject );
+	}
+
+	/**
+	 * Get products oasis
 	 *
 	 * @param array $args
 	 *

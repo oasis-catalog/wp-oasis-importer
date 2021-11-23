@@ -70,55 +70,25 @@ Errors: " . $errors . PHP_EOL;
 
 		echo '[' . date( 'c' ) . '] Начало обновления товаров' . PHP_EOL;
 
-		$selectedUserCategory = null;
-		if ( isset( $argv[1] ) ) {
-			$selectedUserCategory = intval( $argv[1] );
-		}
-
 		include_once( __DIR__ . '/functions.php' );
 
-		$selectedCategories = ! empty( $this->options['oasis_mi_category_map'] ) ? array_filter( $this->options['oasis_mi_category_map'] ) : [];
+		$products   = $this->getOasisProducts();
+		$products   = $this->getOasisProducts( [ 'limit' => 100, 'extend' => 'is_visible' ] );
+		$categories = Oasis::getCategoriesOasis();
 
-		$loopArray = array_values( $selectedCategories );
-		if ( $selectedUserCategory ) {
-			$loopArray = [ $selectedUserCategory ];
+		$group_ids = [];
+		foreach ( $products as $product ) {
+			$group_ids[ $product->group_id ][ $product->id ] = $product;
 		}
 
-		if ( $selectedCategories ) {
-			$oasisCategories = get_oasis_categories( API_KEY );
+		$total = count( array_keys( $group_ids ) );
+		$count = 0;
 
-			foreach ( $loopArray as $oasisCategory ) {
-				$products = $this->getOasisProducts( [ 'limit' => 1, 'extend' => 'is_visible' ] );
-
-				$group_ids = [];
-				foreach ( $products as $product ) {
-					$group_ids[ $product->group_id ][ $product->id ] = $product;
-				}
-
-				$total = count( array_keys( $group_ids ) );
-				$count = 0;
-				foreach ( $group_ids as $group_id => $model ) {
-					echo '[' . date( 'c' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-					$selectedCategory = [];
-
-					$firstProduct = reset( $model );
-					foreach ( $selectedCategories as $k => $v ) {
-						if ( in_array( $v, $firstProduct->categories_array ) || in_array( $v, $firstProduct->full_categories ) ) {
-							$selectedCategory[] = $k;
-						}
-					}
-					if ( empty( $selectedCategory ) ) {
-						foreach ( $selectedCategories as $k => $v ) {
-							$selectedCategory = array_merge( $selectedCategory,
-								recursiveCheckCategories( $k, $v, $oasisCategories, $firstProduct->categories_array ) );
-						}
-					}
-
-					upsert_model( $group_id, $model, $selectedCategory, true );
-					$count ++;
-					echo '[' . date( 'c' ) . '] Done  ' . $count . ' from ' . $total . PHP_EOL;
-				}
-			}
+		foreach ( $group_ids as $group_id => $model ) {
+			echo '[' . date( 'c' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
+			upsert_model( $group_id, $model, $categories, true );
+			$count ++;
+			echo '[' . date( 'c' ) . '] Done  ' . $count . ' from ' . $total . PHP_EOL;
 		}
 
 		echo '[' . date( 'c' ) . '] Окончание обновления товаров' . PHP_EOL;

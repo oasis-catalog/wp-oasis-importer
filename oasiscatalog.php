@@ -198,17 +198,6 @@ function oasis_mi_settings_init() {
 				'label_for' => 'oasis_mi_remote_warehouse',
 			]
 		);
-
-		add_settings_field(
-			'oasis_mi_category_map',
-			'Сопоставления категорий',
-			'oasis_mi_category_map_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
-			[
-				'label_for' => 'oasis_mi_category_map',
-			]
-		);
 	}
 }
 
@@ -241,13 +230,13 @@ function oasis_mi_categories_cb( $args ) {
 	$categories = Oasis::getOasisMainCategories();
 
 	foreach ( $categories as $key => $value ) {
-        ?>
+		?>
 
         <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $key; ?>]"
                type="checkbox"<?php echo checked( 1, $options[ $args['label_for'] ][ $key ], false ); ?> value="1"
                class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>"/>
         <label for="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>" class="option"><?php echo $value; ?></label><br/>
-        <?php
+		<?php
 	}
 }
 
@@ -303,75 +292,6 @@ function oasis_mi_rating_cb( $args ) {
         <option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>>Только со скидкой</option>
     </select>
 	<?php
-}
-
-function oasis_mi_category_map_cb( $args ) {
-	$options         = get_option( 'oasis_mi_options' );
-	$oasisCategories = get_oasis_categories( $options['oasis_mi_api_key'] );
-
-	echo '<table class="wp-list-table widefat fixed striped tags ui-sortable">';
-	oasis_mi_recursive_category( 0, 1, $args, $options, $oasisCategories );
-	echo '</table>';
-}
-
-function oasis_mi_recursive_category( $parent_id, $level, $args, $options, $oasisCategories ) {
-	$wp_categories = get_categories( [
-		'taxonomy'   => 'product_cat',
-		'hide_empty' => false,
-		'parent'     => $parent_id,
-		'orderby'    => 'name',
-	] );
-	foreach ( $wp_categories as $wp_category ) {
-		echo '<tr><td style="padding-left: ' . ( $level * 10 ) . 'px;">' . ( $level > 1 ? '- ' : '' ) . $wp_category->name . ' (#' . $wp_category->term_id . ')</td><td><select name="oasis_mi_options[' . esc_attr( $args['label_for'] ) . '][' . $wp_category->term_id . ']">' .
-		     get_oasis_categories_tree(
-			     $oasisCategories,
-			     0, 0,
-			     ( $options[ $args['label_for'] ][ $wp_category->term_id ] ?? '' )
-		     ) .
-		     '</select></td></tr>';
-		oasis_mi_recursive_category( $wp_category->term_id, $level + 1, $args, $options, $oasisCategories );
-	}
-}
-
-function get_oasis_categories( $key ) {
-	$result = [];
-
-	$availableRoots = [
-		2891 => 'Продукция',
-	];
-
-	$data = json_decode( file_get_contents( 'https://api.oasiscatalog.com/v4/categories?format=json&fields=id,parent_id,root,name&key=' . $key ),
-		true );
-
-	if ( $data ) {
-		foreach ( $data as $row ) {
-			if ( isset( $availableRoots[ $row['root'] ] ) && ! empty( $row['parent_id'] ) ) {
-				$parent = (int) $row['parent_id'];
-				if ( $parent == 2891 ) {
-					$parent = 0;
-				}
-				$result[ $parent ][] = $row;
-			}
-		}
-	}
-
-	return $result;
-}
-
-function get_oasis_categories_tree( $tree, $parent_id, $level, $seleted ) {
-	$result = '';
-	if ( $level == 0 ) {
-		$result .= '<option value="">Выберите рубрику Oasis</option>';
-	}
-	if ( isset( $tree[ $parent_id ] ) ) {
-		foreach ( $tree[ $parent_id ] as $cat ) {
-			$result .= '<option value="' . $cat['id'] . '" ' . ( $seleted == $cat['id'] ? 'selected' : '' ) . '>' . str_repeat( ' - ',
-					$level ) . $cat['name'] . '</option>';
-			$result .= get_oasis_categories_tree( $tree, $cat['id'], $level + 1, $seleted );
-		}
-	}
-
-	return $result;
 }
 
 /**
@@ -450,318 +370,39 @@ if ( is_admin() ) {
 		<?php
 	}
 
-	/**
-	 * @param $actions
-	 * @param $post
-	 *
-	 * @return mixed
-	 */
-	function oasis_mi_update_link( $actions, $post ) {
-		if ( $post->post_type != 'product' ) {
-			return $actions;
-		}
+	add_action( 'product_cat_add_form_fields', 'true_add_cat_fields' );
 
-		$post_status = ( $_REQUEST['post_status'] ?? false );
-		if ( ! empty( $post_status ) ) {
-			if ( $post_status == 'trash' ) {
-				return $actions;
-			}
-		}
-
-		$model_id = get_post_meta( $post->ID, 'model_id' );
-		if ( empty( $model_id ) ) {
-			return $actions;
-		}
-
-		$actions['oasis_update'] = '<span class="delete"><a href="' . wp_nonce_url( admin_url( 'edit.php?post_type=product&ids=' . $post->ID . '&action=oasis_update' ),
-				'oasis_update_' . $post->ID ) . '" title="Обновить товар из Oasiscatalog" rel="permalink">Обновить модель Oasiscatalog</a></span>';
-
-		return $actions;
+	function true_add_cat_fields( $taxonomy ) {
+		echo '<div class="form-field">
+		<label for="oasis-cat-id">Oasis ID</label>
+		<input type="text" name="oasis_cat_id" id="oasis_cat_id" />
+	</div>';
 	}
 
-	add_filter( 'post_row_actions', 'oasis_mi_update_link', 10, 2 );
-	add_filter( 'page_row_actions', 'oasis_mi_update_link', 10, 2 );
+	add_action( 'product_cat_edit_form_fields', 'true_edit_term_fields', 10, 2 );
 
-	/**
-	 *
-	 */
-	function oasis_mi_update_action() {
-		include_once( OASIS_MI_PATH . 'functions.php' );
+	function true_edit_term_fields( $term, $taxonomy ) {
+		$oasis_cat_id = get_term_meta( $term->term_id, 'oasis_cat_id', true );
 
-		if ( empty( $_REQUEST['ids'] ) ) {
-			wp_die( 'Не выбраны модели для обновления!' );
-		}
-
-		// Get the original page
-		$id = isset( $_REQUEST['ids'] ) ? absint( $_REQUEST['ids'] ) : '';
-
-		$options            = get_option( 'oasis_mi_options' );
-		$api_key            = $options['oasis_mi_api_key'];
-		$selectedCategories = array_filter( $options['oasis_mi_category_map'] );
-		$oasisCategories    = get_oasis_categories( $api_key );
-
-		$sku   = [];
-		$sku[] = reset( get_post_meta( $id, '_sku' ) );
-
-		$variations = get_posts( [ 'post_type' => 'product_variation', 'post_parent' => $id ] );
-		if ( $variations ) {
-			foreach ( $variations as $variation ) {
-				$sku[] = reset( get_post_meta( $variation->ID, '_sku' ) );
-			}
-		}
-
-		$params = [
-			'format'   => 'json',
-			'fieldset' => 'full',
-			'articles' => implode( ",", $sku ),
-			'no_vat'   => 0,
-			'extend'   => 'is_visible',
-			'key'      => $api_key,
-		];
-
-		$products = json_decode(
-			file_get_contents( 'https://api.oasiscatalog.com/v4/products?' . http_build_query( $params ) ),
-			true
-		);
-
-		$models = [];
-		foreach ( $products as $product ) {
-			$models[ $product['group_id'] ][ $product['id'] ] = $product;
-		}
-
-		ob_start();
-		foreach ( $models as $model_id => $model ) {
-			$selectedCategory = [];
-
-			$firstProduct = reset( $model );
-			foreach ( $selectedCategories as $k => $v ) {
-				if ( in_array( $v, $firstProduct['categories_array'] ) || in_array( $v, $firstProduct['full_categories'] ) ) {
-					$selectedCategory[] = $k;
-				}
-			}
-
-			if ( empty( $selectedCategory ) ) {
-				foreach ( $selectedCategories as $k => $v ) {
-					$selectedCategory = array_merge( $selectedCategory,
-						recursiveCheckCategories( $k, $v, $oasisCategories, $firstProduct['categories_array'] ) );
-				}
-			}
-			upsert_model( $model_id, $model, $selectedCategory, true, true );
-		}
-
-		$result = ob_get_contents();
-
-		add_option( 'oasis_mi_update_message', nl2br( $result ) );
-		ob_end_clean();
-
-		$post_type = 'product';
-		$url       = add_query_arg( [
-			'post_type' => $post_type,
-		], 'edit.php' );
-		wp_redirect( $url );
-		exit();
+		echo '<tr class="form-field">
+	<th>
+		<label for="oasis_cat_id">Oasis cat ID</label>
+	</th>
+	<td>
+		<input name="oasis_cat_id" id="oasis_cat_id" type="text" value="' . esc_attr( $oasis_cat_id ) . '" />
+	</td>
+	</tr>';
 	}
 
-	add_action( 'admin_action_oasis_update', 'oasis_mi_update_action' );
+	add_action( 'created_product_cat', 'true_save_term_fields' );
+	add_action( 'edited_product_cat', 'true_save_term_fields' );
 
-	/**
-	 *
-	 */
-	function oasis_mi_update_message() {
-		$message = get_option( 'oasis_mi_update_message' );
-		if ( $message ) {
-			delete_option( 'oasis_mi_update_message' );
-			?>
-            <div class="notice notice-success is-dismissible">
-                <p><strong><?= $message; ?></strong></p>
-            </div>
-			<?php
-		}
-	}
-
-	add_action( 'admin_notices', 'oasis_mi_update_message' );
-
-	/**
-	 * @param $actions
-	 * @param $post
-	 *
-	 * @return mixed
-	 */
-	function oasis_mi_update_category_link( $actions, $term ) {
-		if ( $term->taxonomy != 'product_cat' ) {
-			return $actions;
-		}
-
-		$options = get_option( 'oasis_mi_options' );
-
-		$selectedCategories = ! empty( $options['oasis_mi_category_map'] ) ? array_filter( $options['oasis_mi_category_map'] ) : [];
-
-		if ( empty( $selectedCategories ) || ! isset( $selectedCategories[ $term->term_id ] ) ) {
-			return $actions;
-		}
-
-
-		$actions['oasis_update_category'] = '<span class="delete"><a href="' . wp_nonce_url( admin_url( 'admin.php?tag_ID=' . $term->term_id . '&page=oasis-update-category' ),
-				'oasis_update_category' . $term->term_id ) . '" title="Обновить товары из Oasiscatalog для этой категории" rel="permalink">Обновить категорию Oasiscatalog</a></span>';
-
-		return $actions;
-	}
-
-	add_filter( 'product_cat_row_actions', 'oasis_mi_update_category_link', 10, 2 );
-
-	/**
-	 *
-	 */
-	function oasis_mi_oasis_update_category() {
-		include_once( OASIS_MI_PATH . 'functions.php' );
-
-		if ( empty( $_REQUEST['tag_ID'] ) ) {
-			wp_die( 'Не выбрана категория для обновления!' );
-		}
-
-		$options            = get_option( 'oasis_mi_options' );
-		$api_key            = $options['oasis_mi_api_key'];
-		$selectedCategories = array_filter( $options['oasis_mi_category_map'] );
-
-		$models = $oasisCategories = [];
-
-		if ( $api_key && $selectedCategories ) {
-
-			$oasisCategories = get_oasis_categories( $api_key );
-
-			$oasisCategory = $selectedCategories[ $_REQUEST['tag_ID'] ];
-			$params        = [
-				'format'   => 'json',
-				'fieldset' => 'full',
-				'category' => $oasisCategory,
-				'no_vat'   => 0,
-				'extend'   => 'is_visible',
-				'key'      => $api_key,
-			];
-
-			$products = json_decode(
-				file_get_contents( 'https://api.oasiscatalog.com/v4/products?' . http_build_query( $params ) ),
-				true
-			);
-
-
-			foreach ( $products as $product ) {
-				$models[ $product['group_id'] ][ $product['id'] ] = $product;
-			}
-		}
-
-
-		$tmpfname = tempnam( sys_get_temp_dir(), "cat" );
-		file_put_contents( $tmpfname, json_encode( [ 'categories' => $oasisCategories, 'models' => $models ] ) );
-
-		$term = get_term( $_REQUEST['tag_ID'], 'product_cat' );
-		?>
-        <div class="wrap">
-            <h1><?= esc_html( 'Импорт товаров Oasis для категории "' . $term->name . '"' ); ?></h1>
-
-            <div class="oasis-content">
-                Начат процесс обновления категории...<br/>
-            </div>
-        </div>
-        <script>
-            var uniqname = '<?=$tmpfname;?>';
-            jQuery(document).ready(function () {
-                setTimeout(function () {
-                    var step = 0;
-                    var total = <?= count( $models );?>;
-
-                    function getNextStep() {
-                        jQuery.ajax({
-                            type: "POST",
-                            url: ajaxurl,
-                            data: {'action': 'oasis_update_category_ajax', 'file': uniqname, 'step': step},
-                            async: true
-                        }).done(function (msg) {
-                            if (step <= total) {
-                                jQuery('.oasis-content').append(msg);
-                                step = step + 1;
-                                getNextStep();
-                            }
-                        });
-                    }
-
-                    getNextStep();
-
-                }, 3000);
-            });
-        </script>
-		<?php
-	}
-
-	add_action( 'admin_menu', 'action_oasis_update_category' );
-	function action_oasis_update_category( $context ) {
-		add_submenu_page(
-			'tools.php',
-			'oasis-update-category',
-			'oasis-update-category',
-			'manage_categories',
-			'oasis-update-category',
-			'oasis_mi_oasis_update_category'
-		);
-	}
-
-	/**
-	 *
-	 */
-	function oasis_mi_oasis_update_category_ajax() {
-		include_once( OASIS_MI_PATH . 'functions.php' );
-
-		if ( empty( $_REQUEST['file'] ) ) {
-			wp_die( 'Не выбрана категория для обновления!' );
-		}
-
-		if ( substr_count( $_REQUEST['file'], sys_get_temp_dir() ) == 0 ) {
-			wp_die( 'Не выбран файл для обновления!' );
-		}
-
-		$data = json_decode( file_get_contents( $_REQUEST['file'] ), true );
-
-		$oasisCategories = $data['categories'];
-		$models          = $data['models'];
-
-		$options            = get_option( 'oasis_mi_options' );
-		$selectedCategories = array_filter( $options['oasis_mi_category_map'] );
-
-		$keys = array_keys( $models );
-
-		if ( isset( $keys[ $_REQUEST['step'] ] ) ) {
-			$model_id = $keys[ $_REQUEST['step'] ];
-			$model    = $models[ $model_id ];
-
-			ob_start();
-			echo '[' . date( 'c' ) . '] Начало обработки модели ' . $model_id . PHP_EOL;
-			$selectedCategory = [];
-
-			$firstProduct = reset( $model );
-			foreach ( $selectedCategories as $k => $v ) {
-				if ( in_array( $v, $firstProduct['categories_array'] ) || in_array( $v, $firstProduct['full_categories'] ) ) {
-					$selectedCategory[] = $k;
-				}
-			}
-			if ( empty( $selectedCategory ) ) {
-				foreach ( $selectedCategories as $k => $v ) {
-					$selectedCategory = array_merge( $selectedCategory,
-						recursiveCheckCategories( $k, $v, $oasisCategories, $firstProduct['categories_array'] ) );
-				}
-			}
-
-			upsert_model( $model_id, $model, $selectedCategory, true );
+	function true_save_term_fields( $term_id ) {
+		if ( isset( $_POST['oasis_cat_id'] ) ) {
+			update_term_meta( $term_id, 'oasis_cat_id', sanitize_text_field( $_POST['oasis_cat_id'] ) );
 		} else {
-			echo 'Обновление завершено.' . PHP_EOL;
-			unlink( $_REQUEST['file'] );
+			delete_term_meta( $term_id, 'oasis_cat_id' );
 		}
-
-		$result = ob_get_contents();
-		ob_end_clean();
-
-		echo nl2br( $result );
-		exit();
 	}
 
-	add_action( 'wp_ajax_oasis_update_category_ajax', 'oasis_mi_oasis_update_category_ajax' );
 }

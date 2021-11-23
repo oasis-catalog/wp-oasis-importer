@@ -1,14 +1,18 @@
 <?php
 
+use OasisImport\Controller\Oasis\Oasis;
+
 /**
  * Добавление модели и его вариаций (если они есть)
  *
  * @param $model_id
  * @param $model
- * @param $categories
+ * @param $categoriesOasis
  * @param bool $verbose
+ * @param bool $force
  */
-function upsert_model( $model_id, $model, $categories, $verbose = false, $force = false ) {
+function upsert_model( $model_id, $model, $categoriesOasis, $verbose = false, $force = false ) {
+	$options = get_option( 'oasis_mi_options' );
 	$args = [
 		'post_type'  => [ 'product' ],
 		'meta_query' => [
@@ -70,6 +74,12 @@ function upsert_model( $model_id, $model, $categories, $verbose = false, $force 
 	}
 
 	if ( $force ) {
+		$categories = [];
+
+		foreach ( $firstProduct->full_categories as $full_category ) {
+			$categories[] = Oasis::getCategoryId($categoriesOasis, $full_category);
+		}
+
 		$productAttributes = [];
 		$existColor        = false;
 		foreach ( $firstProduct->attributes as $key => $attribute ) {
@@ -294,7 +304,6 @@ function upsert_model( $model_id, $model, $categories, $verbose = false, $force 
 
 				$variationId = wp_insert_post( $variationParams );
 
-				// upsert_photo([reset($item['images'])], $variationId, $productId);
 				upsert_photo( $item->images, $variationId, $productId );
 
 				if ( $verbose ) {
@@ -524,19 +533,4 @@ function oasis_mi_translite( $name ) {
 		], $name );
 
 	return $name;
-}
-
-function recursiveCheckCategories( $wpCategoryId, $parentId, $oasisCategories, $productCategories ) {
-	$result = [];
-	if ( isset( $oasisCategories[ $parentId ] ) ) {
-		foreach ( $oasisCategories[ $parentId ] as $sub_v ) {
-			if ( in_array( $sub_v['id'], $productCategories ) ) {
-				$result[] = $wpCategoryId;
-			}
-			$result = array_merge( $result,
-				recursiveCheckCategories( $wpCategoryId, $sub_v['id'], $oasisCategories, $productCategories ) );
-		}
-	}
-
-	return $result;
 }
