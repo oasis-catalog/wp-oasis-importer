@@ -194,6 +194,15 @@ class Oasis {
 	}
 
 	/**
+	 * Get stock oasis
+	 *
+	 * @return array
+	 */
+	public static function getStockOasis(): array {
+		return Oasis::curlQuery( 'stock', [ 'fields' => 'article,stock'] );
+	}
+
+	/**
 	 * Get api data
 	 *
 	 * @param $type

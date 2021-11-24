@@ -13,7 +13,7 @@ use OasisImport\Controller\Oasis\Oasis;
  */
 function upsert_model( $model_id, $model, $categoriesOasis, $verbose = false, $force = false ) {
 	$options = get_option( 'oasis_mi_options' );
-	$args = [
+	$args    = [
 		'post_type'  => [ 'product' ],
 		'meta_query' => [
 			[
@@ -77,7 +77,7 @@ function upsert_model( $model_id, $model, $categoriesOasis, $verbose = false, $f
 		$categories = [];
 
 		foreach ( $firstProduct->full_categories as $full_category ) {
-			$categories[] = Oasis::getCategoryId($categoriesOasis, $full_category);
+			$categories[] = Oasis::getCategoryId( $categoriesOasis, $full_category );
 		}
 
 		$productAttributes = [];
@@ -311,6 +311,29 @@ function upsert_model( $model_id, $model, $categoriesOasis, $verbose = false, $f
 				}
 			}
 		}
+	}
+}
+
+/**
+ * Up stock products
+ *
+ * @param $stock
+ */
+function upStock( $stock ) {
+	$args = [
+		'post_type'  => [ 'product', 'product_variation' ],
+		'meta_query' => [
+			[
+				'key'   => '_sku',
+				'value' => $stock->article,
+			],
+		],
+	];
+
+	$query = new WP_Query( $args );
+
+	if ($query->post) {
+		update_post_meta( $query->post->ID, '_stock', $stock->stock );
 	}
 }
 

@@ -94,7 +94,20 @@ Errors: " . $errors . PHP_EOL;
 	}
 
 	public function cronUpStock() {
-		echo 'cronUpStock';
+		try {
+			include_once( __DIR__ . '/functions.php' );
+
+			set_time_limit( 0 );
+			ini_set( 'memory_limit', '2G' );
+			$stock = Oasis::getStockOasis();
+
+			foreach ( $stock as $item ) {
+				upStock( $item );
+			}
+			unset( $item );
+		} catch ( \Exception $exception ) {
+			die();
+		}
 	}
 }
 
