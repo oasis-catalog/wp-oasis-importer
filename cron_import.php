@@ -85,7 +85,7 @@ Errors: " . $errors . PHP_EOL;
 
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'c' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-			upsert_model( $group_id, $model, $categories, true );
+			upsert_model( $group_id, $model, $categories);
 			$count ++;
 			echo '[' . date( 'c' ) . '] Done  ' . $count . ' from ' . $total . PHP_EOL;
 		}
