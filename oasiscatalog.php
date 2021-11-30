@@ -198,6 +198,28 @@ function oasis_mi_settings_init() {
 				'label_for' => 'oasis_mi_remote_warehouse',
 			]
 		);
+
+		// orders
+		register_setting( 'oasis_mi_orders', 'oasis_mi_orders' );
+
+		add_settings_section(
+			'oasis_mi_section_orders',
+			'',
+			null,
+			'oasis_mi_orders'
+		);
+
+		add_settings_field(
+			'oasis_mi_orders',
+			'Заказы',
+			'oasis_mi_orders_cb',
+			'oasis_mi_orders',
+			'oasis_mi_section_orders',
+			[
+				'label_for' => 'oasis_mi_orders',
+			]
+		);
+
 	}
 }
 
@@ -294,6 +316,69 @@ function oasis_mi_rating_cb( $args ) {
 	<?php
 }
 
+function oasis_mi_orders_cb( $args ) {
+	echo '
+<table class="wp-list-table widefat fixed striped table-view-list oasis-orders">
+    <thead>
+        <tr>
+            <th class="manage-column">Заказ</th>
+            <th class="manage-column">Дата</th>
+            <th class="manage-column">Итого</th>
+            <th class="manage-column export">Выгрузить</th>
+        </tr>
+    </thead>
+    <tbody>' . PHP_EOL;
+
+	oasis_mi_get_orders();
+
+	echo '    </tbody>
+</table>' . PHP_EOL;
+}
+
+function oasis_mi_get_orders() {
+	$orders = wc_get_orders( [
+		'limit'   => - 1,
+		'orderby' => 'date',
+		'order'   => 'DESC',
+		'status'  => [ 'wc-processing', 'wc-pending', 'wc-on-hold', 'wc-completed' ],
+	] );
+
+	if ( $orders ) {
+		foreach ( $orders as $order ) {
+			$queueId = get_metadata( 'post', $order->get_order_number(), 'oasis_queue_id', true );
+
+			if ( $queueId ) {
+				$htmlExport = '';
+				$dataOrder  = Oasis::getOrderByQueueId( $queueId );
+
+				if ( isset( $dataOrder->state ) ) {
+					if ( $dataOrder->state == 'created' ) {
+						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__success"><span class="dashicons dashicons-yes-alt"></span>' . $dataOrder->order->statusText . '. Заказ №' . $dataOrder->order->number . '</div></div>';
+					} elseif ( $dataOrder->state == 'pending' ) {
+						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__warning"><span class="dashicons dashicons-warning"></span>Заказ обрабатывается в Oasiscatalog, ожидайте.</div></div>';
+					} elseif ( $dataOrder->state == 'error' ) {
+						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__danger"><span class="dashicons dashicons-dismiss"></span>Ошибка, попробуйте еще раз.</div></div> <input type="submit" name="send_order" class="button send_order" value="Выгрузить" data-order-id="' . $order->get_order_number() . '">';
+					}
+				}
+			} else {
+				$htmlExport = '<input type="submit" name="send_order" class="button send_order" value="Выгрузить" data-order-id="' . $order->get_order_number() . '">';
+			}
+
+			echo '        <tr>
+            <td><a href="' . $order->get_edit_order_url() . '">' . $order->get_order_number() . '</a></td>
+            <td>' . date( 'Y-m-d H:i:s', strtotime( $order->get_date_created() ) ) . '</td>
+            <td>' . $order->total . '</td>
+            <td>' . $htmlExport . '</td>
+        </tr>' . PHP_EOL;
+		}
+	} else {
+		echo '
+        <tr>
+            <td colspan="5">Заказы не найдены</td>
+        </tr>';
+	}
+}
+
 /**
  * register our wporg_settings_init to the admin_init action hook
  */
@@ -317,8 +402,156 @@ if ( is_admin() ) {
 
 	add_action( 'admin_menu', 'oasis_mi_menu' );
 
+	function oasis_mi_menu_orders() {
+		$options = get_option( 'oasis_mi_options' );
+
+		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) && OASIS_MI_API_VALIDATE ) {
+			add_submenu_page(
+				'tools.php',
+				'Заказы Oasis',
+				'Заказы Oasis',
+				'manage_options',
+				'oasiscatalog_mi_orders',
+				'oasis_mi_orders_html'
+			);
+		}
+	}
+
+	add_action( 'admin_menu', 'oasis_mi_menu_orders' );
+
+	function oasis_mi_orders_html() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		add_action( 'admin_print_footer_scripts', 'init_order_ajax', 99 );
+
+		// show error/update messages
+		settings_errors( 'oasis_mi_messages' );
+		?>
+
+        <style type="text/css">
+            .widefat td, .widefat th {
+                padding: 8px 10px;
+            }
+
+            table.oasis-orders th.export {
+                width: 400px;
+            }
+
+            .oasis-order__wrap {
+                padding: 0 10px 0 0;
+                display: inline-block;
+            }
+
+            .oasis-order {
+                border-radius: 3px;
+                padding: 4px;
+            }
+
+            .oasis-order .dashicons {
+                margin-right: 3px;
+            }
+
+            .oasis-order__success {
+                border: solid 1px #d6e9c6;
+                color: #3c763d;
+                background-color: #dff0d8;
+            }
+
+            .oasis-order__warning {
+                border: solid 1px #faebcc;
+                color: #8a6d3b;
+                background-color: #fcf8e3;
+            }
+
+            .oasis-order__danger {
+                border: solid 1px #ebccd1;
+                color: #a94442;
+                background-color: #f2dede;
+            }
+        </style>
+        <div class="wrap">
+            <h1><?= esc_html( 'Экспорт заказов в oasiscatalog' ); ?></h1>
+            <p>Экспортировать заказы возможно только со статусами: <b>«В ожидании оплаты», «Обработка», «На удержании», «Выполнен»</b></p>
+
+            <form action="options.php" method="post" class="oasis-mi-orders-form">
+				<?php
+				settings_fields( 'oasis_mi_orders' );
+				do_settings_sections( 'oasis_mi_orders' );
+				?>
+            </form>
+        </div>
+		<?php
+	}
+
+	function init_order_ajax() {
+		?>
+        <script>
+            jQuery(function ($) {
+                $('.send_order').click(function () {
+                    var data = {
+                        action: 'send_order',
+                        order_id: this.getAttribute('data-order-id')
+                    };
+                    this.setAttribute("disabled", "disabled");
+
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: data,
+                        success: function (data) {
+                            setTimeout(function () {
+                                location.reload();
+                            }, 2 * 1000);
+                        }
+                    });
+                    return false;
+                });
+            });
+        </script>
+		<?php
+	}
+
+	add_action( 'wp_ajax_send_order', 'send_order_ajax' );
+
+	function send_order_ajax() {
+		$order_id = strval( $_POST['order_id'] );
+		$options  = get_option( 'oasis_mi_options' );
+
+		if ( ! empty( $order_id ) ) {
+			$apiKey = $options['oasis_mi_api_key'];
+			$data   = [
+				'userId' => $options['oasis_mi_api_user_id'],
+			];
+			if ( ! empty( $apiKey ) && ! empty( $data['userId'] ) ) {
+				$order = wc_get_order( $order_id );
+
+				foreach ( $order->get_items() as $item ) {
+					if ( $item->get_variation_id() ) {
+						$oasisProductId = get_metadata( 'post', $item->get_variation_id(), 'variation_id', true );
+					} else {
+						$oasisProductId = get_metadata( 'post', $item->get_product_id(), 'product_id', true );
+					}
+					$data['items'][] = [
+						'productId' => $oasisProductId,
+						'quantity'  => $item->get_quantity(),
+					];
+
+				}
+				unset( $item );
+
+				$request = Oasis::sendOrder( $apiKey, $data );
+
+				if ( $request ) {
+					update_metadata( 'post', $order_id, 'oasis_queue_id', $request->queueId );
+				}
+			}
+		}
+		wp_die();
+	}
+
 	function oasis_mi_page_html() {
-		// check user capabilities
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
@@ -326,7 +559,6 @@ if ( is_admin() ) {
 			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', 'Настройки сохранены', 'updated' );
 		}
 
-		// show error/update messages
 		settings_errors( 'oasis_mi_messages' );
 
 		$options = get_option( 'oasis_mi_options' );

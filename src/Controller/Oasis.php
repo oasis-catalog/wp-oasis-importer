@@ -2,6 +2,8 @@
 
 namespace OasisImport\Controller\Oasis;
 
+use WP_Query;
+
 class Oasis {
 	public $options = [];
 
@@ -206,6 +208,47 @@ class Oasis {
 	}
 
 	/**
+	 * Export order to Oasiscatalog
+	 *
+	 * @param $apiKey
+	 * @param $data
+	 *
+	 * @return array|mixed
+	 */
+	public static function sendOrder( $apiKey, $data ) {
+		$result = [];
+
+		try {
+			$options = [
+				'http' => [
+					'method' => 'POST',
+					'header' => 'Content-Type: application/json' . PHP_EOL .
+					            'Accept: application/json' . PHP_EOL,
+
+					'content' => json_encode( $data ),
+				],
+			];
+
+			return json_decode( file_get_contents( 'https://api.oasiscatalog.com/v4/reserves/?key=' . $apiKey, 0, stream_context_create( $options ) ) );
+
+		} catch ( \Exception $exception ) {
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Get order data by queue id
+	 *
+	 * @param $queueId
+	 *
+	 * @return array
+	 */
+	public static function getOrderByQueueId($queueId) {
+		return Oasis::curlQuery( 'reserves/by-queue/' . $queueId);
+	}
+
+	/**
 	 * Get api data
 	 *
 	 * @param $type
@@ -213,7 +256,7 @@ class Oasis {
 	 *
 	 * @return array
 	 */
-	public static function curlQuery( $type, array $args = [] ): array {
+	public static function curlQuery( $type, array $args = [] ) {
 		$options = get_option( 'oasis_mi_options' );
 
 		if ( empty( $options['oasis_mi_api_key'] ) ) {
