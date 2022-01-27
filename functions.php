@@ -194,7 +194,9 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 	wp_set_object_terms( $productId, ( count( $model ) > 1 ? 'variable' : 'simple' ), 'product_type' );
 	wp_set_object_terms( $productId, $categories, 'product_cat' );
 
-	upsert_photo( $firstProduct->images, $productId, $productId );
+	if (!$existProduct) {
+		upsert_photo( $firstProduct->images, $productId, $productId );
+	}
 
 	echo '[' . date( 'c' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
 
@@ -278,7 +280,9 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 
 			$variationId = wp_insert_post( $variationParams );
 
-			upsert_photo( $variation->images, $variationId, $productId );
+			if (!$existVariation) {
+				upsert_photo( $variation->images, $variationId, $productId );
+			}
 
 			echo '[' . date( 'c' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
 		}
