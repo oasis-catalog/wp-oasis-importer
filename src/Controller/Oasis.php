@@ -149,7 +149,9 @@ class Oasis {
 			$categoryIds = array_keys( Oasis::getOasisMainCategories() );
 		}
 
-		$data['category'] = implode( ',', $categoryIds );
+		$args += [
+			'category' => implode( ',', $categoryIds ),
+		];
 
 		unset( $categoryIds, $category );
 

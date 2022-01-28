@@ -194,7 +194,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 	wp_set_object_terms( $productId, ( count( $model ) > 1 ? 'variable' : 'simple' ), 'product_type' );
 	wp_set_object_terms( $productId, $categories, 'product_cat' );
 
-	if (!$existProduct) {
+	if ( ! $existProduct ) {
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	}
 
@@ -251,37 +251,54 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				'post_type'      => 'product_variation',
 				'post_excerpt'   => '',
 				'meta_input'     => [
-					                    'variation_id'           => $variation->id,
-					                    '_regular_price'         => $variation->price,
-					                    '_price'                 => $variation->price,
-					                    '_sale_price'            => '',
-					                    '_sale_price_dates_from' => '',
-					                    '_sale_price_dates_to'   => '',
-					                    '_sku'                   => $variation->article,
-					                    '_weight'                => 0,
-					                    '_length'                => 0,
-					                    '_width'                 => 0,
-					                    '_height'                => 0,
-					                    '_tax_status'            => 'taxable',
-					                    '_tax_class'             => '',
-					                    '_stock_status'          => 'instock',
-					                    '_visibility'            => 'visible',
-					                    '_featured'              => 'no',
-					                    '_downloadable'          => 'no',
-					                    '_virtual'               => 'no',
-					                    '_sold_individually'     => '',
-					                    '_manage_stock'          => 'yes',
-					                    '_backorders'            => getProductStatus( $variation->rating, $totalStock )['_backorders'],
-					                    '_stock'                 => (int) $variation->total_stock,
-					                    '_purchase_note'         => '',
-					                    'total_sales'            => 0,
+					                    'variation_id'             => $variation->id,
+					                    'variation_parent_size_id' => $variation->parent_size_id,
+					                    '_regular_price'           => $variation->price,
+					                    '_price'                   => $variation->price,
+					                    '_sale_price'              => '',
+					                    '_sale_price_dates_from'   => '',
+					                    '_sale_price_dates_to'     => '',
+					                    '_sku'                     => $variation->article,
+					                    '_weight'                  => 0,
+					                    '_length'                  => 0,
+					                    '_width'                   => 0,
+					                    '_height'                  => 0,
+					                    '_tax_status'              => 'taxable',
+					                    '_tax_class'               => '',
+					                    '_stock_status'            => 'instock',
+					                    '_visibility'              => 'visible',
+					                    '_featured'                => 'no',
+					                    '_downloadable'            => 'no',
+					                    '_virtual'                 => 'no',
+					                    '_sold_individually'       => '',
+					                    '_manage_stock'            => 'yes',
+					                    '_backorders'              => getProductStatus( $variation->rating, $totalStock )['_backorders'],
+					                    '_stock'                   => (int) $variation->total_stock,
+					                    '_purchase_note'           => '',
+					                    'total_sales'              => 0,
 				                    ] + $attributeMeta,
 			];
 
+			$query = new WP_Query( [
+				'post_type'  => [ 'product_variation' ],
+				'meta_query' => [
+					[
+						'key'   => 'variation_parent_size_id',
+						'value' => $variation->parent_size_id,
+					],
+				],
+			] );
+
+			if ( $query->posts ) {
+				$parentId = reset( $query->posts )->ID;
+			} else {
+				$parentId = false;
+			}
+
 			$variationId = wp_insert_post( $variationParams );
 
-			if (!$existVariation) {
-				upsert_photo( $variation->images, $variationId, $productId );
+			if ( ! $existVariation ) {
+				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			}
 
 			echo '[' . date( 'c' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
@@ -341,8 +358,9 @@ function getProductStatus( int $rating, int $totalStock ): array {
  * @param $images
  * @param $product_id
  * @param $main_product_id
+ * @param bool $parentProductId
  */
-function upsert_photo( $images, $product_id, $main_product_id ) {
+function upsert_photo( $images, $product_id, $main_product_id, $parentProductId = false ) {
 	$upload_dir = wp_upload_dir();
 
 	require_once( ABSPATH . 'wp-admin/includes/image.php' );
@@ -352,41 +370,44 @@ function upsert_photo( $images, $product_id, $main_product_id ) {
 		if ( ! isset( $image->superbig ) ) {
 			continue;
 		}
+		if ( ! $parentProductId ) {
+			$filename = basename( $image->superbig );
 
-		$filename = basename( $image->superbig );
-
-		$existImage = get_page_by_title( sanitize_file_name( $filename ), OBJECT, 'attachment' );
-		if ( $existImage ) {
-			$attachIds[] = $existImage->ID;
-			continue;
-		}
-
-		$image_data = file_get_contents( $image->superbig );
-
-		if ( $image_data ) {
-			if ( wp_mkdir_p( $upload_dir['path'] ) ) {
-				$file = $upload_dir['path'] . '/' . $filename;
-			} else {
-				$file = $upload_dir['basedir'] . '/' . $filename;
+			$existImage = get_page_by_title( sanitize_file_name( $filename ), OBJECT, 'attachment' );
+			if ( $existImage ) {
+				$attachIds[] = $existImage->ID;
+				continue;
 			}
 
-			file_put_contents( $file, $image_data );
+			$image_data = file_get_contents( $image->superbig );
 
-			$wp_filetype = wp_check_filetype( $filename, null );
+			if ( $image_data ) {
+				if ( wp_mkdir_p( $upload_dir['path'] ) ) {
+					$file = $upload_dir['path'] . '/' . $filename;
+				} else {
+					$file = $upload_dir['basedir'] . '/' . $filename;
+				}
 
-			$attachment = [
-				'post_mime_type' => $wp_filetype['type'],
-				'post_title'     => sanitize_file_name( $filename ),
-				'post_content'   => '',
-				'post_status'    => 'inherit',
-				'post_parent'    => $main_product_id,
-			];
+				file_put_contents( $file, $image_data );
 
-			$attach_id = wp_insert_attachment( $attachment, $file );
+				$wp_filetype = wp_check_filetype( $filename, null );
 
-			$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
-			wp_update_attachment_metadata( $attach_id, $attach_data );
-			$attachIds[] = $attach_id;
+				$attachment = [
+					'post_mime_type' => $wp_filetype['type'],
+					'post_title'     => sanitize_file_name( $filename ),
+					'post_content'   => '',
+					'post_status'    => 'inherit',
+					'post_parent'    => $main_product_id,
+				];
+
+				$attach_id = wp_insert_attachment( $attachment, $file );
+
+				$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
+				wp_update_attachment_metadata( $attach_id, $attach_data );
+				$attachIds[] = $attach_id;
+			}
+		} else {
+			$attachIds[] = get_post_thumbnail_id( $parentProductId );
 		}
 	}
 
