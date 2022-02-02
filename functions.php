@@ -126,7 +126,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 
 			$productAttributes[ $attr ] = [
 				'name'         => $attrName,
-				'value'        => implode( "|", array_unique( $attrValues ) ),
+				'value'        => implode( '|', array_unique( $attrValues ) ),
 				'position'     => ++ $key,
 				'is_visible'   => 1,
 				'is_variation' => 1,

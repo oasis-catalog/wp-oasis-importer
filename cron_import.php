@@ -30,18 +30,18 @@ class OasisCron extends Oasis {
 		}
 
 		if ( $errors ) {
-			$help = "
-usage:  php " . __DIR__ . "/oasis_cli.php [-k|--key=secret] [-u|--up]
+			$help = '
+usage:  php ' . __DIR__ . '/oasis_cli.php [-k|--key=secret] [-u|--up]
 
 Options:
         -k  --key      substitute your secret key from the Oasis module
         -u  --up       specify this key to use the update
 Example import products:
-        php " . __DIR__ . "/oasis_cli.php --key=secret
+        php ' . __DIR__ . '/oasis_cli.php --key=secret
 Example update stock (quantity) products:
-        php " . __DIR__ . "/oasis_cli.php --key=secret --up
+        php ' . __DIR__ . '/oasis_cli.php --key=secret --up
 
-Errors: " . $errors . PHP_EOL;
+Errors: ' . $errors . PHP_EOL;
 			die( $help );
 		}
 
