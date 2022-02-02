@@ -68,7 +68,7 @@ Errors: " . $errors . PHP_EOL;
 		set_time_limit( 0 );
 		ini_set( 'memory_limit', '2G' );
 
-		echo '[' . date( 'c' ) . '] Начало обновления товаров' . PHP_EOL;
+		echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обновления товаров' . PHP_EOL;
 
 		include_once( __DIR__ . '/functions.php' );
 
@@ -84,13 +84,13 @@ Errors: " . $errors . PHP_EOL;
 		$count = 0;
 
 		foreach ( $group_ids as $group_id => $model ) {
-			echo '[' . date( 'c' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
+			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
 			upsert_model( $group_id, $model, $categories);
 			$count ++;
-			echo '[' . date( 'c' ) . '] Done  ' . $count . ' from ' . $total . PHP_EOL;
+			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 		}
 
-		echo '[' . date( 'c' ) . '] Окончание обновления товаров' . PHP_EOL;
+		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 	}
 
 	public function cronUpStock() {

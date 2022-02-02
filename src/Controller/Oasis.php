@@ -12,6 +12,28 @@ class Oasis {
 	}
 
 	/**
+	 * Get posts by meta_query key and value
+	 *
+	 * @param array $post_type
+	 * @param $key
+	 * @param $value
+	 *
+	 * @return WP_Query
+	 */
+	public static function getPostsByMetaQuery( array $post_type, $key, $value ): WP_Query {
+		return new WP_Query( [
+			'post_type'   => $post_type,
+			'post_status' => [ 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash', 'any' ],
+			'meta_query'  => [
+				[
+					'key'   => $key,
+					'value' => $value,
+				],
+			],
+		] );
+	}
+
+	/**
 	 * Get id category woocommerce
 	 *
 	 * @param $categories
@@ -246,8 +268,8 @@ class Oasis {
 	 *
 	 * @return array
 	 */
-	public static function getOrderByQueueId($queueId) {
-		return Oasis::curlQuery( 'reserves/by-queue/' . $queueId);
+	public static function getOrderByQueueId( $queueId ) {
+		return Oasis::curlQuery( 'reserves/by-queue/' . $queueId );
 	}
 
 	/**

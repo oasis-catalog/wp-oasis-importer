@@ -10,20 +10,11 @@ use OasisImport\Controller\Oasis\Oasis;
  * @param $categoriesOasis
  */
 function upsert_model( $model_id, $model, $categoriesOasis ) {
-	$args = [
-		'post_type'  => [ 'product' ],
-		'meta_query' => [
-			[
-				'key'   => 'model_id',
-				'value' => $model_id,
-			],
-		],
-	];
+	$dataQuery = Oasis::getPostsByMetaQuery([ 'product' ], 'model_id', $model_id);
 
-	$query        = new WP_Query( $args );
 	$existProduct = null;
-	if ( $query->posts ) {
-		$existProduct = reset( $query->posts );
+	if ( $dataQuery->posts ) {
+		$existProduct = reset( $dataQuery->posts );
 	}
 
 	if ( $existProduct ) {
@@ -56,18 +47,45 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 	}
 
 	$productAttributes = [];
+	$addonMeta         = [];
 	$existColor        = false;
 	foreach ( $firstProduct->attributes as $key => $attribute ) {
 		if ( count( $model ) > 1 && $attribute->id == '1000000001' ) {
 			$existColor = true;
+
+			$attrName = 'Цвет';
+			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
+
+			$attrValues = [];
+			foreach ( $model as $item ) {
+				foreach ( $item->attributes as $attribute ) {
+					if ( $attribute->id == '1000000001' ) {
+						$attrValues[] = trim( $attribute->value );
+						if ( $item->id == $firstProduct->id ) {
+							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
+						}
+					}
+				}
+			}
+			sort( $attrValues );
+
+			$productAttributes[ $attr ] = [
+				'name'         => $attrName,
+				'value'        => implode( '|', array_unique( $attrValues ) ),
+				'position'     => ++ $key,
+				'is_visible'   => 1,
+				'is_variation' => 1,
+				'is_taxonomy'  => 0,
+			];
+
 			continue;
 		}
 
-		$attr = wc_sanitize_taxonomy_name( stripslashes( $attribute->name ) );
+		$attr = wc_sanitize_taxonomy_name( stripslashes( trim( $attribute->name ) ) );
 
 		$productAttributes[ $attr ] = [
 			'name'         => $attribute->name,
-			'value'        => $attribute->value . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
+			'value'        => trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
 			'position'     => ( $key + 1 ),
 			'is_visible'   => 1,
 			'is_variation' => 0,
@@ -75,7 +93,6 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 		];
 	}
 
-	$addonMeta = [];
 	if ( count( $model ) > 1 ) {
 		if ( ! empty( $firstProduct->size ) ) {
 			$attrName = 'Размер';
@@ -83,7 +100,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 
 			$attrValues = [];
 			foreach ( $model as $item ) {
-				$attrValues[] = $item->size;
+				$attrValues[] = trim( $item->size );
 			}
 
 			$etalonSizes = [
@@ -106,33 +123,6 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 			usort( $attrValues, function ( $key1, $key2 ) use ( $etalonSizes ) {
 				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
 			} );
-
-			$productAttributes[ $attr ] = [
-				'name'         => $attrName,
-				'value'        => implode( "|", array_unique( $attrValues ) ),
-				'position'     => ++ $key,
-				'is_visible'   => 1,
-				'is_variation' => 1,
-				'is_taxonomy'  => 0,
-			];
-		}
-
-		if ( $existColor ) {
-			$attrName = 'Цвет';
-			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
-			$attrValues = [];
-			foreach ( $model as $item ) {
-				foreach ( $item->attributes as $attribute ) {
-					if ( $attribute->id == '1000000001' ) {
-						$attrValues[] = $attribute->value;
-						if ( $item->id == $firstProduct->id ) {
-							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => $attribute->value ];
-						}
-					}
-				}
-			}
-			sort( $attrValues );
 
 			$productAttributes[ $attr ] = [
 				'name'         => $attrName,
@@ -198,24 +188,14 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	}
 
-	echo '[' . date( 'c' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
+	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
 
 	if ( count( $model ) > 1 ) {
 		foreach ( $model as $variation ) {
-			$args = [
-				'post_type'  => [ 'product_variation' ],
-				'meta_query' => [
-					[
-						'key'   => 'variation_id',
-						'value' => $variation->id,
-					],
-				],
-			];
-
-			$query          = new WP_Query( $args );
+			$dataQuery = Oasis::getPostsByMetaQuery([ 'product_variation' ], 'variation_id', $variation->id);
 			$existVariation = null;
-			if ( $query->posts ) {
-				$existVariation = reset( $query->posts );
+			if ( $dataQuery->posts ) {
+				$existVariation = reset( $dataQuery->posts );
 			}
 
 			$attributeMeta = [];
@@ -223,7 +203,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				$attrName = 'Размер';
 				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
 
-				$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = $variation->size;
+				$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $variation->size );
 			}
 
 			if ( $existColor ) {
@@ -232,7 +212,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 
 				foreach ( $variation->attributes as $attribute ) {
 					if ( $attribute->id == '1000000001' ) {
-						$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = $attribute->value;
+						$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $attribute->value );
 					}
 				}
 			}
@@ -245,7 +225,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				'post_date_gmt'  => current_time( 'mysql', 1 ),
 				'post_title'     => $variation->full_name,
 				'post_name'      => Oasis::transliteration( $variation->full_name ),
-				'post_status'    => getProductStatus( $variation->rating, $totalStock )['post_status'],
+				'post_status'    => getProductStatus( $variation->rating, (int) $variation->total_stock, true )['post_status'],
 				'comment_status' => 'closed',
 				'ping_status'    => 'closed',
 				'post_type'      => 'product_variation',
@@ -279,18 +259,10 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				                    ] + $attributeMeta,
 			];
 
-			$query = new WP_Query( [
-				'post_type'  => [ 'product_variation' ],
-				'meta_query' => [
-					[
-						'key'   => 'variation_parent_size_id',
-						'value' => $variation->parent_size_id,
-					],
-				],
-			] );
+			$dataQuery = Oasis::getPostsByMetaQuery([ 'product_variation' ], 'variation_parent_size_id', $variation->parent_size_id);
 
-			if ( $query->posts ) {
-				$parentId = reset( $query->posts )->ID;
+			if ( $dataQuery->posts ) {
+				$parentId = reset( $dataQuery->posts )->ID;
 			} else {
 				$parentId = false;
 			}
@@ -301,7 +273,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			}
 
-			echo '[' . date( 'c' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
+			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
 		}
 	}
 }
@@ -312,20 +284,10 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
  * @param $stock
  */
 function upStock( $stock ) {
-	$args = [
-		'post_type'  => [ 'product', 'product_variation' ],
-		'meta_query' => [
-			[
-				'key'   => '_sku',
-				'value' => $stock->article,
-			],
-		],
-	];
+	$dataQuery = Oasis::getPostsByMetaQuery([ 'product', 'product_variation' ], '_sku', $stock->article);
 
-	$query = new WP_Query( $args );
-
-	if ( $query->post ) {
-		update_post_meta( $query->post->ID, '_stock', $stock->stock );
+	if ( $dataQuery->post ) {
+		update_post_meta( $dataQuery->post->ID, '_stock', $stock->stock );
 	}
 }
 
@@ -334,19 +296,24 @@ function upStock( $stock ) {
  *
  * @param int $rating
  * @param int $totalStock
+ * @param bool $variation
  *
  * @return string[]
  */
-function getProductStatus( int $rating, int $totalStock ): array {
+function getProductStatus( int $rating, int $totalStock, $variation = false ): array {
 	$data = [
 		'post_status' => 'publish',
 		'_backorders' => 'no',
-	];;
+	];
 
 	if ( $rating === 5 ) {
 		$data['_backorders'] = 'yes';
 	} elseif ( $totalStock === 0 ) {
-		$data['post_status'] = 'draft';
+		if ( $variation ) {
+			$data['post_status'] = 'private';
+		} else {
+			$data['post_status'] = 'draft';
+		}
 	}
 
 	return $data;
