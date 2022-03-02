@@ -12,6 +12,32 @@ class Oasis {
 	}
 
 	/**
+	 * Up option _transient_wc_products_onsale
+	 *
+	 * @param $productId
+	 * @param $oasisProduct
+	 */
+	public static function upTransientWcProductsOnsale($productId, $oasisProduct) {
+		$optWcProductsOnsale = get_option( '_transient_wc_products_onsale' );
+
+		if ( ! empty( $oasisProduct->old_price ) ) {
+			if ( ! in_array( $productId, $optWcProductsOnsale ) ) {
+				$optWcProductsOnsale[] = $productId;
+				update_option( '_transient_wc_products_onsale', $optWcProductsOnsale );
+			}
+		} else {
+			$optKey = array_search( $productId, $optWcProductsOnsale );
+
+			if ( $optKey !== false ) {
+				unset( $optWcProductsOnsale[ $optKey ] );
+				update_option( '_transient_wc_products_onsale', array_values( $optWcProductsOnsale ) );
+			}
+		}
+
+		unset( $optWcProductsOnsale, $optKey );
+	}
+
+	/**
 	 * Get posts by meta_query key and value
 	 *
 	 * @param array $post_type

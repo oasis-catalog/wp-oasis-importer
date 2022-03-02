@@ -85,10 +85,12 @@ Errors: ' . $errors . PHP_EOL;
 
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-			upsert_model( $group_id, $model, $categories);
+			upsert_model( $group_id, $model, $categories );
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 		}
+
+		wc_update_product_lookup_tables();
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 	}

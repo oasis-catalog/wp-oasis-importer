@@ -10,7 +10,7 @@ use OasisImport\Controller\Oasis\Oasis;
  * @param $categoriesOasis
  */
 function upsert_model( $model_id, $model, $categoriesOasis ) {
-	$dataQuery = Oasis::getPostsByMetaQuery([ 'product' ], 'model_id', $model_id);
+	$dataQuery = Oasis::getPostsByMetaQuery( [ 'product' ], 'model_id', $model_id );
 
 	$existProduct = null;
 	if ( $dataQuery->posts ) {
@@ -151,9 +151,9 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 		'meta_input'     => [
 			                    'model_id'               => $model_id,
 			                    'product_id'             => $firstProduct->id,
-			                    '_regular_price'         => $firstProduct->price,
-			                    '_price'                 => $firstProduct->price,
-			                    '_sale_price'            => '',
+			                    '_regular_price'         => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->old_price ) : str_replace( '.', ',', $firstProduct->price ),
+			                    '_price'                 => str_replace( '.', ',', $firstProduct->price ),
+			                    '_sale_price'            => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->price ) : '',
 			                    '_sale_price_dates_from' => '',
 			                    '_sale_price_dates_to'   => '',
 			                    '_sku'                   => count( $model ) > 1 ? $firstProduct->article_base : $firstProduct->article,
@@ -188,11 +188,13 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	}
 
+	Oasis::upTransientWcProductsOnsale( $productId, $firstProduct );
+
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
 
 	if ( count( $model ) > 1 ) {
 		foreach ( $model as $variation ) {
-			$dataQuery = Oasis::getPostsByMetaQuery([ 'product_variation' ], 'variation_id', $variation->id);
+			$dataQuery      = Oasis::getPostsByMetaQuery( [ 'product_variation' ], 'variation_id', $variation->id );
 			$existVariation = null;
 			if ( $dataQuery->posts ) {
 				$existVariation = reset( $dataQuery->posts );
@@ -233,9 +235,9 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				'meta_input'     => [
 					                    'variation_id'             => $variation->id,
 					                    'variation_parent_size_id' => $variation->parent_size_id,
-					                    '_regular_price'           => $variation->price,
-					                    '_price'                   => $variation->price,
-					                    '_sale_price'              => '',
+					                    '_regular_price'           => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->old_price ) : str_replace( '.', ',', $firstProduct->price ),
+					                    '_price'                   => str_replace( '.', ',', $firstProduct->price ),
+					                    '_sale_price'              => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->price ) : '',
 					                    '_sale_price_dates_from'   => '',
 					                    '_sale_price_dates_to'     => '',
 					                    '_sku'                     => $variation->article,
@@ -259,7 +261,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				                    ] + $attributeMeta,
 			];
 
-			$dataQuery = Oasis::getPostsByMetaQuery([ 'product_variation' ], 'variation_parent_size_id', $variation->parent_size_id);
+			$dataQuery = Oasis::getPostsByMetaQuery( [ 'product_variation' ], 'variation_parent_size_id', $variation->parent_size_id );
 
 			if ( $dataQuery->posts ) {
 				$parentId = reset( $dataQuery->posts )->ID;
@@ -273,6 +275,8 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
 				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			}
 
+			Oasis::upTransientWcProductsOnsale( $variationId, $variation );
+
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
 		}
 	}
@@ -284,7 +288,7 @@ function upsert_model( $model_id, $model, $categoriesOasis ) {
  * @param $stock
  */
 function upStock( $stock ) {
-	$dataQuery = Oasis::getPostsByMetaQuery([ 'product', 'product_variation' ], '_sku', $stock->article);
+	$dataQuery = Oasis::getPostsByMetaQuery( [ 'product', 'product_variation' ], '_sku', $stock->article );
 
 	if ( $dataQuery->post ) {
 		update_post_meta( $dataQuery->post->ID, '_stock', $stock->stock );
