@@ -17,24 +17,20 @@ class Oasis {
 	 * @param $productId
 	 * @param $oasisProduct
 	 */
-	public static function upTransientWcProductsOnsale($productId, $oasisProduct) {
-		$optWcProductsOnsale = get_option( '_transient_wc_products_onsale' );
+	public static function upTransientWcProductsOnsale( $productId, $oasisProduct ) {
+		if ( $productId ) {
+			$wcProduct = wc_get_product( $productId );
+			$wcProduct->set_price( $oasisProduct->price );
 
-		if ( ! empty( $oasisProduct->old_price ) ) {
-			if ( ! in_array( $productId, $optWcProductsOnsale ) ) {
-				$optWcProductsOnsale[] = $productId;
-				update_option( '_transient_wc_products_onsale', $optWcProductsOnsale );
+			if ( ! empty( $oasisProduct->old_price ) ) {
+				$wcProduct->set_regular_price( $oasisProduct->old_price );
+				$wcProduct->set_sale_price( $oasisProduct->price );
+			} else {
+				$wcProduct->set_regular_price( $oasisProduct->price );
 			}
-		} else {
-			$optKey = array_search( $productId, $optWcProductsOnsale );
 
-			if ( $optKey !== false ) {
-				unset( $optWcProductsOnsale[ $optKey ] );
-				update_option( '_transient_wc_products_onsale', array_values( $optWcProductsOnsale ) );
-			}
+			$wcProduct->save();
 		}
-
-		unset( $optWcProductsOnsale, $optKey );
 	}
 
 	/**

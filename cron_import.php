@@ -90,8 +90,6 @@ Errors: ' . $errors . PHP_EOL;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 		}
 
-		wc_update_product_lookup_tables();
-
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 	}
 
