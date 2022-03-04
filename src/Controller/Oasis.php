@@ -22,7 +22,7 @@ class Oasis {
 			$wcProduct = wc_get_product( $productId );
 			$wcProduct->set_price( $oasisProduct->price );
 
-			if ( ! empty( $oasisProduct->old_price ) ) {
+			if ( ! empty( $oasisProduct->old_price ) && $oasisProduct->price < $oasisProduct->old_price ) {
 				$wcProduct->set_regular_price( $oasisProduct->old_price );
 				$wcProduct->set_sale_price( $oasisProduct->price );
 			} else {
