@@ -315,14 +315,9 @@ class Oasis {
 		];
 		$args      = array_merge( $args_pref, $args );
 
-		$ch = curl_init();
-		curl_setopt( $ch, CURLOPT_URL, 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-		$result    = json_decode( curl_exec( $ch ) );
-		$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		curl_close( $ch );
-
-		return $http_code === 200 ? $result : [];
+		return json_decode(
+			file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) )
+		);
 	}
 
 	/**

@@ -31,15 +31,12 @@ function oasis_mi_activate() {
 	if ( ! is_plugin_active( 'woocommerce/woocommerce.php' ) and current_user_can( 'activate_plugins' ) ) {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
+	up_currencies_categories();
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
 	include( ABSPATH . "wp-includes/pluggable.php" );
 }
-
-$oasis = new Oasis();
-
-define( 'OASIS_MI_API_VALIDATE', (bool) Oasis::getCurrenciesOasis() );
 
 /**
  * custom option and settings
@@ -88,7 +85,7 @@ function oasis_mi_settings_init() {
             <p><strong>Укажите API ключ!</strong></p>
         </div>
 		<?php
-	} elseif ( OASIS_MI_API_VALIDATE ) {
+	} else {
 		add_settings_field(
 			'oasis_mi_currency',
 			'Валюта',
@@ -248,10 +245,10 @@ function oasis_mi_api_user_id_cb( $args ) {
 }
 
 function oasis_mi_categories_cb( $args ) {
-	$options    = get_option( 'oasis_mi_options' );
-	$categories = Oasis::getOasisMainCategories();
+	$options        = get_option( 'oasis_mi_options' );
+	$oasis_curr_cat = get_option( 'oasis_curr_cat' );
 
-	foreach ( $categories as $key => $value ) {
+	foreach ( $oasis_curr_cat['categories'] as $key => $value ) {
 		?>
 
         <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $key; ?>]"
@@ -269,14 +266,14 @@ function oasis_mi_currency_cb( $args ) {
 
     <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-control col-sm-6">
 		<?php
-		$currencies = Oasis::getCurrenciesOasis();
+		$oasis_curr_cat = get_option( 'oasis_curr_cat' );
 
-		foreach ( $currencies as $currency ) {
+		foreach ( $oasis_curr_cat['currencies'] as $currency ) {
 			$selected = '';
-			if ( $currency->code === $defaultCurrency ) {
+			if ( $currency['code'] === $defaultCurrency ) {
 				$selected = ' selected="selected"';
 			}
-			echo '<option value="' . $currency->code . '"' . $selected . '>' . $currency->full_name . '</option>' . PHP_EOL;
+			echo '<option value="' . $currency['code'] . '"' . $selected . '>' . $currency['name'] . '</option>' . PHP_EOL;
 		}
 		unset( $currency );
 		?>
@@ -405,7 +402,7 @@ if ( is_admin() ) {
 	function oasis_mi_menu_orders() {
 		$options = get_option( 'oasis_mi_options' );
 
-		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) && OASIS_MI_API_VALIDATE ) {
+		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) ) {
 			add_submenu_page(
 				'tools.php',
 				'Заказы Oasis',
@@ -568,7 +565,7 @@ if ( is_admin() ) {
 
         <div class="wrap">
             <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
-			<?php if ( ! empty( $options['oasis_mi_api_key'] ) && OASIS_MI_API_VALIDATE ) { ?>
+			<?php if ( ! empty( $options['oasis_mi_api_key'] ) ) { ?>
                 <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
                     <strong>Не разглашайте эти данные!</strong></p>
                 <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
@@ -576,12 +573,6 @@ if ( is_admin() ) {
                 <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
                         --key=<?php echo md5( $options['oasis_mi_api_key'] ); ?> --up</code> - обновление остатков 1 раз в 30 минут
                 </p><br/>
-				<?php
-			} elseif ( ! empty( $options['oasis_mi_api_key'] ) && ! OASIS_MI_API_VALIDATE ) {
-				?>
-                <div class="notice notice-error">
-                    <p><strong>Не корректный API ключ, для корректной работы укажите существующий API ключ</strong></p>
-                </div>
 				<?php
 			}
 			?>
@@ -637,4 +628,62 @@ if ( is_admin() ) {
 		}
 	}
 
+}
+
+function up_currencies_categories() {
+	$categories = Oasis::getOasisMainCategories();
+
+	if ( $categories ) {
+		$data['categories'] = $categories;
+	} else {
+		$data['categories'] = [
+			1906 => 'VIP',
+			2269 => 'Праздники',
+			2891 => 'Продукция',
+		];
+	}
+
+	$currencies = Oasis::getCurrenciesOasis();
+
+	if ( $currencies ) {
+		foreach ( $currencies as $currency ) {
+			$data['currencies'][] = [
+				'code' => $currency->code,
+				'name' => $currency->full_name
+			];
+		}
+	} else {
+		$data['currencies'] = [
+			[
+				'code' => 'kzt',
+				'name' => 'Тенге',
+			],
+			[
+				'code' => 'kgs',
+				'name' => 'Киргизский Сом',
+			],
+			[
+				'code' => 'rub',
+				'name' => 'Российский рубль',
+			],
+			[
+				'code' => 'usd',
+				'name' => 'Доллар США',
+			],
+			[
+				'code' => 'byn',
+				'name' => 'Белорусский рубль',
+			],
+			[
+				'code' => 'eur',
+				'name' => 'Евро',
+			],
+			[
+				'code' => 'uah',
+				'name' => 'Гривна',
+			]
+		];
+	}
+
+	update_option( 'oasis_curr_cat', $data );
 }

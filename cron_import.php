@@ -91,6 +91,8 @@ Errors: ' . $errors . PHP_EOL;
 		}
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
+
+		up_currencies_categories();
 	}
 
 	public function cronUpStock() {
