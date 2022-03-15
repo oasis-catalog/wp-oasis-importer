@@ -81,12 +81,14 @@ Errors: ' . $errors . PHP_EOL;
 		if ( $limit > 0 ) {
 			$args['limit']  = $limit;
 			$args['offset'] = $step * $limit;
-		}
 
-		if ( $args['offset'] > $stats->products ) {
-			$nextStep = 0;
+			if ( $args['offset'] > $stats->products ) {
+				$nextStep = 0;
+			} else {
+				$nextStep = ++ $step;
+			}
 		} else {
-			$nextStep = ++ $step;
+			$nextStep = 0;
 		}
 
 		$products   = $this->getOasisProducts( $args );
