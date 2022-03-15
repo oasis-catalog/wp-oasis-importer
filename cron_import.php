@@ -72,7 +72,24 @@ Errors: ' . $errors . PHP_EOL;
 
 		include_once( __DIR__ . '/functions.php' );
 
-		$products   = $this->getOasisProducts();
+		$args    = [];
+		$options = get_option( 'oasis_mi_options' );
+		$limit   = (int) $options['oasis_mi_limit'];
+		$step    = (int) get_option( 'oasis_step' );
+		$stats   = Oasis::getStatProducts();
+
+		if ( $limit > 0 ) {
+			$args['limit']  = $limit;
+			$args['offset'] = $step * $limit;
+		}
+
+		if ( $args['offset'] > $stats->products ) {
+			$nextStep = 0;
+		} else {
+			$nextStep = ++ $step;
+		}
+
+		$products   = $this->getOasisProducts( $args );
 		$categories = Oasis::getCategoriesOasis();
 
 		$group_ids = [];
@@ -89,6 +106,7 @@ Errors: ' . $errors . PHP_EOL;
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 		}
+		update_option( 'oasis_step', $nextStep );
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 

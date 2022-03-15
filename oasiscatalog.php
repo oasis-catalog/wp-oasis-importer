@@ -32,6 +32,7 @@ function oasis_mi_activate() {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
 	up_currencies_categories();
+	update_option( 'oasis_step', 0 );
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -193,6 +194,17 @@ function oasis_mi_settings_init() {
 			'oasis_mi_section_developers',
 			[
 				'label_for' => 'oasis_mi_remote_warehouse',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_limit',
+			'Лимит',
+			'oasis_mi_price_cb',
+			'oasis_mi',
+			'oasis_mi_section_developers',
+			[
+				'label_for' => 'oasis_mi_limit',
 			]
 		);
 
