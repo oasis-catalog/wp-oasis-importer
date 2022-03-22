@@ -31,8 +31,9 @@ function oasis_mi_activate() {
 	if ( ! is_plugin_active( 'woocommerce/woocommerce.php' ) and current_user_can( 'activate_plugins' ) ) {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
-	up_currencies_categories();
+	create_table();
 	update_option( 'oasis_step', 0 );
+	up_currencies_categories(true);
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -642,8 +643,12 @@ if ( is_admin() ) {
 
 }
 
-function up_currencies_categories() {
-	$categories = Oasis::getOasisMainCategories();
+function up_currencies_categories($activate = false) {
+	if ( $activate ) {
+		$categories = false;
+	} else {
+		$categories = Oasis::getOasisMainCategories();
+    }
 
 	if ( $categories ) {
 		$data['categories'] = $categories;
@@ -655,7 +660,12 @@ function up_currencies_categories() {
 		];
 	}
 
-	$currencies = Oasis::getCurrenciesOasis();
+
+	if ( $activate ) {
+		$currencies = false;
+	} else {
+		$currencies = Oasis::getCurrenciesOasis();
+	}
 
 	if ( $currencies ) {
 		foreach ( $currencies as $currency ) {
@@ -698,4 +708,23 @@ function up_currencies_categories() {
 	}
 
 	update_option( 'oasis_curr_cat', $data );
+}
+
+function create_table() {
+	global $wpdb;
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+	$charset_collate = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE {$wpdb->prefix}oasis_products (
+	post_id bigint(20) unsigned NOT NULL,
+	product_id_oasis char(12) NOT NULL,
+	model_id_oasis char(12) NOT NULL,
+	variation_parent_size_id char(12) DEFAULT NULL,
+	type char(30) NOT NULL,
+	PRIMARY KEY (post_id)
+	)
+	{$charset_collate};";
+
+	dbDelta($sql);
 }

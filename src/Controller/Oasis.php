@@ -57,24 +57,45 @@ class Oasis {
 	}
 
 	/**
-	 * Up option _transient_wc_products_onsale
+	 * Up product
 	 *
 	 * @param $productId
 	 * @param $oasisProduct
+	 * @param $totalStock
+	 * @param false $categories
+	 * @param bool $variation
 	 */
-	public static function upTransientWcProductsOnsale( $productId, $oasisProduct ) {
+	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $categories = false, $variation = false ) {
 		if ( $productId ) {
-			$wcProduct = wc_get_product( $productId );
-			$wcProduct->set_price( $oasisProduct->price );
+			global $wpdb;
 
-			if ( ! empty( $oasisProduct->old_price ) && $oasisProduct->price < $oasisProduct->old_price ) {
-				$wcProduct->set_regular_price( $oasisProduct->old_price );
-				$wcProduct->set_sale_price( $oasisProduct->price );
-			} else {
-				$wcProduct->set_regular_price( $oasisProduct->price );
+			$data = [
+				'post_title'    => $variation ? $oasisProduct->full_name : $oasisProduct->name,
+				'post_status'   => getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, true )['post_status'],
+				'post_modified' => current_time( 'mysql' ),
+			];
+
+			if ( $variation === false ) {
+				$data['post_content'] = $oasisProduct->description;
+				wp_set_object_terms( $productId, $categories, 'product_cat' );
+				update_post_meta($productId, '_total_stock', $totalStock);
 			}
 
-			$wcProduct->save();
+			$wpdb->update( $wpdb->prefix . 'posts', $data, [ 'ID' => $productId ] );
+			update_post_meta( $productId, '_price', $oasisProduct->price );
+
+			if ( ! empty( $oasisProduct->old_price ) && $oasisProduct->price < $oasisProduct->old_price ) {
+				update_post_meta( $productId, '_regular_price', $oasisProduct->old_price );
+				update_post_meta( $productId, '_sale_price', $oasisProduct->price );
+				$wcProduct = wc_get_product( $productId );
+				$wcProduct->set_sale_price( $oasisProduct->price );
+				$wcProduct->save();
+			} else {
+				update_post_meta( $productId, '_regular_price', $oasisProduct->price );
+			}
+
+			update_post_meta( $productId, '_backorders', getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
+			update_post_meta( $productId, '_stock', (int) $oasisProduct->total_stock );
 		}
 	}
 
@@ -295,7 +316,7 @@ class Oasis {
 	 * @return array
 	 */
 	public static function getStockOasis(): array {
-		return Oasis::curlQuery( 'stock', [ 'fields' => 'article,stock' ] );
+		return Oasis::curlQuery( 'stock', [ 'fields' => 'article,stock,id' ] );
 	}
 
 	/**
@@ -360,9 +381,10 @@ class Oasis {
 		];
 		$args      = array_merge( $args_pref, $args );
 
-		return json_decode(
-			file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) )
-		);
+		$content = file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
+		$result = json_decode($content);
+
+		return $result;
 	}
 
 	/**

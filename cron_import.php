@@ -76,9 +76,9 @@ Errors: ' . $errors . PHP_EOL;
 		$options = get_option( 'oasis_mi_options' );
 		$limit   = (int) $options['oasis_mi_limit'];
 		$step    = (int) get_option( 'oasis_step' );
-		$stats   = Oasis::getStatProducts();
 
 		if ( $limit > 0 ) {
+			$stats          = Oasis::getStatProducts();
 			$args['limit']  = $limit;
 			$args['offset'] = $step * $limit;
 
@@ -99,19 +99,24 @@ Errors: ' . $errors . PHP_EOL;
 			$group_ids[ $product->group_id ][ $product->id ] = $product;
 		}
 
-		$total = count( array_keys( $group_ids ) );
-		$count = 0;
+		$total      = count( array_keys( $group_ids ) );
+		$count      = 0;
+		$time_start = microtime( true );
 
+		update_option( 'oasis_total_model', $total );
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
 			upsert_model( $group_id, $model, $categories );
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
+			update_option( 'oasis_item_model', $count );
 		}
 		update_option( 'oasis_step', $nextStep );
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 
+		$time_end = microtime( true );
+		update_option( 'oasis_import_time', ( $time_end - $time_start ) );
 		up_currencies_categories();
 	}
 
@@ -121,12 +126,8 @@ Errors: ' . $errors . PHP_EOL;
 
 			set_time_limit( 0 );
 			ini_set( 'memory_limit', '2G' );
-			$stock = Oasis::getStockOasis();
 
-			foreach ( $stock as $item ) {
-				upStock( $item );
-			}
-			unset( $item );
+			upStock();
 		} catch ( \Exception $exception ) {
 			die();
 		}
