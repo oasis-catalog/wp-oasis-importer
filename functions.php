@@ -8,8 +8,11 @@ use OasisImport\Controller\Oasis\Oasis;
  * @param $model_id
  * @param $model
  * @param $categoriesOasis
+ * @param $factor
+ * @param $increase
+ * @param $dealer
  */
-function upsert_model( $model_id, $model, $categoriesOasis ) {
+function upsert_model( $model_id, $model, $categoriesOasis, $factor, $increase, $dealer ) {
 	global $wpdb;
 
 	$dbResults = $wpdb->get_results( "
@@ -56,6 +59,8 @@ WHERE model_id_oasis = '" . $model_id . "'
 	foreach ( $firstProduct->full_categories as $full_category ) {
 		$categories[] = Oasis::getCategoryId( $categoriesOasis, $full_category );
 	}
+
+	$dataPrice = Oasis::getDataPrice($factor, $increase, $dealer, $firstProduct);
 
 	if ( ! $existProduct ) {
 		$productAttributes = [];
@@ -163,9 +168,6 @@ WHERE model_id_oasis = '" . $model_id . "'
 			'meta_input'     => [
 				                    'model_id'               => $model_id,
 				                    'product_id'             => $firstProduct->id,
-				                    '_regular_price'         => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->old_price ) : str_replace( '.', ',', $firstProduct->price ),
-				                    '_price'                 => str_replace( '.', ',', $firstProduct->price ),
-				                    '_sale_price'            => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->price ) : '',
 				                    '_sale_price_dates_from' => '',
 				                    '_sale_price_dates_to'   => '',
 				                    '_sku'                   => count( $model ) > 1 ? $firstProduct->article_base : $firstProduct->article,
@@ -188,7 +190,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 				                    'total_sales'            => 0,
 				                    '_product_attributes'    => $productAttributes,
 				                    '_total_stock'           => $totalStock,
-			                    ] + $addonMeta,
+			                    ] + $addonMeta + $dataPrice,
 		];
 
 		$productId = wp_insert_post( $productParams );
@@ -205,7 +207,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	} else {
 		$productId = $existProduct->ID;
-		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $categories );
+		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories );
 	}
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
@@ -247,6 +249,8 @@ WHERE product_id_oasis = '" . $variation->id . "'
 				}
 			}
 
+			$dataPrice = Oasis::getDataPrice($factor, $increase, $dealer, $variation);
+
 			if ( ! $existVariation ) {
 				$variationParams = [
 					'ID'             => 0,
@@ -264,9 +268,6 @@ WHERE product_id_oasis = '" . $variation->id . "'
 					'meta_input'     => [
 						                    'variation_id'             => $variation->id,
 						                    'variation_parent_size_id' => $variation->parent_size_id,
-						                    '_regular_price'           => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->old_price ) : str_replace( '.', ',', $firstProduct->price ),
-						                    '_price'                   => str_replace( '.', ',', $firstProduct->price ),
-						                    '_sale_price'              => ! empty( $firstProduct->old_price ) ? str_replace( '.', ',', $firstProduct->price ) : '',
 						                    '_sale_price_dates_from'   => '',
 						                    '_sale_price_dates_to'     => '',
 						                    '_sku'                     => $variation->article,
@@ -287,7 +288,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 						                    '_stock'                   => (int) $variation->total_stock,
 						                    '_purchase_note'           => '',
 						                    'total_sales'              => 0,
-					                    ] + $attributeMeta,
+					                    ] + $attributeMeta + $dataPrice,
 				];
 
 				$dbResults = $wpdb->get_results( "
@@ -322,7 +323,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			} else {
-				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, false, true );
+				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, $dataPrice, false, true );
 			}
 
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;

@@ -12,6 +12,46 @@ class Oasis {
 	}
 
 	/**
+	 * Calculation price
+	 *
+	 * @param $factor
+	 * @param $increase
+	 * @param $dealer
+	 * @param $product
+	 *
+	 * @return array
+	 */
+	public static function getDataPrice( $factor, $increase, $dealer, $product ): array {
+		if ( ! empty( $factor ) || ! empty( $increase ) || ! empty( $dealer ) ) {
+			$price = ! empty( $dealer ) ? $product->discount_price : $product->price;
+
+			if ( ! empty( $factor ) ) {
+				$price = $price * (float) $factor;
+			}
+
+			if ( ! empty( $increase ) ) {
+				$price = $price + (float) $increase;
+			}
+
+			$data['_price']         = str_replace( '.', ',', $price );
+			$data['_regular_price'] = str_replace( '.', ',', $price );
+			$data['_sale_price']    = '';
+		} else {
+			$data['_price'] = str_replace( '.', ',', $product->price );
+
+			if ( ! empty( $product->old_price ) && $product->price < $product->old_price ) {
+				$data['_regular_price'] = str_replace( '.', ',', $product->old_price );
+				$data['_sale_price']    = str_replace( '.', ',', $product->price );
+			} else {
+				$data['_regular_price'] = str_replace( '.', ',', $product->price );
+				$data['_sale_price']    = '';
+			}
+		}
+
+		return $data;
+	}
+
+	/**
 	 * Get stat products
 	 *
 	 * @return array|mixed
@@ -62,10 +102,11 @@ class Oasis {
 	 * @param $productId
 	 * @param $oasisProduct
 	 * @param $totalStock
+	 * @param $dataPrice
 	 * @param false $categories
 	 * @param bool $variation
 	 */
-	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $categories = false, $variation = false ) {
+	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false ) {
 		if ( $productId ) {
 			global $wpdb;
 
@@ -78,20 +119,19 @@ class Oasis {
 			if ( $variation === false ) {
 				$data['post_content'] = $oasisProduct->description;
 				wp_set_object_terms( $productId, $categories, 'product_cat' );
-				update_post_meta($productId, '_total_stock', $totalStock);
+				update_post_meta( $productId, '_total_stock', $totalStock );
 			}
 
 			$wpdb->update( $wpdb->prefix . 'posts', $data, [ 'ID' => $productId ] );
-			update_post_meta( $productId, '_price', $oasisProduct->price );
+			update_post_meta( $productId, '_price', $dataPrice['_price'] );
 
-			if ( ! empty( $oasisProduct->old_price ) && $oasisProduct->price < $oasisProduct->old_price ) {
-				update_post_meta( $productId, '_regular_price', $oasisProduct->old_price );
-				update_post_meta( $productId, '_sale_price', $oasisProduct->price );
+			if ( ! empty( $dataPrice['_sale_price'] ) || ! empty( $oasisProduct->old_price ) ) {
 				$wcProduct = wc_get_product( $productId );
-				$wcProduct->set_sale_price( $oasisProduct->price );
+				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
+				$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
 				$wcProduct->save();
 			} else {
-				update_post_meta( $productId, '_regular_price', $oasisProduct->price );
+				update_post_meta( $productId, '_regular_price', $dataPrice['_regular_price'] );
 			}
 
 			update_post_meta( $productId, '_backorders', getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
@@ -382,7 +422,7 @@ class Oasis {
 		$args      = array_merge( $args_pref, $args );
 
 		$content = file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
-		$result = json_decode($content);
+		$result  = json_decode( $content );
 
 		return $result;
 	}

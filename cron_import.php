@@ -106,7 +106,7 @@ Errors: ' . $errors . PHP_EOL;
 		update_option( 'oasis_total_model', $total );
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-			upsert_model( $group_id, $model, $categories );
+			upsert_model( $group_id, $model, $categories, $options['oasis_mi_price_factor'], $options['oasis_mi_increase'], $options['oasis_mi_dealer'] );
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 			update_option( 'oasis_item_model', $count );

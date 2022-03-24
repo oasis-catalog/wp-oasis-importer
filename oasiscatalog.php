@@ -209,6 +209,46 @@ function oasis_mi_settings_init() {
 			]
 		);
 
+		add_settings_section(
+			'oasis_mi_section_price',
+			'Настройки цен',
+			null,
+			'oasis_mi'
+		);
+
+		add_settings_field(
+			'oasis_mi_price_factor',
+			'Коэффициент цены',
+			'oasis_mi_price_cb',
+			'oasis_mi',
+			'oasis_mi_section_price',
+			[
+				'label_for' => 'oasis_mi_price_factor',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_increase',
+			'Надбавка к цене',
+			'oasis_mi_price_cb',
+			'oasis_mi',
+			'oasis_mi_section_price',
+			[
+				'label_for' => 'oasis_mi_increase',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_dealer',
+			'Использовать диллерские цены',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_price',
+			[
+				'label_for' => 'oasis_mi_dealer',
+			]
+		);
+
 		// orders
 		register_setting( 'oasis_mi_orders', 'oasis_mi_orders' );
 
@@ -308,6 +348,7 @@ function oasis_mi_price_cb( $args ) {
 	?>
 
     <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+           step="0.01"
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 120px;"/>
 	<?php
@@ -594,7 +635,7 @@ if ( is_admin() ) {
 				<?php
 				settings_fields( 'oasis_mi' );
 				do_settings_sections( 'oasis_mi' );
-				submit_button( 'Сохранить настроки' );
+				submit_button( 'Сохранить настройки' );
 				?>
             </form>
         </div>
