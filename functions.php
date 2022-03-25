@@ -343,7 +343,7 @@ function upStock() {
 	$oasisProducts = [];
 
 	foreach ( $dbResults as $dbResult ) {
-		if ( empty( $dbResult['product_id_oasis'] ) || $dbResult['type'] == 'product_variation' ) {
+		if ( empty( $oasisProducts[ $dbResult['product_id_oasis'] ] ) || $dbResult['type'] == 'product_variation' ) {
 			$oasisProducts[ $dbResult['product_id_oasis'] ] = $dbResult['post_id'];
 		}
 	}
