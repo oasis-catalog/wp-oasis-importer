@@ -62,7 +62,6 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	$dataPrice = Oasis::getDataPrice($factor, $increase, $dealer, $firstProduct);
 
-	if ( ! $existProduct ) {
 		$productAttributes = [];
 		$addonMeta         = [];
 		$existColor        = false;
@@ -118,6 +117,10 @@ WHERE model_id_oasis = '" . $model_id . "'
 				$attrValues = [];
 				foreach ( $model as $item ) {
 					$attrValues[] = trim( $item->size );
+
+					if ( $item->id == $firstProduct->id ) {
+						$addonMeta['_default_attributes'][ strtolower( urlencode( $attr ) ) ] = trim( $item->size );
+					}
 				}
 
 				$etalonSizes = [
@@ -152,6 +155,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 			}
 		}
 
+	if ( ! $existProduct ) {
 		$productParams = [
 			'ID'             => 0,
 			'post_author'    => get_current_user_id(),
@@ -207,7 +211,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	} else {
 		$productId = $existProduct->ID;
-		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories );
+		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta['_default_attributes'] );
 	}
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;

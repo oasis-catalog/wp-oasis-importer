@@ -106,7 +106,7 @@ class Oasis {
 	 * @param false $categories
 	 * @param bool $variation
 	 */
-	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false ) {
+	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false, $attributes = [] ) {
 		if ( $productId ) {
 			global $wpdb;
 
@@ -124,6 +124,10 @@ class Oasis {
 
 			$wpdb->update( $wpdb->prefix . 'posts', $data, [ 'ID' => $productId ] );
 			update_post_meta( $productId, '_price', $dataPrice['_price'] );
+
+			if ( ! empty( $attributes ) ) {
+				update_post_meta( $productId, '_default_attributes', $attributes );
+			}
 
 			if ( ! empty( $dataPrice['_sale_price'] ) || ! empty( $oasisProduct->old_price ) ) {
 				$wcProduct = wc_get_product( $productId );
