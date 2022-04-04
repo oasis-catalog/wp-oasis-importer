@@ -31,22 +31,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	}
 	unset( $dbResults );
 
-	if ( $existProduct ) {
-		$allMetas = get_post_meta( $existProduct->ID );
-		foreach ( $model as $item ) {
-			if ( $item->id == $allMetas['product_id'][0] ) {
-				$firstProduct = $item;
-				break;
-			}
-		}
-		unset( $item );
-
-		if ( ! $firstProduct ) {
-			$firstProduct = reset( $model );
-		}
-	} else {
-		$firstProduct = reset( $model );
-	}
+	$firstProduct = Oasis::getFirstProduct( $existProduct, $model );
 
 	$totalStock = 0;
 	foreach ( $model as $item ) {
@@ -60,100 +45,100 @@ WHERE model_id_oasis = '" . $model_id . "'
 		$categories[] = Oasis::getCategoryId( $categoriesOasis, $full_category );
 	}
 
-	$dataPrice = Oasis::getDataPrice($factor, $increase, $dealer, $firstProduct);
+	$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $firstProduct );
 
-		$productAttributes = [];
-		$addonMeta         = [];
-		$existColor        = false;
-		foreach ( $firstProduct->attributes as $key => $attribute ) {
-			if ( count( $model ) > 1 && $attribute->id == '1000000001' ) {
-				$existColor = true;
+	$productAttributes = [];
+	$addonMeta         = [];
+	$existColor        = false;
+	foreach ( $firstProduct->attributes as $key => $attribute ) {
+		if ( count( $model ) > 1 && $attribute->id == '1000000001' ) {
+			$existColor = true;
 
-				$attrName = 'Цвет';
-				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
+			$attrName = 'Цвет';
+			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
 
-				$attrValues = [];
-				foreach ( $model as $item ) {
-					foreach ( $item->attributes as $attribute ) {
-						if ( $attribute->id == '1000000001' ) {
-							$attrValues[] = trim( $attribute->value );
-							if ( $item->id == $firstProduct->id ) {
-								$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
-							}
+			$attrValues = [];
+			foreach ( $model as $item ) {
+				foreach ( $item->attributes as $attribute ) {
+					if ( $attribute->id == '1000000001' ) {
+						$attrValues[] = trim( $attribute->value );
+						if ( $item->id == $firstProduct->id ) {
+							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
 						}
 					}
 				}
-				sort( $attrValues );
-
-				$productAttributes[ $attr ] = [
-					'name'         => $attrName,
-					'value'        => implode( '|', array_unique( $attrValues ) ),
-					'position'     => ++ $key,
-					'is_visible'   => 1,
-					'is_variation' => 1,
-					'is_taxonomy'  => 0,
-				];
-
-				continue;
 			}
-
-			$attr = wc_sanitize_taxonomy_name( stripslashes( trim( $attribute->name ) ) );
+			sort( $attrValues );
 
 			$productAttributes[ $attr ] = [
-				'name'         => $attribute->name,
-				'value'        => trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
-				'position'     => ( $key + 1 ),
+				'name'         => $attrName,
+				'value'        => implode( '|', array_unique( $attrValues ) ),
+				'position'     => ++ $key,
 				'is_visible'   => 1,
-				'is_variation' => 0,
+				'is_variation' => 1,
+				'is_taxonomy'  => 0,
+			];
+
+			continue;
+		}
+
+		$attr = wc_sanitize_taxonomy_name( stripslashes( trim( $attribute->name ) ) );
+
+		$productAttributes[ $attr ] = [
+			'name'         => $attribute->name,
+			'value'        => trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
+			'position'     => ( $key + 1 ),
+			'is_visible'   => 1,
+			'is_variation' => 0,
+			'is_taxonomy'  => 0,
+		];
+	}
+
+	if ( count( $model ) > 1 ) {
+		if ( ! empty( $firstProduct->size ) ) {
+			$attrName = 'Размер';
+			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
+
+			$attrValues = [];
+			foreach ( $model as $item ) {
+				$attrValues[] = trim( $item->size );
+
+				if ( $item->id == $firstProduct->id ) {
+					$addonMeta['_default_attributes'][ strtolower( urlencode( $attr ) ) ] = trim( $item->size );
+				}
+			}
+
+			$etalonSizes = [
+				'3XS',
+				'2XS',
+				'XS',
+				'XS-S',
+				'S',
+				'M',
+				'M-L',
+				'L',
+				'XL',
+				'XL-2XL',
+				'2XL',
+				'3XL',
+				'4XL',
+				'5XL',
+			];
+
+			usort( $attrValues, function ( $key1, $key2 ) use ( $etalonSizes ) {
+				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
+			} );
+
+			$productAttributes[ $attr ] = [
+				'name'         => $attrName,
+				'value'        => implode( '|', array_unique( $attrValues ) ),
+				'position'     => ++ $key,
+				'is_visible'   => 1,
+				'is_variation' => 1,
 				'is_taxonomy'  => 0,
 			];
 		}
-
-		if ( count( $model ) > 1 ) {
-			if ( ! empty( $firstProduct->size ) ) {
-				$attrName = 'Размер';
-				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
-				$attrValues = [];
-				foreach ( $model as $item ) {
-					$attrValues[] = trim( $item->size );
-
-					if ( $item->id == $firstProduct->id ) {
-						$addonMeta['_default_attributes'][ strtolower( urlencode( $attr ) ) ] = trim( $item->size );
-					}
-				}
-
-				$etalonSizes = [
-					'3XS',
-					'2XS',
-					'XS',
-					'XS-S',
-					'S',
-					'M',
-					'M-L',
-					'L',
-					'XL',
-					'XL-2XL',
-					'2XL',
-					'3XL',
-					'4XL',
-					'5XL',
-				];
-
-				usort( $attrValues, function ( $key1, $key2 ) use ( $etalonSizes ) {
-					return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
-				} );
-
-				$productAttributes[ $attr ] = [
-					'name'         => $attrName,
-					'value'        => implode( '|', array_unique( $attrValues ) ),
-					'position'     => ++ $key,
-					'is_visible'   => 1,
-					'is_variation' => 1,
-					'is_taxonomy'  => 0,
-				];
-			}
-		}
+	}
 
 	if ( ! $existProduct ) {
 		$productParams = [
@@ -253,7 +238,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 				}
 			}
 
-			$dataPrice = Oasis::getDataPrice($factor, $increase, $dealer, $variation);
+			$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $variation );
 
 			if ( ! $existVariation ) {
 				$variationParams = [

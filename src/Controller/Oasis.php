@@ -12,6 +12,46 @@ class Oasis {
 	}
 
 	/**
+	 * Get first product
+	 *
+	 * @param $existProduct
+	 * @param $model
+	 *
+	 * @return false|mixed
+	 */
+	public static function getFirstProduct( $existProduct, $model ) {
+		if ( count( $model ) > 1 ) {
+			if ( $existProduct ) {
+				$allMetas = get_post_meta( $existProduct->ID );
+				foreach ( $model as $item ) {
+					if ( $item->id == $allMetas['product_id'][0] ) {
+						$firstProduct = $item;
+						break;
+					}
+				}
+				unset( $item );
+
+				if ( ! $firstProduct ) {
+					$firstProduct = reset( $model );
+				}
+			} else {
+				$firstProduct = reset( $model );
+			}
+
+			$status = getProductStatus( $firstProduct->rating, (int) $firstProduct->total_stock )['post_status'];
+
+			if ( $status != 'publish' ) {
+				array_shift( $model );
+				$firstProduct = self::getFirstProduct( $existProduct, $model );
+			}
+		} else {
+			$firstProduct = reset( $model );
+		}
+
+		return $firstProduct;
+	}
+
+	/**
 	 * Calculation price
 	 *
 	 * @param $factor
@@ -52,51 +92,6 @@ class Oasis {
 	}
 
 	/**
-	 * Get stat products
-	 *
-	 * @return array|mixed
-	 */
-	public static function getStatProducts() {
-		$args = [];
-
-		try {
-			$options = get_option( 'oasis_mi_options' );
-
-			$data = [
-				'not_on_order' => ! empty( $options['oasis_mi_no_vat'] ) ? (int) $options['oasis_mi_no_vat'] : false,
-				'price_from'   => ! empty( $options['oasis_mi_price_from'] ) ? (float) $options['oasis_mi_price_from'] : false,
-				'price_to'     => ! empty( $options['oasis_mi_price_to'] ) ? (float) $options['oasis_mi_price_to'] : false,
-				'rating'       => ! empty( $options['oasis_mi_rating'] ) ? (int) $options['oasis_mi_rating'] : false,
-				'moscow'       => ! empty( $options['oasis_mi_warehouse_moscow'] ) ? (int) $options['oasis_mi_warehouse_moscow'] : false,
-				'europe'       => ! empty( $options['oasis_mi_warehouse_europe'] ) ? (int) $options['oasis_mi_warehouse_europe'] : false,
-				'remote'       => ! empty( $options['oasis_mi_remote_warehouse'] ) ? (int) $options['oasis_mi_remote_warehouse'] : false,
-			];
-
-			$categories = $options['oasis_mi_categories'];
-
-			if ( ! $categories ) {
-				$categories = self::getOasisMainCategories();
-			}
-
-			$categories = implode( ',', array_keys( $categories ) );
-
-			$args = [
-				'category' => $categories,
-			];
-
-			foreach ( $data as $key => $value ) {
-				if ( $value ) {
-					$args[ $key ] = $value;
-				}
-			}
-			unset( $category, $data, $key, $value );
-		} catch ( \Exception $e ) {
-		}
-
-		return self::curlQuery( 'stat', $args );
-	}
-
-	/**
 	 * Up product
 	 *
 	 * @param $productId
@@ -105,6 +100,7 @@ class Oasis {
 	 * @param $dataPrice
 	 * @param false $categories
 	 * @param bool $variation
+	 * @param array $attributes
 	 */
 	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false, $attributes = [] ) {
 		if ( $productId ) {
@@ -112,7 +108,7 @@ class Oasis {
 
 			$data = [
 				'post_title'    => $variation ? $oasisProduct->full_name : $oasisProduct->name,
-				'post_status'   => getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, true )['post_status'],
+				'post_status'   => getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, $variation )['post_status'],
 				'post_modified' => current_time( 'mysql' ),
 			];
 
