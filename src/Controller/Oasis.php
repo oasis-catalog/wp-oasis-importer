@@ -104,61 +104,58 @@ class Oasis {
 	 */
 	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false, $attributes = [] ) {
 		if ( $productId ) {
-			global $wpdb;
-
-			$data = [
-				'post_title'    => $variation ? $oasisProduct->full_name : $oasisProduct->name,
-				'post_status'   => getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, $variation )['post_status'],
-				'post_modified' => current_time( 'mysql' ),
-			];
+			$wcProduct = wc_get_product( $productId );
 
 			if ( $variation === false ) {
-				$data['post_content'] = $oasisProduct->description;
+				$wcProduct->set_description( $oasisProduct->description );
 				wp_set_object_terms( $productId, $categories, 'product_cat' );
 				update_post_meta( $productId, '_total_stock', $totalStock );
 			}
-
-			$wpdb->update( $wpdb->prefix . 'posts', $data, [ 'ID' => $productId ] );
-			update_post_meta( $productId, '_price', $dataPrice['_price'] );
 
 			if ( ! empty( $attributes ) ) {
 				update_post_meta( $productId, '_default_attributes', $attributes );
 			}
 
-			if ( ! empty( $dataPrice['_sale_price'] ) || ! empty( $oasisProduct->old_price ) ) {
-				$wcProduct = wc_get_product( $productId );
-				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
-				$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
-				$wcProduct->save();
-			} else {
-				update_post_meta( $productId, '_regular_price', $dataPrice['_regular_price'] );
-			}
-
-			update_post_meta( $productId, '_backorders', getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
-			update_post_meta( $productId, '_stock', (int) $oasisProduct->total_stock );
+			$wcProduct->set_name( $variation ? $oasisProduct->full_name : $oasisProduct->name );
+			$wcProduct->set_status( getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, $variation )['post_status'] );
+			$wcProduct->set_price( $dataPrice['_price'] );
+			$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
+			$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
+			$wcProduct->set_stock_quantity( (int) $oasisProduct->total_stock );
+			$wcProduct->set_backorders( getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
+			$wcProduct->save();
 		}
 	}
 
 	/**
-	 * Get posts by meta_query key and value
+	 * Get unique post_name by post_title
 	 *
-	 * @param array $post_type
-	 * @param $key
-	 * @param $value
+	 * @param $name
+	 * @param $post_type
+	 * @param null $productId
+	 * @param int $count
 	 *
-	 * @return WP_Query
+	 * @return string
 	 */
-	public static function getPostsByMetaQuery( array $post_type, $key, $value ): WP_Query {
-		return new WP_Query( [
+	public static function getUniquePostName( $name, $post_type, $productId = null, $count = 0 ): string {
+		$post_name = self::transliteration( $name );
+
+		if ( ! empty( $count ) ) {
+			$post_name = $post_name . '-' . $count;
+		}
+
+		$dbPosts = get_posts( [
+			'name'        => $post_name,
 			'post_type'   => $post_type,
 			'post_status' => [ 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash', 'any' ],
-			'meta_query'  => [
-				[
-					'key'   => $key,
-					'value' => $value,
-				],
-			],
+			'exclude'     => ! empty( $productId ) ? intval( $productId ) : '',
 		] );
+
+		if ( $dbPosts ) {
+			$post_name = self::getUniquePostName( $name, $post_type, $productId, ++ $count );
+		}
+
+		return $post_name;
 	}
 
 	/**
