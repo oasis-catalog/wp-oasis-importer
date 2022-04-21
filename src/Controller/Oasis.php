@@ -62,30 +62,33 @@ class Oasis {
 	 * @return array
 	 */
 	public static function getDataPrice( $factor, $increase, $dealer, $product ): array {
-		if ( ! empty( $factor ) || ! empty( $increase ) || ! empty( $dealer ) ) {
-			$price = ! empty( $dealer ) ? $product->discount_price : $product->price;
+		$price     = ! empty( $dealer ) ? $product->discount_price : $product->price;
+		$old_price = ! empty( $product->old_price ) ? $product->old_price : null;
 
-			if ( ! empty( $factor ) ) {
-				$price = $price * (float) $factor;
+		if ( ! empty( $factor ) ) {
+			$price = $price * (float) $factor;
+
+			if ( empty( $dealer ) ) {
+				$old_price = $old_price * (float) $factor;
 			}
+		}
 
-			if ( ! empty( $increase ) ) {
-				$price = $price + (float) $increase;
+		if ( ! empty( $increase ) ) {
+			$price = $price + (float) $increase;
+
+			if ( empty( $dealer ) ) {
+				$old_price = $old_price + (float) $increase;
 			}
+		}
 
-			$data['_price']         = str_replace( '.', ',', $price );
+		$data['_price'] = str_replace( '.', ',', $price );
+
+		if ( ! empty( $old_price ) && $price < $old_price ) {
+			$data['_regular_price'] = str_replace( '.', ',', $old_price );
+			$data['_sale_price']    = str_replace( '.', ',', $price );
+		} else {
 			$data['_regular_price'] = str_replace( '.', ',', $price );
 			$data['_sale_price']    = '';
-		} else {
-			$data['_price'] = str_replace( '.', ',', $product->price );
-
-			if ( ! empty( $product->old_price ) && $product->price < $product->old_price ) {
-				$data['_regular_price'] = str_replace( '.', ',', $product->old_price );
-				$data['_sale_price']    = str_replace( '.', ',', $product->price );
-			} else {
-				$data['_regular_price'] = str_replace( '.', ',', $product->price );
-				$data['_sale_price']    = '';
-			}
 		}
 
 		return $data;
