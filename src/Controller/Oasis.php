@@ -116,7 +116,9 @@ class Oasis {
 			}
 
 			if ( ! empty( $attributes ) ) {
-				update_post_meta( $productId, '_default_attributes', $attributes );
+				foreach ($attributes as $key => $value) {
+					update_post_meta( $productId, $key, $value );
+				}
 			}
 
 			$wcProduct->set_name( $variation ? $oasisProduct->full_name : $oasisProduct->name );

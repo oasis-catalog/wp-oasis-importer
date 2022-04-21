@@ -87,7 +87,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		$productAttributes[ $attr ] = [
 			'name'         => $attribute->name,
 			'value'        => trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
-			'position'     => ( $key + 1 ),
+			'position'     => ++ $key,
 			'is_visible'   => 1,
 			'is_variation' => 0,
 			'is_taxonomy'  => 0,
@@ -140,6 +140,19 @@ WHERE model_id_oasis = '" . $model_id . "'
 		}
 	}
 
+	$addonMeta['_product_attributes'] = $productAttributes;
+
+	if ( ! empty( $firstProduct->defect ) ) {
+		$addonMeta['_product_attributes']['дефект'] = [
+			'name'         => 'Дефект',
+			'value'        => trim( $firstProduct->defect ),
+			'position'     => ++ $key,
+			'is_visible'   => 1,
+			'is_variation' => 0,
+			'is_taxonomy'  => 0,
+		];
+	}
+
 	if ( ! $existProduct ) {
 		$productParams = [
 			'ID'             => 0,
@@ -177,7 +190,6 @@ WHERE model_id_oasis = '" . $model_id . "'
 				                    '_stock'                 => (int) $firstProduct->total_stock,
 				                    '_purchase_note'         => '',
 				                    'total_sales'            => 0,
-				                    '_product_attributes'    => $productAttributes,
 				                    '_total_stock'           => $totalStock,
 			                    ] + $addonMeta + $dataPrice,
 		];
@@ -196,7 +208,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	} else {
 		$productId = $existProduct->ID;
-		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta['_default_attributes'] );
+		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta );
 	}
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
