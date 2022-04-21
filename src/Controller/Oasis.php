@@ -314,11 +314,16 @@ class Oasis {
 	/**
 	 * Get categories level 1
 	 *
+	 * @param null $categories
+	 *
 	 * @return array
 	 */
-	public static function getOasisMainCategories(): array {
-		$result     = [];
-		$categories = Oasis::getCategoriesOasis();
+	public static function getOasisMainCategories( $categories = null ): array {
+		$result = [];
+
+		if ( ! $categories ) {
+			$categories = Oasis::getCategoriesOasis();
+		}
 
 		foreach ( $categories as $category ) {
 			if ( $category->level === 1 ) {

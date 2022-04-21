@@ -95,6 +95,7 @@ Errors: ' . $errors . PHP_EOL;
 		foreach ( $products as $product ) {
 			$group_ids[ $product->group_id ][ $product->id ] = $product;
 		}
+		unset( $products );
 
 		$total      = count( array_keys( $group_ids ) );
 		$count      = 0;
@@ -108,6 +109,7 @@ Errors: ' . $errors . PHP_EOL;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 			update_option( 'oasis_item_model', $count );
 		}
+		unset( $group_ids );
 
 		if ( ! empty( $limit ) ) {
 			update_option( 'oasis_step', $nextStep );
@@ -117,7 +119,7 @@ Errors: ' . $errors . PHP_EOL;
 
 		$time_end = microtime( true );
 		update_option( 'oasis_import_time', ( $time_end - $time_start ) );
-		up_currencies_categories();
+		up_currencies_categories( false, $categories );
 	}
 
 	public function cronUpStock() {

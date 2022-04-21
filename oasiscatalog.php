@@ -684,38 +684,13 @@ if ( is_admin() ) {
 
 }
 
-function up_currencies_categories($activate = false) {
+function up_currencies_categories( $activate = false, $categories = null ) {
 	if ( $activate ) {
-		$categories = false;
-	} else {
-		$categories = Oasis::getOasisMainCategories();
-    }
-
-	if ( $categories ) {
-		$data['categories'] = $categories;
-	} else {
 		$data['categories'] = [
 			1906 => 'VIP',
 			2269 => 'Праздники',
 			2891 => 'Продукция',
 		];
-	}
-
-
-	if ( $activate ) {
-		$currencies = false;
-	} else {
-		$currencies = Oasis::getCurrenciesOasis();
-	}
-
-	if ( $currencies ) {
-		foreach ( $currencies as $currency ) {
-			$data['currencies'][] = [
-				'code' => $currency->code,
-				'name' => $currency->full_name
-			];
-		}
-	} else {
 		$data['currencies'] = [
 			[
 				'code' => 'kzt',
@@ -746,6 +721,16 @@ function up_currencies_categories($activate = false) {
 				'name' => 'Гривна',
 			]
 		];
+	} else {
+		$data['categories'] = Oasis::getOasisMainCategories( $categories );
+		$currencies         = Oasis::getCurrenciesOasis();
+
+		foreach ( $currencies as $currency ) {
+			$data['currencies'][] = [
+				'code' => $currency->code,
+				'name' => $currency->full_name
+			];
+		}
 	}
 
 	update_option( 'oasis_curr_cat', $data );
