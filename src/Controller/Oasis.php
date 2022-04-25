@@ -428,8 +428,23 @@ class Oasis {
 		];
 		$args      = array_merge( $args_pref, $args );
 
-		$content = file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
-		$result  = json_decode( $content );
+		try {
+			$content = file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ), true, stream_context_create( [
+				'http' => [
+					'ignore_errors'   => true,
+					'follow_location' => true
+				]
+			] ) );
+
+			if ( preg_match( "/401/", $http_response_header[0] ) ) {
+				throw new \Exception( "Error Unauthorized. Invalid API key!" );
+			} else {
+				$result = json_decode( $content );
+			}
+		} catch ( \Exception $e ) {
+			echo $e->getMessage();
+			die();
+		}
 
 		return $result;
 	}

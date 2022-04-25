@@ -50,7 +50,13 @@ Errors: ' . $errors . PHP_EOL;
 		define( 'API_KEY', $this->options['oasis_mi_api_key'] );
 
 		if ( CRON_KEY !== md5( API_KEY ) ) {
-			die( 'Error' );
+			die( 'Error! Invalid --key' );
+		}
+
+		$version_php = intval(PHP_MAJOR_VERSION . PHP_MINOR_VERSION);
+
+		if ( $version_php < 73 ) {
+			die( 'Error! Minimum PHP version 7.3, your PHP version ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION );
 		}
 
 		$this->doExecute();
