@@ -116,7 +116,7 @@ class Oasis {
 			}
 
 			if ( ! empty( $attributes ) ) {
-				foreach ($attributes as $key => $value) {
+				foreach ( $attributes as $key => $value ) {
 					update_post_meta( $productId, $key, $value );
 				}
 			}
@@ -290,7 +290,7 @@ class Oasis {
 			'remote_warehouse' => $this->options['oasis_mi_remote_warehouse'] ?? null,
 		];
 
-		$categories  = $this->options['oasis_mi_categories'];
+		$categories  = $this->options['oasis_mi_categories'] ?? null;
 		$categoryIds = [];
 
 		if ( ! is_null( $categories ) ) {

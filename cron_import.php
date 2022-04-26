@@ -47,13 +47,13 @@ Errors: ' . $errors . PHP_EOL;
 
 		parent::__construct();
 
-		define( 'API_KEY', $this->options['oasis_mi_api_key'] );
+		define( 'API_KEY', $this->options['oasis_mi_api_key'] ?? '' );
 
 		if ( CRON_KEY !== md5( API_KEY ) ) {
 			die( 'Error! Invalid --key' );
 		}
 
-		$version_php = intval(PHP_MAJOR_VERSION . PHP_MINOR_VERSION);
+		$version_php = intval( PHP_MAJOR_VERSION . PHP_MINOR_VERSION );
 
 		if ( $version_php < 73 ) {
 			die( 'Error! Minimum PHP version 7.3, your PHP version ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION );
@@ -80,7 +80,7 @@ Errors: ' . $errors . PHP_EOL;
 
 		$args    = [];
 		$options = get_option( 'oasis_mi_options' );
-		$limit   = (int) $options['oasis_mi_limit'];
+		$limit   = isset( $options['oasis_mi_limit'] ) ? (int) $options['oasis_mi_limit'] : null;
 		$step    = (int) get_option( 'oasis_step' );
 
 		if ( $limit > 0 ) {
@@ -110,7 +110,7 @@ Errors: ' . $errors . PHP_EOL;
 		update_option( 'oasis_total_model', $total );
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-			upsert_model( $group_id, $model, $categories, $options['oasis_mi_price_factor'], $options['oasis_mi_increase'], $options['oasis_mi_dealer'] ?? '' );
+			upsert_model( $group_id, $model, $categories, $options['oasis_mi_price_factor'] ?? '', $options['oasis_mi_increase'] ?? '', $options['oasis_mi_dealer'] ?? '' );
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 			update_option( 'oasis_item_model', $count );
