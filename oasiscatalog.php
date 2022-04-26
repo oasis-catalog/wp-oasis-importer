@@ -302,10 +302,11 @@ function oasis_mi_categories_cb( $args ) {
 	$oasis_curr_cat = get_option( 'oasis_curr_cat' );
 
 	foreach ( $oasis_curr_cat['categories'] as $key => $value ) {
+		$checked = $options[ $args['label_for'] ][ $key ] ?? false;
 		?>
 
         <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $key; ?>]"
-               type="checkbox"<?php echo checked( 1, $options[ $args['label_for'] ][ $key ], false ); ?> value="1"
+               type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
                class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>"/>
         <label for="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>" class="option"><?php echo $value; ?></label><br/>
 		<?php
@@ -336,7 +337,7 @@ function oasis_mi_currency_cb( $args ) {
 
 function oasis_mi_checbox_cb( $args ) {
 	$options = get_option( 'oasis_mi_options' );
-	$checked = $options[ $args['label_for'] ];
+	$checked = $options[ $args['label_for'] ] ?? false;
 	?>
     <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
            class="code"/>

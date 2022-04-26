@@ -281,13 +281,13 @@ class Oasis {
 		$data = [
 			'currency'         => $this->options['oasis_mi_currency'] ?? 'rub',
 			'no_vat'           => $this->options['oasis_mi_no_vat'] ?? 0,
-			'not_on_order'     => $this->options['oasis_mi_not_on_order'],
-			'price_from'       => $this->options['oasis_mi_price_from'],
-			'price_to'         => $this->options['oasis_mi_price_to'],
-			'rating'           => $this->options['oasis_mi_rating'],
-			'warehouse_moscow' => $this->options['oasis_mi_warehouse_moscow'],
-			'warehouse_europe' => $this->options['oasis_mi_warehouse_europe'],
-			'remote_warehouse' => $this->options['oasis_mi_remote_warehouse'],
+			'not_on_order'     => $this->options['oasis_mi_not_on_order'] ?? null,
+			'price_from'       => $this->options['oasis_mi_price_from'] ?? null,
+			'price_to'         => $this->options['oasis_mi_price_to'] ?? null,
+			'rating'           => $this->options['oasis_mi_rating'] ?? null,
+			'warehouse_moscow' => $this->options['oasis_mi_warehouse_moscow'] ?? null,
+			'warehouse_europe' => $this->options['oasis_mi_warehouse_europe'] ?? null,
+			'remote_warehouse' => $this->options['oasis_mi_remote_warehouse'] ?? null,
 		];
 
 		$categories  = $this->options['oasis_mi_categories'];

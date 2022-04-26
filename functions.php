@@ -51,7 +51,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	$addonMeta         = [];
 	$existColor        = false;
 	foreach ( $firstProduct->attributes as $key => $attribute ) {
-		if ( count( $model ) > 1 && $attribute->id == '1000000001' ) {
+		if ( count( $model ) > 1 && isset($attribute->id) && $attribute->id == '1000000001' ) {
 			$existColor = true;
 
 			$attrName = 'Цвет';
@@ -60,7 +60,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 			$attrValues = [];
 			foreach ( $model as $item ) {
 				foreach ( $item->attributes as $attribute ) {
-					if ( $attribute->id == '1000000001' ) {
+					if ( isset($attribute->id) && $attribute->id == '1000000001' ) {
 						$attrValues[] = trim( $attribute->value );
 						if ( $item->id == $firstProduct->id ) {
 							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
@@ -244,7 +244,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
 
 				foreach ( $variation->attributes as $attribute ) {
-					if ( $attribute->id == '1000000001' ) {
+					if ( isset($attribute->id) && $attribute->id == '1000000001' ) {
 						$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $attribute->value );
 					}
 				}
