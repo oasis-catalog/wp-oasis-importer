@@ -81,13 +81,13 @@ class Oasis {
 			}
 		}
 
-		$data['_price'] = str_replace( '.', ',', $price );
+		$data['_price'] = $price;
 
 		if ( ! empty( $old_price ) && $price < $old_price ) {
-			$data['_regular_price'] = str_replace( '.', ',', $old_price );
-			$data['_sale_price']    = str_replace( '.', ',', $price );
+			$data['_regular_price'] = $old_price;
+			$data['_sale_price']    = $price;
 		} else {
-			$data['_regular_price'] = str_replace( '.', ',', $price );
+			$data['_regular_price'] = $price;
 			$data['_sale_price']    = '';
 		}
 
@@ -436,8 +436,8 @@ class Oasis {
 				]
 			] ) );
 
-			if ( preg_match( "/401/", $http_response_header[0] ) ) {
-				throw new \Exception( "Error Unauthorized. Invalid API key!" );
+			if ( preg_match( '/401/', $http_response_header[0] ) ) {
+				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
 			} else {
 				$result = json_decode( $content );
 			}
