@@ -63,10 +63,28 @@ Errors: ' . $errors . PHP_EOL;
 	}
 
 	public function doExecute() {
-		if ( $this->cronUp ) {
-			$this->cronUpStock();
-		} else {
-			$this->cronUpProduct();
+		try {
+			$upload_dir = wp_upload_dir();
+			$dir_lock = $upload_dir['basedir'] . '/oasis_lock';
+
+			if ( ! wp_mkdir_p( $dir_lock ) ){
+				throw new \Exception( 'Failed to create directory ' . $dir_lock );
+			}
+
+			$lock = fopen( $dir_lock . '/lock_start.lock', 'w' );
+			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
+				throw new \Exception( 'Already running' );
+			}
+
+			if ( $this->cronUp ) {
+				$this->cronUpStock();
+			} else {
+				$this->cronUpProduct();
+			}
+
+		} catch (\Exception $e) {
+			echo $e->getMessage() . PHP_EOL;
+			exit();
 		}
 	}
 
