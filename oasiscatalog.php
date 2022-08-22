@@ -48,7 +48,7 @@ function oasis_mi_settings_init() {
 		wp_die( 'Вы используете старую версию PHP ' . phpversion() . '. Попросите администратора сервера её обновить до 7.3 или выше! <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
 
-	register_setting( 'oasis_mi', 'oasis_mi_options' );
+	register_setting( 'oasis_mi', 'oasis_mi_options', 'sanitize_data' );
 
 	add_settings_section(
 		'oasis_mi_section_developers',
@@ -429,6 +429,16 @@ function oasis_mi_get_orders() {
             <td colspan="5">Заказы не найдены</td>
         </tr>';
 	}
+}
+
+function sanitize_data( $options ) {
+	foreach ( $options as $name => & $val ) {
+		if ( $name === 'oasis_mi_api_key' || $name === 'oasis_mi_api_user_id' ) {
+			$val = trim( $val );
+		}
+	}
+
+	return $options;
 }
 
 /**
