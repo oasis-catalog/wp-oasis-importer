@@ -8,7 +8,7 @@ use OasisImport\Controller\Oasis\Oasis;
 
 class OasisCron extends Oasis {
 
-	private $cronUp = false;
+	private bool $cronUp = false;
 
 	public function __construct() {
 		$params = [
@@ -65,15 +65,15 @@ Errors: ' . $errors . PHP_EOL;
 	public function doExecute() {
 		try {
 			$upload_dir = wp_upload_dir();
-			$dir_lock = $upload_dir['basedir'] . '/oasis_lock';
+			$dir_lock   = $upload_dir['basedir'] . '/oasis_lock';
 
-			if ( ! wp_mkdir_p( $dir_lock ) ){
-				throw new \Exception( 'Failed to create directory ' . $dir_lock );
+			if ( ! wp_mkdir_p( $dir_lock ) ) {
+				throw new Exception( 'Failed to create directory ' . $dir_lock );
 			}
 
 			$lock = fopen( $dir_lock . '/lock_start.lock', 'w' );
 			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
-				throw new \Exception( 'Already running' );
+				throw new Exception( 'Already running' );
 			}
 
 			if ( $this->cronUp ) {
@@ -82,7 +82,7 @@ Errors: ' . $errors . PHP_EOL;
 				$this->cronUpProduct();
 			}
 
-		} catch (\Exception $e) {
+		} catch ( Exception $e ) {
 			echo $e->getMessage() . PHP_EOL;
 			exit();
 		}
@@ -108,12 +108,26 @@ Errors: ' . $errors . PHP_EOL;
 
 		$products   = $this->getOasisProducts( $args );
 		$categories = Oasis::getCategoriesOasis();
+		$stats      = $this->getStatProducts();
+
+		$progressBar              = get_option( 'oasis_progress' );
+		$progressBar['total']     = $stats->products;
+		$progressBar['step_item'] = 0;
+
+		if ( $limit > 0 && ! empty( $products ) ) {
+			$progressBar['step_total'] = count( $products );
+		} else {
+			$progressBar['step_total'] = 0;
+			$progressBar['item']       = 0;
+		}
 
 		if ( $products ) {
 			$nextStep = ++ $step;
 		} else {
 			$nextStep = 0;
 		}
+
+		update_option( 'oasis_progress', $progressBar );
 
 		$group_ids = [];
 		foreach ( $products as $product ) {
@@ -141,6 +155,11 @@ Errors: ' . $errors . PHP_EOL;
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
 
+		if ( empty( $limit ) ) {
+			$progressBar['item'] = $stats->products;
+			update_option( 'oasis_progress', $progressBar );
+		}
+
 		$time_end = microtime( true );
 		update_option( 'oasis_import_time', ( $time_end - $time_start ) );
 		up_currencies_categories( false, $categories );
@@ -154,7 +173,7 @@ Errors: ' . $errors . PHP_EOL;
 			ini_set( 'memory_limit', '2G' );
 
 			upStock();
-		} catch ( \Exception $exception ) {
+		} catch ( Exception $exception ) {
 			die();
 		}
 	}

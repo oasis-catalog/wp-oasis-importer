@@ -1,0 +1,91 @@
+.progress-notice {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-left-width: 4px;
+    box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
+    margin: 5px 15px 2px;
+    padding: 1px 12px;
+    border-left-color: #2e78ff;
+}
+
+.progress-row {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: start;
+}
+
+.progress-label {
+    width: 30%;
+    min-width: 300px;
+}
+
+.progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    height: 100%;
+    min-width: 100px;
+}
+
+.progress-bar {
+    height: 1.1rem;
+    width: 100rem;
+    border-radius: 0.2rem;
+    background: #f0f0f1;
+    color: #fff;
+}
+
+.progress-bar .progress {
+    height: 100%;
+    border-radius: 0.2rem;
+    background: #228b09;
+    transition: width 0.4s ease;
+    text-align: center;
+}
+
+/*
+Orders
+ */
+.widefat td, .widefat th {
+    padding: 8px 10px;
+}
+
+table.oasis-orders th.export {
+    width: 400px;
+}
+
+.oasis-order__wrap {
+    padding: 0 10px 0 0;
+    display: inline-block;
+}
+
+.oasis-order {
+    border-radius: 3px;
+    padding: 4px;
+}
+
+.oasis-order .dashicons {
+    margin-right: 3px;
+}
+
+.oasis-order__success {
+    border: solid 1px #d6e9c6;
+    color: #3c763d;
+    background-color: #dff0d8;
+}
+
+.oasis-order__warning {
+    border: solid 1px #faebcc;
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+}
+
+.oasis-order__danger {
+    border: solid 1px #ebccd1;
+    color: #a94442;
+    background-color: #f2dede;
+}
+

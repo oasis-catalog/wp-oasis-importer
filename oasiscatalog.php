@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://forum.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce
-Version: 1.5
+Version: 1.8
 Author: Oasiscatalog Team
 Author URI: https://forum.oasiscatalog.com
 License: GPL2
@@ -33,7 +33,7 @@ function oasis_mi_activate() {
 	}
 	create_table();
 	update_option( 'oasis_step', 0 );
-	up_currencies_categories(true);
+	up_currencies_categories( true );
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -442,7 +442,7 @@ add_action( 'admin_init', 'oasis_mi_settings_init' );
 if ( is_admin() ) {
 
 	function oasis_mi_menu() {
-		add_submenu_page(
+		$page = add_submenu_page(
 			'tools.php',
 			'Импорт Oasis',
 			'Импорт Oasis',
@@ -450,6 +450,12 @@ if ( is_admin() ) {
 			'oasiscatalog_mi',
 			'oasis_mi_page_html'
 		);
+
+		add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
+	}
+
+	function oasis_mi_admin_styles() {
+		wp_enqueue_style( 'oasis-stylesheet', plugins_url( 'assets/css/stylesheet.css', __FILE__ ) );
 	}
 
 	add_action( 'admin_menu', 'oasis_mi_menu' );
@@ -458,7 +464,7 @@ if ( is_admin() ) {
 		$options = get_option( 'oasis_mi_options' );
 
 		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) ) {
-			add_submenu_page(
+			$page = add_submenu_page(
 				'tools.php',
 				'Заказы Oasis',
 				'Заказы Oasis',
@@ -467,6 +473,8 @@ if ( is_admin() ) {
 				'oasis_mi_orders_html'
 			);
 		}
+
+		add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
 	}
 
 	add_action( 'admin_menu', 'oasis_mi_menu_orders' );
@@ -482,47 +490,6 @@ if ( is_admin() ) {
 		settings_errors( 'oasis_mi_messages' );
 		?>
 
-        <style type="text/css">
-            .widefat td, .widefat th {
-                padding: 8px 10px;
-            }
-
-            table.oasis-orders th.export {
-                width: 400px;
-            }
-
-            .oasis-order__wrap {
-                padding: 0 10px 0 0;
-                display: inline-block;
-            }
-
-            .oasis-order {
-                border-radius: 3px;
-                padding: 4px;
-            }
-
-            .oasis-order .dashicons {
-                margin-right: 3px;
-            }
-
-            .oasis-order__success {
-                border: solid 1px #d6e9c6;
-                color: #3c763d;
-                background-color: #dff0d8;
-            }
-
-            .oasis-order__warning {
-                border: solid 1px #faebcc;
-                color: #8a6d3b;
-                background-color: #fcf8e3;
-            }
-
-            .oasis-order__danger {
-                border: solid 1px #ebccd1;
-                color: #a94442;
-                background-color: #f2dede;
-            }
-        </style>
         <div class="wrap">
             <h1><?= esc_html( 'Экспорт заказов в oasiscatalog' ); ?></h1>
             <p>Экспортировать заказы возможно только со статусами: <b>«В ожидании оплаты», «Обработка», «На удержании», «Выполнен»</b></p>
@@ -613,14 +580,58 @@ if ( is_admin() ) {
 
 		settings_errors( 'oasis_mi_messages' );
 
-		$options = get_option( 'oasis_mi_options' );
+		$options     = get_option( 'oasis_mi_options' );
+		$progressBar = get_option( 'oasis_progress' );
+		$limit       = isset( $options['oasis_mi_limit'] ) ? (int) $options['oasis_mi_limit'] : null;
 		?>
         <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 
         <div class="wrap">
             <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
-			<?php if ( ! empty( $options['oasis_mi_api_key'] ) ) { ?>
+			<?php
+			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
+				if ( ! empty( $progressBar['item'] ) || ! empty( $progressBar['total'] ) ) {
+					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100 );
+				} else {
+					$percentTotal = 0;
+				}
+
+				if ( ! empty( $progressBar['step_item'] ) || ! empty( $progressBar['step_total'] ) ) {
+					$percentStep = round( ( $progressBar['step_item'] / $progressBar['step_total'] ) * 100 );
+				} else {
+					$percentStep = 0;
+				}
+				?>
+
+                <div class="progress-notice">
+                    <div class="progress-row">
+                        <div class="progress-label">
+                            <h3>Общий статус обработки</h3>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress total" style="width: <?php echo $percentTotal; ?>%;"><?php echo $percentTotal; ?>%</div>
+                            </div>
+                        </div>
+                    </div>
+					<?php if ( $limit > 0 ) {
+						$stepTotal = ! empty( $progressBar['total'] ) ? ceil( intval( $progressBar['total'] ) / intval( $limit ) ) : 0;
+						$step      = intval( get_option( 'oasis_step' ) );
+						?>
+                        <div class="progress-row">
+                            <div class="progress-label">
+                                <h3>Выполняется <?php echo ++ $step; ?> шаг из <?php echo $stepTotal; ?>. Статус текущего шага</h3>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress step" style="width: <?php echo $percentStep; ?>%;"><?php echo $percentStep; ?>%</div>
+                                </div>
+                            </div>
+                        </div>
+					<?php } ?>
+                </div>
+
                 <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
                     <strong>Не разглашайте эти данные!</strong></p>
                 <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
@@ -753,5 +764,5 @@ function create_table() {
 	)
 	{$charset_collate};";
 
-	dbDelta($sql);
+	dbDelta( $sql );
 }

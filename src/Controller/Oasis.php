@@ -279,26 +279,22 @@ class Oasis {
 		];
 
 		$data = [
-			'currency'         => $this->options['oasis_mi_currency'] ?? 'rub',
-			'no_vat'           => $this->options['oasis_mi_no_vat'] ?? 0,
-			'not_on_order'     => $this->options['oasis_mi_not_on_order'] ?? null,
-			'price_from'       => $this->options['oasis_mi_price_from'] ?? null,
-			'price_to'         => $this->options['oasis_mi_price_to'] ?? null,
-			'rating'           => $this->options['oasis_mi_rating'] ?? null,
-			'warehouse_moscow' => $this->options['oasis_mi_warehouse_moscow'] ?? null,
-			'warehouse_europe' => $this->options['oasis_mi_warehouse_europe'] ?? null,
-			'remote_warehouse' => $this->options['oasis_mi_remote_warehouse'] ?? null,
+			'currency'     => $this->options['oasis_mi_currency'] ?? 'rub',
+			'no_vat'       => $this->options['oasis_mi_no_vat'] ?? 0,
+			'not_on_order' => $this->options['oasis_mi_not_on_order'] ?? null,
+			'price_from'   => $this->options['oasis_mi_price_from'] ?? null,
+			'price_to'     => $this->options['oasis_mi_price_to'] ?? null,
+			'rating'       => $this->options['oasis_mi_rating'] ?? null,
+			'moscow'       => $this->options['oasis_mi_warehouse_moscow'] ?? null,
+			'europe'       => $this->options['oasis_mi_warehouse_europe'] ?? null,
+			'remote'       => $this->options['oasis_mi_remote_warehouse'] ?? null,
 		];
 
-		$categories  = $this->options['oasis_mi_categories'] ?? null;
-		$categoryIds = [];
-
-		if ( ! is_null( $categories ) ) {
-			$categoryIds = array_keys( $categories );
-		}
-
-		if ( ! count( $categoryIds ) ) {
+		if ( empty( $this->options['oasis_mi_categories'] ) ) {
 			$categoryIds = array_keys( Oasis::getOasisMainCategories() );
+			sleep( 1 );
+		} else {
+			$categoryIds = array_keys( $this->options['oasis_mi_categories'] );
 		}
 
 		$args += [
@@ -314,6 +310,52 @@ class Oasis {
 		}
 
 		return Oasis::curlQuery( 'products', $args );
+	}
+
+	/**
+	 * Get Stat Products
+	 *
+	 * @return array|mixed
+	 */
+	public function getStatProducts() {
+		$args = [];
+
+		$data = [
+			'not_on_order' => $this->options['oasis_mi_not_on_order'] ?? null,
+			'price_from'   => $this->options['oasis_mi_price_from'] ?? null,
+			'price_to'     => $this->options['oasis_mi_price_to'] ?? null,
+			'rating'       => ! empty( $this->options['oasis_mi_rating'] ) ? $this->options['oasis_mi_rating'] : '0,1,2,3,4,5',
+			'moscow'       => $this->options['oasis_mi_warehouse_moscow'] ?? null,
+			'europe'       => $this->options['oasis_mi_warehouse_europe'] ?? null,
+			'remote'       => $this->options['oasis_mi_remote_warehouse'] ?? null,
+		];
+
+		if ( empty( $this->options['oasis_mi_categories'] ) ) {
+			$data['category'] = implode( ',', array_keys( Oasis::getOasisMainCategories() ) );
+			sleep( 1 );
+		} else {
+			$data['category'] = implode( ',', array_keys( $this->options['oasis_mi_categories'] ) );
+		}
+
+		foreach ( $data as $key => $value ) {
+			if ( $value ) {
+				$args[ $key ] = $value;
+			}
+		}
+
+		return Oasis::curlQuery( 'stat', $args );
+	}
+
+	public static function upProgressBar( $progressBar ) {
+		$progressBar['item'] ++;
+
+		if ( ! empty( $progressBar['step_total'] ) ) {
+			$progressBar['step_item'] ++;
+		}
+
+		update_option( 'oasis_progress', $progressBar );
+
+		return $progressBar;
 	}
 
 	/**

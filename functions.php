@@ -211,7 +211,9 @@ WHERE model_id_oasis = '" . $model_id . "'
 		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta );
 	}
 
-	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар арт. ' . $firstProduct->article . PHP_EOL;
+	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->v . PHP_EOL;
+
+	$progressBar = get_option( 'oasis_progress' );
 
 	if ( count( $model ) > 1 ) {
 		foreach ( $model as $variation ) {
@@ -327,8 +329,11 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, $dataPrice, false, true );
 			}
 
-			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант арт. ' . $variation->article . PHP_EOL;
+			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант id ' . $variation->id . PHP_EOL;
+			$progressBar = Oasis::upProgressBar( $progressBar );
 		}
+	} else {
+		$progressBar = Oasis::upProgressBar( $progressBar );
 	}
 }
 
