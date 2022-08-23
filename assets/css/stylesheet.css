@@ -1,3 +1,6 @@
+/*
+Progress bar
+ */
 .progress-notice {
     background: #fff;
     border: 1px solid #c3c4c7;
@@ -25,7 +28,6 @@
     justify-content: center;
     width: 70%;
     margin-top: 20px;
-    margin-bottom: 20px;
     height: 100%;
     min-width: 100px;
 }

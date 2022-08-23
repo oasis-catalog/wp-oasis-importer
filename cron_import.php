@@ -157,8 +157,9 @@ Errors: ' . $errors . PHP_EOL;
 
 		if ( empty( $limit ) ) {
 			$progressBar['item'] = $stats->products;
-			update_option( 'oasis_progress', $progressBar );
 		}
+		$progressBar['date'] = current_time( 'mysql' );
+		update_option( 'oasis_progress', $progressBar );
 
 		$time_end = microtime( true );
 		update_option( 'oasis_import_time', ( $time_end - $time_start ) );
