@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://forum.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce
-Version: 1.8
+Version: 1.9
 Author: Oasiscatalog Team
 Author URI: https://forum.oasiscatalog.com
 License: GPL2
@@ -435,6 +435,8 @@ function sanitize_data( $options ) {
 	foreach ( $options as $name => & $val ) {
 		if ( $name === 'oasis_mi_api_key' || $name === 'oasis_mi_api_user_id' ) {
 			$val = trim( $val );
+		} elseif ( $name === 'oasis_mi_limit' && empty( $val ) ) {
+			update_option( 'oasis_step', 0 );
 		}
 	}
 
