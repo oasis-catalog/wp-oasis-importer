@@ -211,7 +211,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta );
 	}
 
-	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->v . PHP_EOL;
+	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->id . PHP_EOL;
 
 	$progressBar = get_option( 'oasis_progress' );
 
