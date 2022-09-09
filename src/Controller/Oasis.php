@@ -29,7 +29,6 @@ class Oasis {
 						break;
 					}
 				}
-				unset( $item );
 
 				if ( ! $firstProduct ) {
 					$firstProduct = reset( $model );
@@ -47,6 +46,7 @@ class Oasis {
 		} else {
 			$firstProduct = reset( $model );
 		}
+		unset( $existProduct, $model, $allMetas, $item, $status );
 
 		return $firstProduct;
 	}
@@ -90,6 +90,7 @@ class Oasis {
 			$data['_regular_price'] = $price;
 			$data['_sale_price']    = '';
 		}
+		unset( $factor, $increase, $dealer, $product, $price, $old_price );
 
 		return $data;
 	}
@@ -129,6 +130,7 @@ class Oasis {
 			$wcProduct->set_stock_quantity( (int) $oasisProduct->total_stock );
 			$wcProduct->set_backorders( getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
 			$wcProduct->save();
+			unset( $productId, $oasisProduct, $totalStock, $dataPrice, $categories, $variation, $attributes, $key, $value, $wcProduct );
 		}
 	}
 
@@ -159,6 +161,7 @@ class Oasis {
 		if ( $dbPosts ) {
 			$post_name = self::getUniquePostName( $name, $post_type, $productId, ++ $count );
 		}
+		unset( $name, $post_type, $productId, $count, $dbPosts );
 
 		return $post_name;
 	}
@@ -192,6 +195,7 @@ class Oasis {
 		} else {
 			$result = (int) $terms->term_id;
 		}
+		unset( $categories, $categoryId, $terms, $category, $parentTermsId, $parentTerms );
 
 		return $result;
 	}
@@ -217,6 +221,7 @@ class Oasis {
 
 		$result = wp_insert_category( $data );
 		update_term_meta( $result, 'oasis_cat_id', $category->id );
+		unset( $category, $parentTermsId, $data );
 
 		return $result;
 	}
@@ -241,6 +246,7 @@ class Oasis {
 		];
 
 		$terms = get_terms( $args );
+		unset( $categoryId, $args );
 
 		return $terms ? reset( $terms ) : [];
 	}
@@ -257,6 +263,7 @@ class Oasis {
 		$neededObject = array_filter( $data, function ( $e ) use ( $id ) {
 			return $e->id == $id;
 		} );
+		unset( $data, $id );
 
 		if ( ! $neededObject ) {
 			return false;
@@ -292,7 +299,6 @@ class Oasis {
 
 		if ( empty( $this->options['oasis_mi_categories'] ) ) {
 			$categoryIds = array_keys( Oasis::getOasisMainCategories() );
-			sleep( 1 );
 		} else {
 			$categoryIds = array_keys( $this->options['oasis_mi_categories'] );
 		}
@@ -301,13 +307,12 @@ class Oasis {
 			'category' => implode( ',', $categoryIds ),
 		];
 
-		unset( $categoryIds, $category );
-
 		foreach ( $data as $key => $value ) {
 			if ( $value ) {
 				$args[ $key ] = $value;
 			}
 		}
+		unset( $categoryIds, $category, $data, $key, $value );
 
 		return Oasis::curlQuery( 'products', $args );
 	}
@@ -332,7 +337,6 @@ class Oasis {
 
 		if ( empty( $this->options['oasis_mi_categories'] ) ) {
 			$data['category'] = implode( ',', array_keys( Oasis::getOasisMainCategories() ) );
-			sleep( 1 );
 		} else {
 			$data['category'] = implode( ',', array_keys( $this->options['oasis_mi_categories'] ) );
 		}
@@ -342,10 +346,18 @@ class Oasis {
 				$args[ $key ] = $value;
 			}
 		}
+		unset( $data, $key, $value );
 
 		return Oasis::curlQuery( 'stat', $args );
 	}
 
+	/**
+	 * Update progress bar
+	 *
+	 * @param $progressBar
+	 *
+	 * @return mixed
+	 */
 	public static function upProgressBar( $progressBar ) {
 		$progressBar['item'] ++;
 
@@ -377,6 +389,7 @@ class Oasis {
 				$result[ $category->id ] = $category->name;
 			}
 		}
+		unset( $categories, $category );
 
 		return $result;
 	}
@@ -434,6 +447,7 @@ class Oasis {
 
 		} catch ( \Exception $exception ) {
 		}
+		unset( $options, $data, $apiKey );
 
 		return $result;
 	}
@@ -471,20 +485,30 @@ class Oasis {
 		$args      = array_merge( $args_pref, $args );
 
 		try {
-			$content = file_get_contents( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ), true, stream_context_create( [
-				'http' => [
-					'ignore_errors'   => true,
-					'follow_location' => true
-				]
-			] ) );
+			$ch = curl_init();
+			curl_setopt( $ch, CURLOPT_URL, 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
+			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+			$content = curl_exec( $ch );
 
-			if ( preg_match( '/401/', $http_response_header[0] ) ) {
-				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
+			if ( $content === false ) {
+				throw new \Exception( 'Error: ' . curl_error( $ch ) );
 			} else {
 				$result = json_decode( $content );
 			}
+
+			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			curl_close( $ch );
+			sleep( 1 );
+
+			if ( $http_code === 401 ) {
+				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
+			} elseif ( $http_code != 200 ) {
+				throw new \Exception( 'Error. Code: ' . $http_code );
+			}
+
+			unset( $content, $options, $args_pref, $args, $type, $ch, $http_code );
 		} catch ( \Exception $e ) {
-			echo $e->getMessage();
+			echo $e->getMessage() . PHP_EOL;
 			die();
 		}
 
@@ -590,6 +614,7 @@ class Oasis {
 		preg_match_all( $pattern, $string, $result );
 		$string = implode( '', $result[0] );
 		$string = preg_replace( '/[\s]+/us', ' ', $string );
+		unset( $result, $pattern );
 
 		return strtolower( strtr( $string, $arr_trans ) );
 	}

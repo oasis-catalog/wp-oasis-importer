@@ -44,6 +44,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	foreach ( $firstProduct->full_categories as $full_category ) {
 		$categories[] = Oasis::getCategoryId( $categoriesOasis, $full_category );
 	}
+	unset($full_category);
 
 	$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $firstProduct );
 
@@ -51,7 +52,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	$addonMeta         = [];
 	$existColor        = false;
 	foreach ( $firstProduct->attributes as $key => $attribute ) {
-		if ( count( $model ) > 1 && isset($attribute->id) && $attribute->id == '1000000001' ) {
+		if ( count( $model ) > 1 && isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 			$existColor = true;
 
 			$attrName = 'Цвет';
@@ -60,7 +61,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 			$attrValues = [];
 			foreach ( $model as $item ) {
 				foreach ( $item->attributes as $attribute ) {
-					if ( isset($attribute->id) && $attribute->id == '1000000001' ) {
+					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 						$attrValues[] = trim( $attribute->value );
 						if ( $item->id == $firstProduct->id ) {
 							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
@@ -141,6 +142,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	}
 
 	$addonMeta['_product_attributes'] = $productAttributes;
+	unset($productAttributes);
 
 	if ( ! empty( $firstProduct->defect ) ) {
 		$addonMeta['_product_attributes']['дефект'] = [
@@ -246,13 +248,14 @@ WHERE product_id_oasis = '" . $variation->id . "'
 				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
 
 				foreach ( $variation->attributes as $attribute ) {
-					if ( isset($attribute->id) && $attribute->id == '1000000001' ) {
+					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 						$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $attribute->value );
 					}
 				}
+				unset( $attribute, $attr );
 			}
 
-			$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $variation );
+			$dataPriceVariation = Oasis::getDataPrice( $factor, $increase, $dealer, $variation );
 
 			if ( ! $existVariation ) {
 				$variationParams = [
@@ -291,8 +294,9 @@ WHERE product_id_oasis = '" . $variation->id . "'
 						                    '_stock'                   => (int) $variation->total_stock,
 						                    '_purchase_note'           => '',
 						                    'total_sales'              => 0,
-					                    ] + $attributeMeta + $dataPrice,
+					                    ] + $attributeMeta + $dataPriceVariation,
 				];
+				unset( $attributeMeta );
 
 				$dbResults = $wpdb->get_results( "
 SELECT * FROM {$wpdb->prefix}oasis_products 
@@ -312,9 +316,9 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 						$parentId = $dataPost->ID;
 					}
 				}
-				unset( $dbResults );
 
 				$variationId = wp_insert_post( $variationParams );
+				unset( $dbResults, $dataPost, $variationParams );
 
 				$wpdb->insert( $wpdb->prefix . 'oasis_products', [
 					'post_id'                  => $variationId,
@@ -326,15 +330,17 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			} else {
-				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, $dataPrice, false, true );
+				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, $dataPriceVariation, false, true );
 			}
 
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант id ' . $variation->id . PHP_EOL;
 			$progressBar = Oasis::upProgressBar( $progressBar );
+			unset( $variation, $existVariation, $dataPriceVariation, $variationId, $parentId );
 		}
 	} else {
-		$progressBar = Oasis::upProgressBar( $progressBar );
+		Oasis::upProgressBar( $progressBar );
 	}
+	unset( $model_id, $model, $categoriesOasis, $categories, $factor, $increase, $dealer, $progressBar, $totalStock, $productId, $addonMeta, $firstProduct );
 }
 
 /**
