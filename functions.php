@@ -44,7 +44,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	foreach ( $firstProduct->full_categories as $full_category ) {
 		$categories[] = Oasis::getCategoryId( $categoriesOasis, $full_category );
 	}
-	unset($full_category);
+	unset( $full_category );
 
 	$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $firstProduct );
 
@@ -64,7 +64,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 						$attrValues[] = trim( $attribute->value );
 						if ( $item->id == $firstProduct->id ) {
-							$addonMeta['_default_attributes'] = [ strtolower( urlencode( $attr ) ) => trim( $attribute->value ) ];
+							$addonMeta['_default_attributes'] = [ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) => sanitize_title( trim( $attribute->value ) ) ];
 						}
 					}
 				}
@@ -105,7 +105,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 				$attrValues[] = trim( $item->size );
 
 				if ( $item->id == $firstProduct->id ) {
-					$addonMeta['_default_attributes'][ strtolower( urlencode( $attr ) ) ] = trim( $item->size );
+					$addonMeta['_default_attributes'] = [ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) => sanitize_title( trim( $item->size ) ) ];
 				}
 			}
 
@@ -142,18 +142,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 	}
 
 	$addonMeta['_product_attributes'] = $productAttributes;
-	unset($productAttributes);
-
-	if ( ! empty( $firstProduct->defect ) ) {
-		$addonMeta['_product_attributes']['дефект'] = [
-			'name'         => 'Дефект',
-			'value'        => trim( $firstProduct->defect ),
-			'position'     => ++ $key,
-			'is_visible'   => 1,
-			'is_variation' => 0,
-			'is_taxonomy'  => 0,
-		];
-	}
+	unset( $productAttributes );
 
 	if ( ! $existProduct ) {
 		$productParams = [
@@ -167,7 +156,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 			'comment_status' => 'closed',
 			'ping_status'    => 'closed',
 			'post_type'      => 'product',
-			'post_content'   => $firstProduct->description,
+			'post_content'   => $firstProduct->description . ( ! empty( $firstProduct->defect ) ? '<p>' . trim( $firstProduct->defect ) . '</p>' : '' ),
 			'post_excerpt'   => '',
 			'meta_input'     => [
 				                    'model_id'               => $model_id,
@@ -193,7 +182,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 				                    '_purchase_note'         => '',
 				                    'total_sales'            => 0,
 				                    '_total_stock'           => $totalStock,
-			                    ] + $addonMeta + $dataPrice,
+			                    ] + $dataPrice,
 		];
 
 		$productId = wp_insert_post( $productParams );
@@ -210,8 +199,9 @@ WHERE model_id_oasis = '" . $model_id . "'
 		upsert_photo( $firstProduct->images, $productId, $productId );
 	} else {
 		$productId = $existProduct->ID;
-		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories, false, $addonMeta );
+		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories );
 	}
+	Oasis::wcProductAttributes( $productId, $addonMeta, count( $model ) > 1 );
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->id . PHP_EOL;
 
@@ -240,7 +230,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 				$attrName = 'Размер';
 				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
 
-				$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $variation->size );
+				$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) ] = sanitize_title( trim( $variation->size ) );
 			}
 
 			if ( $existColor ) {
@@ -249,7 +239,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 
 				foreach ( $variation->attributes as $attribute ) {
 					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-						$attributeMeta[ 'attribute_' . strtolower( urlencode( $attr ) ) ] = trim( $attribute->value );
+						$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) ] = sanitize_title( trim( $attribute->value ) );
 					}
 				}
 				unset( $attribute, $attr );
@@ -294,9 +284,8 @@ WHERE product_id_oasis = '" . $variation->id . "'
 						                    '_stock'                   => (int) $variation->total_stock,
 						                    '_purchase_note'           => '',
 						                    'total_sales'              => 0,
-					                    ] + $attributeMeta + $dataPriceVariation,
+					                    ] + $dataPriceVariation,
 				];
-				unset( $attributeMeta );
 
 				$dbResults = $wpdb->get_results( "
 SELECT * FROM {$wpdb->prefix}oasis_products 
@@ -330,8 +319,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 				upsert_photo( [ reset( $variation->images ) ], $variationId, $productId, $parentId );
 			} else {
+				$variationId = $existVariation->ID;
 				Oasis::upWcProduct( $existVariation->ID, $variation, $totalStock, $dataPriceVariation, false, true );
 			}
+			Oasis::wcVariationAttributes( $variationId, $attributeMeta );
 
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existVariation ? 'Обновлен' : 'Добавлен' ) . ' вариант id ' . $variation->id . PHP_EOL;
 			$progressBar = Oasis::upProgressBar( $progressBar );

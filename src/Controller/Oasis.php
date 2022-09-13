@@ -104,22 +104,15 @@ class Oasis {
 	 * @param $dataPrice
 	 * @param false $categories
 	 * @param bool $variation
-	 * @param array $attributes
 	 */
-	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false, $attributes = [] ) {
+	public static function upWcProduct( $productId, $oasisProduct, $totalStock, $dataPrice, $categories = false, $variation = false ) {
 		if ( $productId ) {
 			$wcProduct = wc_get_product( $productId );
 
 			if ( $variation === false ) {
-				$wcProduct->set_description( $oasisProduct->description );
+				$wcProduct->set_description( $oasisProduct->description . ( ! empty( $oasisProduct->defect ) ? '<p>' . trim( $oasisProduct->defect ) . '</p>' : '' ) );
 				wp_set_object_terms( $productId, $categories, 'product_cat' );
 				update_post_meta( $productId, '_total_stock', $totalStock );
-			}
-
-			if ( ! empty( $attributes ) ) {
-				foreach ( $attributes as $key => $value ) {
-					update_post_meta( $productId, $key, $value );
-				}
 			}
 
 			$wcProduct->set_name( $variation ? $oasisProduct->full_name : $oasisProduct->name );
@@ -132,6 +125,145 @@ class Oasis {
 			$wcProduct->save();
 			unset( $productId, $oasisProduct, $totalStock, $dataPrice, $categories, $variation, $attributes, $key, $value, $wcProduct );
 		}
+	}
+
+	/**
+	 * Add/up attributes product
+	 *
+	 * @param $productId
+	 * @param $attributes
+	 * @param false $variation
+	 */
+	public static function wcProductAttributes( $productId, $attributes, $variation = false ) {
+		if ( $productId ) {
+			$wcProduct = wc_get_product( $productId );
+			$att_var   = [];
+			$i         = 0;
+
+			foreach ( $attributes['_product_attributes'] as $key => $value ) {
+				$attribute_data = self::createAttribute( $value['name'], explode( '|', $value['value'] ) );
+				$attribute      = new \WC_Product_Attribute();
+				$attribute->set_id( $attribute_data['attribute_id'] );
+				$attribute->set_name( $attribute_data['attribute_taxonomy'] );
+				$attribute->set_options( explode( '|', $value['value'] ) );
+				$attribute->set_position( $i );
+				$attribute->set_visible( true );
+
+				if ( ( $key == 'цвет' || $key == 'размер' ) && (bool) $variation === true ) {
+					$attribute->set_variation( true );
+				} else {
+					$attribute->set_variation( false );
+				}
+
+				$att_var[] = $attribute;
+				$i ++;
+			}
+			unset( $key, $value );
+
+			if ( ! empty( $attributes['_default_attributes'] ) ) {
+				$wcProduct->set_default_attributes( $attributes['_default_attributes'] );
+			}
+
+			$wcProduct->set_attributes( $att_var );
+			$wcProduct->save();
+			unset( $productId, $attributes, $wcProduct, $att_var, $key, $value, $i );
+		}
+	}
+
+	/**
+	 * Add/up attributes variation
+	 *
+	 * @param $variationId
+	 * @param $attributes
+	 */
+	public static function wcVariationAttributes( $variationId, $attributes ) {
+		if ( $variationId && ! empty( $attributes ) ) {
+			$wcProduct = wc_get_product( $variationId );
+			$wcProduct->set_attributes( $attributes );
+			$wcProduct->save();
+			unset( $variationId, $attributes, $wcProduct );
+		}
+	}
+
+	/**
+	 * Create attribute
+	 *
+	 * @param string $raw_name Name of attribute to create.
+	 * @param array(string) $terms Terms to create for the attribute.
+	 *
+	 * @return array
+	 */
+	public static function createAttribute( string $raw_name, array $terms ) {
+		global $wc_product_attributes;
+
+		delete_transient( 'wc_attribute_taxonomies' );
+		\WC_Cache_Helper::incr_cache_prefix( 'woocommerce-attributes' );
+
+		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
+		$attribute_name   = array_search( $raw_name, $attribute_labels, true );
+
+		if ( ! $attribute_name ) {
+			$attribute_name = wc_sanitize_taxonomy_name( $raw_name );
+		}
+
+		$attribute_name = substr( self::transliteration( $attribute_name ), 0, 27 );
+		$attribute_id   = wc_attribute_taxonomy_id_by_name( $attribute_name );
+
+		if ( ! $attribute_id ) {
+			$taxonomy_name = wc_attribute_taxonomy_name( $attribute_name );
+			unregister_taxonomy( $taxonomy_name );
+
+			$attribute_id = wc_create_attribute( [
+				'name'         => $raw_name,
+				'slug'         => $attribute_name,
+				'type'         => 'select',
+				'order_by'     => 'menu_order',
+				'has_archives' => 0,
+			] );
+
+			register_taxonomy(
+				$taxonomy_name,
+				apply_filters( 'woocommerce_taxonomy_objects_' . $taxonomy_name, [ 'product' ] ),
+				apply_filters(
+					'woocommerce_taxonomy_args_' . $taxonomy_name,
+					[
+						'labels'       => [
+							'name' => $raw_name,
+						],
+						'hierarchical' => false,
+						'show_ui'      => false,
+						'query_var'    => true,
+						'rewrite'      => false,
+					]
+				)
+			);
+
+			$wc_product_attributes = [];
+
+			foreach ( wc_get_attribute_taxonomies() as $taxonomy ) {
+				$wc_product_attributes[ wc_attribute_taxonomy_name( $taxonomy->attribute_name ) ] = $taxonomy;
+			}
+		}
+
+		$attribute = wc_get_attribute( $attribute_id );
+		$return    = [
+			'attribute_name'     => $attribute->name,
+			'attribute_taxonomy' => $attribute->slug,
+			'attribute_id'       => $attribute_id,
+			'term_ids'           => [],
+		];
+
+		foreach ( $terms as $term ) {
+			$result = term_exists( $term, $attribute->slug );
+			if ( ! $result ) {
+				$result               = wp_insert_term( $term, $attribute->slug );
+				$return['term_ids'][] = $result['term_id'];
+			} else {
+				$return['term_ids'][] = $result['term_id'];
+			}
+		}
+
+		return $return;
 	}
 
 	/**
