@@ -110,7 +110,7 @@ class Oasis {
 			$wcProduct = wc_get_product( $productId );
 
 			if ( $variation === false ) {
-				$wcProduct->set_description( $oasisProduct->description . ( ! empty( $oasisProduct->defect ) ? '<p>' . trim( $oasisProduct->defect ) . '</p>' : '' ) );
+				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
 				wp_set_object_terms( $productId, $categories, 'product_cat' );
 				update_post_meta( $productId, '_total_stock', $totalStock );
 			}
@@ -296,6 +296,27 @@ class Oasis {
 		unset( $name, $post_type, $productId, $count, $dbPosts );
 
 		return $post_name;
+	}
+
+	/**
+	 * Prepare post content
+	 *
+	 * @param $product
+	 *
+	 * @return string
+	 */
+	public static function preparePostContent( $product ): string {
+		$result = ! empty( $product->description ) ? $product->description : '';
+
+		if ( ! empty( $product->defect ) ) {
+			$result .= PHP_EOL . '<p>' . trim( $product->defect ) . '</p>';
+		}
+
+		if ( ! empty( $product->branding ) ) {
+			$result   .= PHP_EOL . '<p><b>Виды нанесения:</b> ' . implode( ', ', array_map( 'trim', explode( ',', $product->branding ) ) ) . '</p>';
+		}
+
+		return $result;
 	}
 
 	/**
