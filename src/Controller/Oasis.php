@@ -140,16 +140,17 @@ class Oasis {
 			$att_var   = [];
 			$i         = 0;
 
-			foreach ( $attributes['_product_attributes'] as $key => $value ) {
-				$attribute_data = self::createAttribute( $value['name'], explode( '|', $value['value'] ) );
+			foreach ( $attributes['attributes'] as $value ) {
+				$attribute_data = self::createAttribute( $value['name'], $value['value'] );
 				$attribute      = new \WC_Product_Attribute();
 				$attribute->set_id( $attribute_data['attribute_id'] );
 				$attribute->set_name( $attribute_data['attribute_taxonomy'] );
-				$attribute->set_options( explode( '|', $value['value'] ) );
+				$attribute->set_options( $value['value'] );
 				$attribute->set_position( $i );
 				$attribute->set_visible( true );
 
-				if ( ( $key == 'цвет' || $key == 'размер' ) && (bool) $variation === true ) {
+				$attrName = wc_sanitize_taxonomy_name( stripslashes( trim( $value['name'] ) ) );
+				if ( ( $attrName == 'цвет' || $attrName == 'размер' ) && (bool) $variation === true ) {
 					$attribute->set_variation( true );
 				} else {
 					$attribute->set_variation( false );
@@ -158,15 +159,20 @@ class Oasis {
 				$att_var[] = $attribute;
 				$i ++;
 			}
-			unset( $key, $value );
+			unset( $value, $i, $attrName );
 
-			if ( ! empty( $attributes['_default_attributes'] ) ) {
-				$wcProduct->set_default_attributes( $attributes['_default_attributes'] );
+			if ( ! empty( $attributes['default'] ) ) {
+				$defAttr = [];
+				foreach ( $attributes['default'] as $key => $value ) {
+					$defAttr[ sanitize_title( 'pa_' . Oasis::transliteration( wc_sanitize_taxonomy_name( stripslashes( $key ) ) ) ) ] = sanitize_title( trim( $value ) );
+				}
+
+				$wcProduct->set_default_attributes( $defAttr );
 			}
 
 			$wcProduct->set_attributes( $att_var );
 			$wcProduct->save();
-			unset( $productId, $attributes, $wcProduct, $att_var, $key, $value, $i );
+			unset( $productId, $attributes, $wcProduct, $att_var, $defAttr );
 		}
 	}
 
@@ -310,10 +316,6 @@ class Oasis {
 
 		if ( ! empty( $product->defect ) ) {
 			$result .= PHP_EOL . '<p>' . trim( $product->defect ) . '</p>';
-		}
-
-		if ( ! empty( $product->branding ) ) {
-			$result   .= PHP_EOL . '<p><b>Виды нанесения:</b> ' . implode( ', ', array_map( 'trim', explode( ',', $product->branding ) ) ) . '</p>';
 		}
 
 		return $result;

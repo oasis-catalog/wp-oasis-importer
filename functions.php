@@ -48,64 +48,61 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $firstProduct );
 
-	$productAttributes = [];
-	$addonMeta         = [];
-	$existColor        = false;
+	$attributes = [];
+	$branding   = [];
+	$existColor = false;
 	foreach ( $firstProduct->attributes as $key => $attribute ) {
 		if ( count( $model ) > 1 && isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 			$existColor = true;
-
-			$attrName = 'Цвет';
-			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
+			$attrName   = 'Цвет';
 			$attrValues = [];
 			foreach ( $model as $item ) {
 				foreach ( $item->attributes as $attribute ) {
 					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 						$attrValues[] = trim( $attribute->value );
 						if ( $item->id == $firstProduct->id ) {
-							$addonMeta['_default_attributes'] = [ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) => sanitize_title( trim( $attribute->value ) ) ];
+							$attributes['default'] = [ $attrName => $attribute->value ];
 						}
 					}
 				}
 			}
 			sort( $attrValues );
 
-			$productAttributes[ $attr ] = [
-				'name'         => $attrName,
-				'value'        => implode( '|', array_unique( $attrValues ) ),
-				'position'     => ++ $key,
-				'is_visible'   => 1,
-				'is_variation' => 1,
-				'is_taxonomy'  => 0,
+			$attributes['attributes'][] = [
+				'name'  => $attrName,
+				'value' => array_unique( $attrValues ),
 			];
 
 			continue;
 		}
 
-		$attr = wc_sanitize_taxonomy_name( stripslashes( trim( $attribute->name ) ) );
+		if ( ! empty( $attribute->id ) && $attribute->id == '1000000008' ) {
+			$branding[ $attribute->name ][] = trim( $attribute->value );
+		} else {
+			$attributes['attributes'][] = [
+				'name'  => $attribute->name,
+				'value' => [ trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ) ],
+			];
+		}
+	}
 
-		$productAttributes[ $attr ] = [
-			'name'         => $attribute->name,
-			'value'        => trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ),
-			'position'     => ++ $key,
-			'is_visible'   => 1,
-			'is_variation' => 0,
-			'is_taxonomy'  => 0,
+	foreach ( $branding as $bKey => $bValue ) {
+		$attributes['attributes'][] = [
+			'name'  => $bKey,
+			'value' => $bValue,
 		];
 	}
+	unset( $branding, $bKey, $bValue );
 
 	if ( count( $model ) > 1 ) {
 		if ( ! empty( $firstProduct->size ) ) {
-			$attrName = 'Размер';
-			$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
+			$attrName   = 'Размер';
 			$attrValues = [];
 			foreach ( $model as $item ) {
 				$attrValues[] = trim( $item->size );
 
 				if ( $item->id == $firstProduct->id ) {
-					$addonMeta['_default_attributes'] = [ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) => sanitize_title( trim( $item->size ) ) ];
+					$attributes['default'] = [ $attrName => $item->size ];
 				}
 			}
 
@@ -130,19 +127,12 @@ WHERE model_id_oasis = '" . $model_id . "'
 				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
 			} );
 
-			$productAttributes[ $attr ] = [
-				'name'         => $attrName,
-				'value'        => implode( '|', array_unique( $attrValues ) ),
-				'position'     => ++ $key,
-				'is_visible'   => 1,
-				'is_variation' => 1,
-				'is_taxonomy'  => 0,
+			$attributes['attributes'][] = [
+				'name'  => $attrName,
+				'value' => array_unique( $attrValues ),
 			];
 		}
 	}
-
-	$addonMeta['_product_attributes'] = $productAttributes;
-	unset( $productAttributes );
 
 	if ( ! $existProduct ) {
 		$productParams = [
@@ -201,7 +191,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 		$productId = $existProduct->ID;
 		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories );
 	}
-	Oasis::wcProductAttributes( $productId, $addonMeta, count( $model ) > 1 );
+	Oasis::wcProductAttributes( $productId, $attributes, count( $model ) > 1 );
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->id . PHP_EOL;
 
@@ -227,22 +217,16 @@ WHERE product_id_oasis = '" . $variation->id . "'
 
 			$attributeMeta = [];
 			if ( ! empty( $variation->size ) ) {
-				$attrName = 'Размер';
-				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
-				$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) ] = sanitize_title( trim( $variation->size ) );
+				$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Размер' ) ) ) ) ] = sanitize_title( trim( $variation->size ) );
 			}
 
 			if ( $existColor ) {
-				$attrName = 'Цвет';
-				$attr     = wc_sanitize_taxonomy_name( stripslashes( $attrName ) );
-
 				foreach ( $variation->attributes as $attribute ) {
 					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-						$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( $attr ) ) ] = sanitize_title( trim( $attribute->value ) );
+						$attributeMeta[ sanitize_title( 'pa_' . Oasis::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Цвет' ) ) ) ) ] = sanitize_title( trim( $attribute->value ) );
 					}
 				}
-				unset( $attribute, $attr );
+				unset( $attribute );
 			}
 
 			$dataPriceVariation = Oasis::getDataPrice( $factor, $increase, $dealer, $variation );
@@ -331,7 +315,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	} else {
 		Oasis::upProgressBar( $progressBar );
 	}
-	unset( $model_id, $model, $categoriesOasis, $categories, $factor, $increase, $dealer, $progressBar, $totalStock, $productId, $addonMeta, $firstProduct );
+	unset( $model_id, $model, $categoriesOasis, $categories, $factor, $increase, $dealer, $progressBar, $totalStock, $productId, $firstProduct );
 }
 
 /**
