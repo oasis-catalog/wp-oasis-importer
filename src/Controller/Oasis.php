@@ -37,7 +37,7 @@ class Oasis {
 				$firstProduct = reset( $model );
 			}
 
-			$status = getProductStatus( $firstProduct->rating, (int) $firstProduct->total_stock )['post_status'];
+			$status = self::getProductStatus( $firstProduct, (int) $firstProduct->total_stock )['post_status'];
 
 			if ( $status != 'publish' ) {
 				array_shift( $model );
@@ -116,12 +116,12 @@ class Oasis {
 			}
 
 			$wcProduct->set_name( $variation ? $oasisProduct->full_name : $oasisProduct->name );
-			$wcProduct->set_status( getProductStatus( $oasisProduct->rating, $variation ? (int) $oasisProduct->total_stock : $totalStock, $variation )['post_status'] );
+			$wcProduct->set_status( self::getProductStatus( $oasisProduct, $variation ? (int) $oasisProduct->total_stock : $totalStock, $variation )['post_status'] );
 			$wcProduct->set_price( $dataPrice['_price'] );
 			$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
 			$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
 			$wcProduct->set_stock_quantity( (int) $oasisProduct->total_stock );
-			$wcProduct->set_backorders( getProductStatus( $oasisProduct->rating, $totalStock )['_backorders'] );
+			$wcProduct->set_backorders( self::getProductStatus( $oasisProduct, $totalStock )['_backorders'] );
 			$wcProduct->save();
 			unset( $productId, $oasisProduct, $totalStock, $dataPrice, $categories, $variation, $attributes, $key, $value, $wcProduct );
 		}
@@ -428,6 +428,33 @@ class Oasis {
 	}
 
 	/**
+	 * Get status and backorders product or variation
+	 *
+	 * @param $product
+	 * @param int $totalStock
+	 * @param bool $variation
+	 *
+	 * @return string[]
+	 */
+	public static function getProductStatus( $product, int $totalStock, $variation = false ): array {
+		$data = [
+			'post_status' => 'publish',
+			'_backorders' => 'no',
+		];
+
+		if ( $product->is_deleted === true ) {
+			$data['post_status'] = $variation ? 'private' : 'draft';
+		} elseif ( $product->rating === 5 ) {
+			$data['_backorders'] = 'yes';
+		} elseif ( $totalStock === 0 ) {
+			$data['post_status'] = $variation ? 'private' : 'draft';
+		}
+		unset( $product, $totalStock, $variation );
+
+		return $data;
+	}
+
+	/**
 	 * Get products oasis
 	 *
 	 * @param array $args
@@ -436,8 +463,9 @@ class Oasis {
 	 */
 	public function getOasisProducts( array $args = [] ): array {
 		$args += [
-			'fieldset' => 'full',
-			'extend'   => 'is_visible',
+			'fieldset'    => 'full',
+			'extend'      => 'is_visible',
+			'showDeleted' => '1',
 		];
 
 		$data = [

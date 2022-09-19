@@ -142,7 +142,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 			'post_date_gmt'  => current_time( 'mysql', 1 ),
 			'post_title'     => $firstProduct->name,
 			'post_name'      => Oasis::getUniquePostName( $firstProduct->name, 'product' ),
-			'post_status'    => getProductStatus( $firstProduct->rating, $totalStock )['post_status'],
+			'post_status'    => Oasis::getProductStatus( $firstProduct, $totalStock )['post_status'],
 			'comment_status' => 'closed',
 			'ping_status'    => 'closed',
 			'post_type'      => 'product',
@@ -167,7 +167,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 				                    '_virtual'               => 'no',
 				                    '_sold_individually'     => '',
 				                    '_manage_stock'          => 'yes',
-				                    '_backorders'            => getProductStatus( $firstProduct->rating, $totalStock )['_backorders'],
+				                    '_backorders'            => Oasis::getProductStatus( $firstProduct, $totalStock )['_backorders'],
 				                    '_stock'                 => (int) $firstProduct->total_stock,
 				                    '_purchase_note'         => '',
 				                    'total_sales'            => 0,
@@ -240,7 +240,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 					'post_date_gmt'  => current_time( 'mysql', 1 ),
 					'post_title'     => $variation->full_name,
 					'post_name'      => Oasis::getUniquePostName( $variation->full_name, 'product_variation' ),
-					'post_status'    => getProductStatus( $variation->rating, (int) $variation->total_stock, true )['post_status'],
+					'post_status'    => Oasis::getProductStatus( $variation, (int) $variation->total_stock, true )['post_status'],
 					'comment_status' => 'closed',
 					'ping_status'    => 'closed',
 					'post_type'      => 'product_variation',
@@ -264,7 +264,7 @@ WHERE product_id_oasis = '" . $variation->id . "'
 						                    '_virtual'                 => 'no',
 						                    '_sold_individually'       => '',
 						                    '_manage_stock'            => 'yes',
-						                    '_backorders'              => getProductStatus( $variation->rating, $totalStock )['_backorders'],
+						                    '_backorders'              => Oasis::getProductStatus( $variation, $totalStock )['_backorders'],
 						                    '_stock'                   => (int) $variation->total_stock,
 						                    '_purchase_note'           => '',
 						                    'total_sales'              => 0,
@@ -345,34 +345,6 @@ function upStock() {
 
 	$time_end = microtime( true );
 	update_option( 'oasis_upStock_time', ( $time_end - $time_start ) );
-}
-
-/**
- * Get status and backorders product or variation
- *
- * @param int $rating
- * @param int $totalStock
- * @param bool $variation
- *
- * @return string[]
- */
-function getProductStatus( int $rating, int $totalStock, $variation = false ): array {
-	$data = [
-		'post_status' => 'publish',
-		'_backorders' => 'no',
-	];
-
-	if ( $rating === 5 ) {
-		$data['_backorders'] = 'yes';
-	} elseif ( $totalStock === 0 ) {
-		if ( $variation ) {
-			$data['post_status'] = 'private';
-		} else {
-			$data['post_status'] = 'draft';
-		}
-	}
-
-	return $data;
 }
 
 /**
