@@ -443,7 +443,7 @@ class Oasis {
 		];
 
 		if ( $product->is_deleted === true ) {
-			$data['post_status'] = $variation ? 'private' : 'draft';
+			$data['post_status'] = 'trash';
 		} elseif ( $product->rating === 5 ) {
 			$data['_backorders'] = 'yes';
 		} elseif ( $totalStock === 0 ) {

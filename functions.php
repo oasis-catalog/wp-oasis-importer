@@ -134,70 +134,77 @@ WHERE model_id_oasis = '" . $model_id . "'
 		}
 	}
 
+	$firstPostStatus = Oasis::getProductStatus( $firstProduct, $totalStock )['post_status'];
+
 	if ( ! $existProduct ) {
-		$productParams = [
-			'ID'             => 0,
-			'post_author'    => get_current_user_id(),
-			'post_date'      => current_time( 'mysql' ),
-			'post_date_gmt'  => current_time( 'mysql', 1 ),
-			'post_title'     => $firstProduct->name,
-			'post_name'      => Oasis::getUniquePostName( $firstProduct->name, 'product' ),
-			'post_status'    => Oasis::getProductStatus( $firstProduct, $totalStock )['post_status'],
-			'comment_status' => 'closed',
-			'ping_status'    => 'closed',
-			'post_type'      => 'product',
-			'post_content'   => Oasis::preparePostContent( $firstProduct ),
-			'post_excerpt'   => '',
-			'meta_input'     => [
-				                    'model_id'               => $model_id,
-				                    'product_id'             => $firstProduct->id,
-				                    '_sale_price_dates_from' => '',
-				                    '_sale_price_dates_to'   => '',
-				                    '_sku'                   => count( $model ) > 1 ? $firstProduct->article_base : $firstProduct->article,
-				                    '_weight'                => 0,
-				                    '_length'                => 0,
-				                    '_width'                 => 0,
-				                    '_height'                => 0,
-				                    '_tax_status'            => 'taxable',
-				                    '_tax_class'             => '',
-				                    '_stock_status'          => 'instock',
-				                    '_visibility'            => 'visible',
-				                    '_featured'              => 'no',
-				                    '_downloadable'          => 'no',
-				                    '_virtual'               => 'no',
-				                    '_sold_individually'     => '',
-				                    '_manage_stock'          => 'yes',
-				                    '_backorders'            => Oasis::getProductStatus( $firstProduct, $totalStock )['_backorders'],
-				                    '_stock'                 => (int) $firstProduct->total_stock,
-				                    '_purchase_note'         => '',
-				                    'total_sales'            => 0,
-				                    '_total_stock'           => $totalStock,
-			                    ] + $dataPrice,
-		];
+		if ( $firstPostStatus !== 'trash' ) {
+			$productParams = [
+				'ID'             => 0,
+				'post_author'    => get_current_user_id(),
+				'post_date'      => current_time( 'mysql' ),
+				'post_date_gmt'  => current_time( 'mysql', 1 ),
+				'post_title'     => $firstProduct->name,
+				'post_name'      => Oasis::getUniquePostName( $firstProduct->name, 'product' ),
+				'post_status'    => $firstPostStatus,
+				'comment_status' => 'closed',
+				'ping_status'    => 'closed',
+				'post_type'      => 'product',
+				'post_content'   => Oasis::preparePostContent( $firstProduct ),
+				'post_excerpt'   => '',
+				'meta_input'     => [
+					                    'model_id'               => $model_id,
+					                    'product_id'             => $firstProduct->id,
+					                    '_sale_price_dates_from' => '',
+					                    '_sale_price_dates_to'   => '',
+					                    '_sku'                   => count( $model ) > 1 ? $firstProduct->article_base : $firstProduct->article,
+					                    '_weight'                => 0,
+					                    '_length'                => 0,
+					                    '_width'                 => 0,
+					                    '_height'                => 0,
+					                    '_tax_status'            => 'taxable',
+					                    '_tax_class'             => '',
+					                    '_stock_status'          => 'instock',
+					                    '_visibility'            => 'visible',
+					                    '_featured'              => 'no',
+					                    '_downloadable'          => 'no',
+					                    '_virtual'               => 'no',
+					                    '_sold_individually'     => '',
+					                    '_manage_stock'          => 'yes',
+					                    '_backorders'            => Oasis::getProductStatus( $firstProduct, $totalStock )['_backorders'],
+					                    '_stock'                 => (int) $firstProduct->total_stock,
+					                    '_purchase_note'         => '',
+					                    'total_sales'            => 0,
+					                    '_total_stock'           => $totalStock,
+				                    ] + $dataPrice,
+			];
 
-		$productId = wp_insert_post( $productParams );
+			$productId = wp_insert_post( $productParams );
 
-		$wpdb->insert( $wpdb->prefix . 'oasis_products', [
-			'post_id'          => $productId,
-			'product_id_oasis' => $firstProduct->id,
-			'model_id_oasis'   => $model_id,
-			'type'             => 'product'
-		] );
+			$wpdb->insert( $wpdb->prefix . 'oasis_products', [
+				'post_id'          => $productId,
+				'product_id_oasis' => $firstProduct->id,
+				'model_id_oasis'   => $model_id,
+				'type'             => 'product'
+			] );
 
-		wp_set_object_terms( $productId, ( count( $model ) > 1 ? 'variable' : 'simple' ), 'product_type' );
-		wp_set_object_terms( $productId, $categories, 'product_cat' );
-		upsert_photo( $firstProduct->images, $productId, $productId );
+			wp_set_object_terms( $productId, ( count( $model ) > 1 ? 'variable' : 'simple' ), 'product_type' );
+			wp_set_object_terms( $productId, $categories, 'product_cat' );
+			upsert_photo( $firstProduct->images, $productId, $productId );
+		}
 	} else {
 		$productId = $existProduct->ID;
 		Oasis::upWcProduct( $existProduct->ID, $firstProduct, $totalStock, $dataPrice, $categories );
 	}
-	Oasis::wcProductAttributes( $productId, $attributes, count( $model ) > 1 );
+
+	if ( $firstPostStatus !== 'trash' ) {
+		Oasis::wcProductAttributes( $productId, $attributes, count( $model ) > 1 );
+	}
 
 	echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . ( $existProduct ? 'Обновлен' : 'Добавлен' ) . ' товар id ' . $firstProduct->id . PHP_EOL;
 
 	$progressBar = get_option( 'oasis_progress' );
 
-	if ( count( $model ) > 1 ) {
+	if ( count( $model ) > 1 && $firstPostStatus !== 'trash' ) {
 		foreach ( $model as $variation ) {
 			$dbResults = $wpdb->get_results( "
 SELECT * FROM {$wpdb->prefix}oasis_products 
