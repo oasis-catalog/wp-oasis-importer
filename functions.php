@@ -99,7 +99,9 @@ WHERE model_id_oasis = '" . $model_id . "'
 			$attrName   = 'Размер';
 			$attrValues = [];
 			foreach ( $model as $item ) {
-				$attrValues[] = trim( $item->size );
+				if ( ! empty( trim( $item->size ) ) ) {
+					$attrValues[] = trim( $item->size );
+				}
 
 				if ( $item->id == $firstProduct->id ) {
 					$attributes['default'] = [ $attrName => $item->size ];
@@ -127,10 +129,16 @@ WHERE model_id_oasis = '" . $model_id . "'
 				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
 			} );
 
-			$attributes['attributes'][] = [
-				'name'  => $attrName,
-				'value' => array_unique( $attrValues ),
-			];
+			$existAttributeKey = Oasis::searchForKeyValue( $attributes['attributes'], 'name', $attrName );
+
+			if ( is_null( $existAttributeKey ) ) {
+				$attributes['attributes'][] = [
+					'name'  => $attrName,
+					'value' => array_unique( $attrValues ),
+				];
+			} else {
+				$attributes['attributes'][ $existAttributeKey ]['value'] = array_unique( array_merge( $attributes['attributes'][ $existAttributeKey ]['value'], $attrValues ) );
+			}
 		}
 	}
 

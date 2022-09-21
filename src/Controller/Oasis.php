@@ -428,6 +428,25 @@ class Oasis {
 	}
 
 	/**
+	 * Search in array by kye and value
+	 *
+	 * @param $array
+	 * @param $key
+	 * @param $value
+	 *
+	 * @return int|string|null
+	 */
+	function searchForKeyValue( $array, $key, $value ) {
+		foreach ( $array as $keyItem => $valItem ) {
+			if ( $valItem[ $key ] === $value ) {
+				return $keyItem;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Get status and backorders product or variation
 	 *
 	 * @param $product
