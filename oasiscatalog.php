@@ -604,13 +604,13 @@ if ( is_admin() ) {
 			<?php
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				if ( ! empty( $progressBar['item'] ) || ! empty( $progressBar['total'] ) ) {
-					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100 );
+					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 				} else {
 					$percentTotal = 0;
 				}
 
 				if ( ! empty( $progressBar['step_item'] ) || ! empty( $progressBar['step_total'] ) ) {
-					$percentStep = round( ( $progressBar['step_item'] / $progressBar['step_total'] ) * 100 );
+					$percentStep = round( ( $progressBar['step_item'] / $progressBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 				} else {
 					$percentStep = 0;
 				}
@@ -628,12 +628,13 @@ if ( is_admin() ) {
                         </div>
                     </div>
 					<?php if ( $limit > 0 ) {
-						$stepTotal = ! empty( $progressBar['total'] ) ? ceil( intval( $progressBar['total'] ) / intval( $limit ) ) : 0;
-						$step      = intval( get_option( 'oasis_step' ) );
+						$stepTotal  = ! empty( $progressBar['total'] ) ? ceil( intval( $progressBar['total'] ) / intval( $limit ) ) : 0;
+						$oasis_step = intval( get_option( 'oasis_step' ) );
+						$step = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
 						?>
                         <div class="progress-row">
                             <div class="progress-label">
-                                <h3>Выполняется <?php echo ++ $step; ?> шаг из <?php echo $stepTotal; ?>. Статус текущего шага</h3>
+                                <h3>Выполняется <?php echo $step; ?> шаг из <?php echo $stepTotal; ?>. Статус текущего шага</h3>
                             </div>
                             <div class="progress-container">
                                 <div class="progress-bar">
