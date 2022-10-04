@@ -605,6 +605,7 @@ if ( is_admin() ) {
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				if ( ! empty( $progressBar['item'] ) || ! empty( $progressBar['total'] ) ) {
 					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+					$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
 				} else {
 					$percentTotal = 0;
 				}
