@@ -6,6 +6,8 @@ WooCommerce version: 5.9+
 
 WordPress version: 5.8+
 
+Свободное пространство на диске не менее 13Gb
+
 ## Usage
 
 Скачать архив wp-oasis-importer.zip из [свежего релиза](https://github.com/oasis-catalog/wp-oasis-importer/releases), установить и активировать плагин на вашем сайте в разделе: http://site.com/wp-admin/plugin-install.php
