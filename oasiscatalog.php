@@ -65,7 +65,7 @@ function oasis_mi_settings_init() {
 
 	add_settings_section(
 		'oasis_mi_section_developers',
-		'Настройка импорта моделей Oasis',
+		'Настройка импорта товаров Oasis',
 		null,
 		'oasis_mi'
 	);
@@ -603,7 +603,7 @@ if ( is_admin() ) {
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 
         <div class="wrap">
-            <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
+            <h1><?= esc_html( 'Настройка импорта товаров Oasis' ); ?></h1>
 			<?php
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
