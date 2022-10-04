@@ -40,13 +40,26 @@ if ( ! function_exists( 'wp_get_current_user' ) ) {
 	include( ABSPATH . "wp-includes/pluggable.php" );
 }
 
+function oasis_mi_admin_validations() {
+	if ( ! is_php_version_compatible( '7.3' ) ) {
+		wp_die( 'Вы используете старую версию PHP ' . phpversion() . '. Попросите администратора сервера её обновить до 7.3 или выше! <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
+	}
+
+	$options = get_option( 'oasis_mi_options' );
+
+	if ( empty( $options['oasis_mi_api_key'] ) ) {
+		?>
+        <div class="notice notice-error">
+            <p><strong>Укажите API ключ!</strong></p>
+        </div>
+		<?php
+	}
+}
+
 /**
  * custom option and settings
  */
 function oasis_mi_settings_init() {
-	if ( ! is_php_version_compatible( '7.3' ) ) {
-		wp_die( 'Вы используете старую версию PHP ' . phpversion() . '. Попросите администратора сервера её обновить до 7.3 или выше! <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
-	}
 
 	register_setting( 'oasis_mi', 'oasis_mi_options', 'sanitize_data' );
 
@@ -81,13 +94,7 @@ function oasis_mi_settings_init() {
 
 	$options = get_option( 'oasis_mi_options' );
 
-	if ( empty( $options['oasis_mi_api_key'] ) ) {
-		?>
-        <div class="notice notice-error">
-            <p><strong>Укажите API ключ!</strong></p>
-        </div>
-		<?php
-	} else {
+	if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 		add_settings_field(
 			'oasis_mi_currency',
 			'Валюта',
@@ -444,15 +451,9 @@ function sanitize_data( $options ) {
 }
 
 /**
- * register our wporg_settings_init to the admin_init action hook
- */
-add_action( 'admin_init', 'oasis_mi_settings_init' );
-
-/**
  * Добавление пункта меню в раздел Инструменты для настройки импорта
  */
 if ( is_admin() ) {
-
 	function oasis_mi_menu() {
 		$page = add_submenu_page(
 			'tools.php',
@@ -464,6 +465,8 @@ if ( is_admin() ) {
 		);
 
 		add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
+		add_action( 'load-' . $page, 'oasis_mi_admin_validations' );
+		oasis_mi_settings_init();
 	}
 
 	function oasis_mi_admin_styles() {
