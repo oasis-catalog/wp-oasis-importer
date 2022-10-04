@@ -663,7 +663,7 @@ if ( is_admin() ) {
                         </div>
                         <div class="oa-container">
                             <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>" aria-label="<?php echo $cronTask; ?>"
-                                   readonly="readonly">
+                                   readonly="readonly" onFocus="this.select()">
                         </div>
                     </div>
                     <div class="oa-row">
@@ -672,7 +672,7 @@ if ( is_admin() ) {
                         </div>
                         <div class="oa-container">
                             <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
-                                   aria-label="<?php echo $cronTask; ?> --up" readonly="readonly">
+                                   aria-label="<?php echo $cronTask; ?> --up" readonly="readonly" onFocus="this.select()">
                         </div>
                     </div>
                 </div>
