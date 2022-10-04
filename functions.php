@@ -33,9 +33,17 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	$firstProduct = Oasis::getFirstProduct( $existProduct, $model );
 
-	$totalStock = 0;
+	$totalStock   = 0;
+	$filterColors = [];
 	foreach ( $model as $item ) {
 		$totalStock += $item->total_stock;
+
+		if ( ! empty( $item->colors ) ) {
+			foreach ( $item->colors as $color ) {
+				$filterColors[] = $color->parent_id;
+			}
+			unset( $color );
+		}
 	}
 	unset( $item );
 
@@ -48,28 +56,31 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	$dataPrice = Oasis::getDataPrice( $factor, $increase, $dealer, $firstProduct );
 
-	$attributes = [];
-	$branding   = [];
-	$existColor = false;
-	foreach ( $firstProduct->attributes as $key => $attribute ) {
+	$attributes    = [];
+	$branding      = [];
+	$existColor    = false;
+	$attrNameColor = 'Цвет';
+	foreach ( $firstProduct->attributes as $attribute ) {
 		if ( count( $model ) > 1 && isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 			$existColor = true;
-			$attrName   = 'Цвет';
 			$attrValues = [];
 			foreach ( $model as $item ) {
-				foreach ( $item->attributes as $attribute ) {
-					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-						$attrValues[] = trim( $attribute->value );
+				foreach ( $item->attributes as $itemAttribute ) {
+					if ( isset( $itemAttribute->id ) && $itemAttribute->id == '1000000001' ) {
+						$attrValues[] = trim( $itemAttribute->value );
 						if ( $item->id == $firstProduct->id ) {
-							$attributes['default'] = [ $attrName => $attribute->value ];
+							$attributes['default'][ $attrNameColor ] = $itemAttribute->value;
 						}
 					}
 				}
+				unset( $itemAttribute );
 			}
+			unset( $item );
 			sort( $attrValues );
 
 			$attributes['attributes'][] = [
-				'name'  => $attrName,
+				'id'    => $attribute->id,
+				'name'  => $attrNameColor,
 				'value' => array_unique( $attrValues ),
 			];
 
@@ -79,8 +90,15 @@ WHERE model_id_oasis = '" . $model_id . "'
 		if ( ! empty( $attribute->id ) && $attribute->id == '1000000008' ) {
 			$branding[ $attribute->name ][] = trim( $attribute->value );
 		} else {
+			if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
+				$attrName = $attrNameColor;
+			} else {
+				$attrName = $attribute->name;
+			}
+
 			$attributes['attributes'][] = [
-				'name'  => $attribute->name,
+				'id'    => ! empty( $attribute->id ) ? $attribute->id : '',
+				'name'  => $attrName,
 				'value' => [ trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ) ],
 			];
 		}
@@ -88,6 +106,7 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	foreach ( $branding as $bKey => $bValue ) {
 		$attributes['attributes'][] = [
+			'id'    => '1000000008',
 			'name'  => $bKey,
 			'value' => $bValue,
 		];
@@ -96,15 +115,15 @@ WHERE model_id_oasis = '" . $model_id . "'
 
 	if ( count( $model ) > 1 ) {
 		if ( ! empty( $firstProduct->size ) ) {
-			$attrName   = 'Размер';
-			$attrValues = [];
+			$attrNameSize = 'Размер';
+			$attrValues   = [];
 			foreach ( $model as $item ) {
 				if ( ! empty( trim( $item->size ) ) ) {
 					$attrValues[] = trim( $item->size );
 				}
 
 				if ( $item->id == $firstProduct->id ) {
-					$attributes['default'] = [ $attrName => $item->size ];
+					$attributes['default'][ $attrNameSize ] = $item->size;
 				}
 			}
 
@@ -129,18 +148,29 @@ WHERE model_id_oasis = '" . $model_id . "'
 				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
 			} );
 
-			$existAttributeKey = Oasis::searchForKeyValue( $attributes['attributes'], 'name', $attrName );
+			$existAttributeKey = Oasis::searchForKeyValue( $attributes['attributes'], 'name', $attrNameSize );
 
 			if ( is_null( $existAttributeKey ) ) {
 				$attributes['attributes'][] = [
-					'name'  => $attrName,
+					'id'    => '1110000001',
+					'name'  => $attrNameSize,
 					'value' => array_unique( $attrValues ),
 				];
 			} else {
 				$attributes['attributes'][ $existAttributeKey ]['value'] = array_unique( array_merge( $attributes['attributes'][ $existAttributeKey ]['value'], $attrValues ) );
+				$attributes['attributes'][ $existAttributeKey ]['id']    = '1110000001';
 			}
 		}
 	}
+
+	if ( ! empty( $filterColors ) ) {
+		$attributes['attributes'][] = [
+			'id'    => '2220000002',
+			'name'  => 'Фильтр цвет',
+			'value' => Oasis::checkColorsToFilter( array_unique( $filterColors ) ),
+		];
+	}
+	unset( $filterColors );
 
 	$firstPostStatus = Oasis::getProductStatus( $firstProduct, $totalStock )['post_status'];
 
@@ -328,9 +358,11 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			unset( $variation, $existVariation, $dataPriceVariation, $variationId, $parentId );
 		}
 	} else {
-		Oasis::upProgressBar( $progressBar );
+		$progressBar = Oasis::upProgressBar( $progressBar );
 	}
-	unset( $model_id, $model, $categoriesOasis, $categories, $factor, $increase, $dealer, $progressBar, $totalStock, $productId, $firstProduct );
+	unset( $model_id, $model, $categoriesOasis, $categories, $factor, $increase, $dealer, $totalStock, $productId, $firstProduct );
+
+	return $progressBar;
 }
 
 /**

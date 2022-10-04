@@ -141,13 +141,26 @@ class Oasis {
 			$i         = 0;
 
 			foreach ( $attributes['attributes'] as $value ) {
-				$attribute_data = self::createAttribute( $value['name'], $value['value'] );
-				$attribute      = new \WC_Product_Attribute();
-				$attribute->set_id( $attribute_data['attribute_id'] );
-				$attribute->set_name( $attribute_data['attribute_taxonomy'] );
+				$attribute = new \WC_Product_Attribute();
+
+				if ( $value['id'] == '1110000001' || $value['id'] == '1000000001' ) {
+					$attr_size = self::createAttribute( $value['name'], $value['value'] );
+					$attribute->set_id( $attr_size['attribute_id'] );
+					$attribute->set_name( $attr_size['attribute_taxonomy'] );
+					$attribute->set_visible( true );
+				} elseif ( $value['id'] == '2220000002' ) {
+					$attr_color = self::createAttribute( $value['name'], $value['value'], 'color' );
+					$attribute->set_id( $attr_color['attribute_id'] );
+					$attribute->set_name( $attr_color['attribute_taxonomy'] );
+					$attribute->set_visible( false );
+				} else {
+					$attribute->set_id( 0 );
+					$attribute->set_name( $value['name'] );
+					$attribute->set_visible( true );
+				}
+
 				$attribute->set_options( $value['value'] );
 				$attribute->set_position( $i );
-				$attribute->set_visible( true );
 
 				$attrName = wc_sanitize_taxonomy_name( stripslashes( trim( $value['name'] ) ) );
 				if ( ( $attrName == 'цвет' || $attrName == 'размер' ) && (bool) $variation === true ) {
@@ -196,20 +209,20 @@ class Oasis {
 	 *
 	 * @param string $raw_name Name of attribute to create.
 	 * @param array(string) $terms Terms to create for the attribute.
+	 * @param string $slug
 	 *
 	 * @return array
 	 */
-	public static function createAttribute( string $raw_name, array $terms ) {
+	public static function createAttribute( string $raw_name, array $terms, string $slug = '' ): array {
 		global $wc_product_attributes;
 
 		delete_transient( 'wc_attribute_taxonomies' );
 		\WC_Cache_Helper::incr_cache_prefix( 'woocommerce-attributes' );
 
 		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
-		$attribute_name   = array_search( $raw_name, $attribute_labels, true );
-
+		$attribute_name   = array_search( empty( $slug ) ? $raw_name : $slug, $attribute_labels, true );
 		if ( ! $attribute_name ) {
-			$attribute_name = wc_sanitize_taxonomy_name( $raw_name );
+			$attribute_name = wc_sanitize_taxonomy_name( empty( $slug ) ? $raw_name : $slug );
 		}
 
 		$attribute_name = substr( self::transliteration( $attribute_name ), 0, 27 );
@@ -270,6 +283,46 @@ class Oasis {
 		}
 
 		return $return;
+	}
+
+	/**
+	 * Check colors to filter
+	 *
+	 * @param $data
+	 *
+	 * @return array
+	 */
+	public static function checkColorsToFilter( $data ): array {
+		$result = [];
+		$colors = [
+			1480 => 'Голубой',
+			1483 => 'Бежевый',
+			1471 => 'Черный',
+			1472 => 'Синий',
+			1482 => 'Коричневый',
+			1478 => 'Бордовый',
+			1488 => 'Темно-синий',
+			1484 => 'Золотистый',
+			1474 => 'Зеленый',
+			1475 => 'Зеленое яблоко',
+			1481 => 'Серый',
+			1486 => 'Разноцветный',
+			1476 => 'Оранжевый',
+			1487 => 'Розовый',
+			1479 => 'Фиолетовый',
+			1473 => 'Красный',
+			1485 => 'Серебристый',
+			1470 => 'Белый',
+			1477 => 'Желтый'
+		];
+
+		foreach ( $data as $item ) {
+			if ( ! empty( $colors[ $item ] ) ) {
+				$result[] = $colors[ $item ];
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -436,7 +489,7 @@ class Oasis {
 	 *
 	 * @return int|string|null
 	 */
-	function searchForKeyValue( $array, $key, $value ) {
+	public static function searchForKeyValue( $array, $key, $value ) {
 		foreach ( $array as $keyItem => $valItem ) {
 			if ( $valItem[ $key ] === $value ) {
 				return $keyItem;
@@ -563,7 +616,7 @@ class Oasis {
 	public static function upProgressBar( $progressBar ) {
 		$progressBar['item'] ++;
 
-		if ( ! empty( $progressBar['step_total'] ) ) {
+		if ( isset( $progressBar['step_total'] ) ) {
 			$progressBar['step_item'] ++;
 		}
 

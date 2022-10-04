@@ -142,7 +142,7 @@ Errors: ' . $errors . PHP_EOL;
 		update_option( 'oasis_total_model', $total );
 		foreach ( $group_ids as $group_id => $model ) {
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Начало обработки модели ' . $group_id . PHP_EOL;
-			upsert_model( $group_id, $model, $categories, $options['oasis_mi_price_factor'] ?? '', $options['oasis_mi_increase'] ?? '', $options['oasis_mi_dealer'] ?? '' );
+			$progressBar = upsert_model( $group_id, $model, $categories, $options['oasis_mi_price_factor'] ?? '', $options['oasis_mi_increase'] ?? '', $options['oasis_mi_dealer'] ?? '' );
 			$count ++;
 			echo '[' . date( 'Y-m-d H:i:s' ) . '] Done ' . $count . ' from ' . $total . PHP_EOL;
 			update_option( 'oasis_item_model', $count );
@@ -151,13 +151,12 @@ Errors: ' . $errors . PHP_EOL;
 
 		if ( ! empty( $limit ) ) {
 			update_option( 'oasis_step', $nextStep );
+			$progressBar['step_item'] = $progressBar['step_total'];
+		} else {
+			$progressBar['item'] = $stats->products;
 		}
 
 		echo '[' . date( 'Y-m-d H:i:s' ) . '] Окончание обновления товаров' . PHP_EOL;
-
-		if ( empty( $limit ) ) {
-			$progressBar['item'] = $stats->products;
-		}
 		$progressBar['date'] = current_time( 'mysql' );
 		update_option( 'oasis_progress', $progressBar );
 
