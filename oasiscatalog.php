@@ -603,6 +603,8 @@ if ( is_admin() ) {
             <h1><?= esc_html( 'Настройка импорта моделей Oasis' ); ?></h1>
 			<?php
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
+				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
+
 				if ( ! empty( $progressBar['item'] ) || ! empty( $progressBar['total'] ) ) {
 					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 					$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
@@ -617,12 +619,12 @@ if ( is_admin() ) {
 				}
 				?>
 
-                <div class="progress-notice">
-                    <div class="progress-row">
-                        <div class="progress-label">
+                <div class="oa-notice oa-notice-info">
+                    <div class="oa-row">
+                        <div class="oa-label">
                             <h3>Общий статус обработки</h3>
                         </div>
-                        <div class="progress-container">
+                        <div class="oa-container">
                             <div class="progress-bar">
                                 <div class="progress total" style="width: <?php echo $percentTotal; ?>%;"><?php echo $percentTotal; ?>%</div>
                             </div>
@@ -631,13 +633,13 @@ if ( is_admin() ) {
 					<?php if ( $limit > 0 ) {
 						$stepTotal  = ! empty( $progressBar['total'] ) ? ceil( intval( $progressBar['total'] ) / intval( $limit ) ) : 0;
 						$oasis_step = intval( get_option( 'oasis_step' ) );
-						$step = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
+						$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
 						?>
-                        <div class="progress-row">
-                            <div class="progress-label">
+                        <div class="oa-row">
+                            <div class="oa-label">
                                 <h3>Выполняется <?php echo $step; ?> шаг из <?php echo $stepTotal; ?>. Статус текущего шага</h3>
                             </div>
-                            <div class="progress-container">
+                            <div class="oa-container">
                                 <div class="progress-bar">
                                     <div class="progress step" style="width: <?php echo $percentStep; ?>%;"><?php echo $percentStep; ?>%</div>
                                 </div>
@@ -647,13 +649,30 @@ if ( is_admin() ) {
                     <p>Последний импорт завершен: <?php echo $progressBar['date'] ?? ''; ?></p>
                 </div>
 
-                <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
-                    <strong>Не разглашайте эти данные!</strong></p>
-                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
-                        --key=<?php echo md5( $options['oasis_mi_api_key'] ); ?></code> - загрузка/обновление товаров 1 раз в сутки</p><br/>
-                <p><code style="border: dashed 1px #333; border-radius: 4px; padding: 10px 20px;">php <?= OASIS_MI_PATH; ?>cron_import.php
-                        --key=<?php echo md5( $options['oasis_mi_api_key'] ); ?> --up</code> - обновление остатков 1 раз в 30 минут
-                </p><br/>
+                <div class="oa-notice">
+                    <div class="oa-row">
+                        <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
+                            <strong>Не разглашайте эти данные!</strong></p>
+                    </div>
+                    <div class="oa-row">
+                        <div class="oa-label">
+                            <p>Загрузка/обновление товаров 1 раз в сутки</p>
+                        </div>
+                        <div class="oa-container">
+                            <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>" aria-label="<?php echo $cronTask; ?>"
+                                   readonly="readonly">
+                        </div>
+                    </div>
+                    <div class="oa-row">
+                        <div class="oa-label">
+                            <p>Обновление остатков 1 раз в 30 минут</p>
+                        </div>
+                        <div class="oa-container">
+                            <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
+                                   aria-label="<?php echo $cronTask; ?> --up" readonly="readonly">
+                        </div>
+                    </div>
+                </div>
 				<?php
 			}
 			?>

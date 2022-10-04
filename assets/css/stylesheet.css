@@ -1,33 +1,49 @@
 /*
 Progress bar
  */
-.progress-notice {
+.oa-notice {
     background: #fff;
     border: 1px solid #c3c4c7;
-    border-left-width: 4px;
     box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
     margin: 5px 15px 2px;
     padding: 1px 12px;
+    border-left-width: 4px;
+    border-left-color: #c3c4c7;
+}
+
+.oa-notice-success {
+    border-left-color: #00a32a;
+}
+
+.oa-notice-info {
     border-left-color: #2e78ff;
 }
 
-.progress-row {
+.oa-notice-warning {
+    border-left-color: #dba617;
+}
+
+.oa-notice-danger {
+    border-left-color: #d63638;
+}
+
+.oa-row {
     display: flex;
     flex-flow: row wrap;
     justify-content: start;
 }
 
-.progress-label {
+.oa-label {
     width: 30%;
     min-width: 300px;
 }
 
-.progress-container {
+.oa-container {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 70%;
-    margin-top: 20px;
+    margin: 1em 0;
     height: 100%;
     min-width: 100px;
 }
@@ -46,6 +62,10 @@ Progress bar
     background: #228b09;
     transition: width 0.4s ease;
     text-align: center;
+}
+
+.input-cron-task {
+    width: 100%;
 }
 
 /*
@@ -91,3 +111,8 @@ table.oasis-orders th.export {
     background-color: #f2dede;
 }
 
+@media (max-width: 1260px) {
+    .oa-container {
+        width: 100%;
+    }
+}
