@@ -162,8 +162,7 @@ class Oasis {
 				$attribute->set_options( $value['value'] );
 				$attribute->set_position( $i );
 
-				$attrName = wc_sanitize_taxonomy_name( stripslashes( trim( $value['name'] ) ) );
-				if ( ( $attrName == 'цвет' || $attrName == 'размер' ) && (bool) $variation === true ) {
+				if ( ( $value['id'] == '1110000001' || $value['id'] == '1000000001' ) && (bool) $variation === true ) {
 					$attribute->set_variation( true );
 				} else {
 					$attribute->set_variation( false );
@@ -172,7 +171,7 @@ class Oasis {
 				$att_var[] = $attribute;
 				$i ++;
 			}
-			unset( $value, $i, $attrName );
+			unset( $value, $i );
 
 			if ( ! empty( $attributes['default'] ) ) {
 				$defAttr = [];
