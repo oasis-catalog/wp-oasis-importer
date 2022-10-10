@@ -176,7 +176,7 @@ class Oasis {
 			if ( ! empty( $attributes['default'] ) ) {
 				$defAttr = [];
 				foreach ( $attributes['default'] as $key => $value ) {
-					$defAttr[ sanitize_title( 'pa_' . Oasis::transliteration( wc_sanitize_taxonomy_name( stripslashes( $key ) ) ) ) ] = sanitize_title( trim( $value ) );
+					$defAttr[ sanitize_title( 'pa_' . self::transliteration( wc_sanitize_taxonomy_name( stripslashes( $key ) ) ) ) ] = sanitize_title( trim( $value ) );
 				}
 
 				$wcProduct->set_default_attributes( $defAttr );
@@ -532,7 +532,7 @@ class Oasis {
 	 *
 	 * @return array
 	 */
-	public function getOasisProducts( array $args = [] ): array {
+	public function getOasisProducts( array $args = [], $categories ): array {
 		$args += [
 			'fieldset'    => 'full',
 			'extend'      => 'is_visible',
@@ -552,9 +552,9 @@ class Oasis {
 		];
 
 		if ( empty( $this->options['oasis_mi_categories'] ) ) {
-			$categoryIds = array_keys( Oasis::getOasisMainCategories() );
+			$categoryIds = self::getOasisMainCategories( $categories );
 		} else {
-			$categoryIds = array_keys( $this->options['oasis_mi_categories'] );
+			$categoryIds = $this->options['oasis_mi_categories'];
 		}
 
 		$args += [
@@ -568,7 +568,7 @@ class Oasis {
 		}
 		unset( $categoryIds, $category, $data, $key, $value );
 
-		return Oasis::curlQuery( 'products', $args );
+		return self::curlQuery( 'products', $args );
 	}
 
 	/**
@@ -576,7 +576,7 @@ class Oasis {
 	 *
 	 * @return array|mixed
 	 */
-	public function getStatProducts() {
+	public function getStatProducts( $categories ) {
 		$args = [];
 
 		$data = [
@@ -590,9 +590,9 @@ class Oasis {
 		];
 
 		if ( empty( $this->options['oasis_mi_categories'] ) ) {
-			$data['category'] = implode( ',', array_keys( Oasis::getOasisMainCategories() ) );
+			$data['category'] = implode( ',', self::getOasisMainCategories( $categories ) );
 		} else {
-			$data['category'] = implode( ',', array_keys( $this->options['oasis_mi_categories'] ) );
+			$data['category'] = implode( ',', $this->options['oasis_mi_categories'] );
 		}
 
 		foreach ( $data as $key => $value ) {
@@ -602,7 +602,7 @@ class Oasis {
 		}
 		unset( $data, $key, $value );
 
-		return Oasis::curlQuery( 'stat', $args );
+		return self::curlQuery( 'stat', $args );
 	}
 
 	/**
@@ -635,12 +635,12 @@ class Oasis {
 		$result = [];
 
 		if ( ! $categories ) {
-			$categories = Oasis::getCategoriesOasis();
+			$categories = self::getCategoriesOasis();
 		}
 
 		foreach ( $categories as $category ) {
 			if ( $category->level === 1 ) {
-				$result[ $category->id ] = $category->name;
+				$result[] = $category->id;
 			}
 		}
 		unset( $categories, $category );
@@ -649,12 +649,101 @@ class Oasis {
 	}
 
 	/**
+	 * Build tree categories
+	 *
+	 * @param $data
+	 * @param array $checkedArr
+	 * @param string $treeCats
+	 * @param int $parent_id
+	 * @param bool $sw
+	 *
+	 * @return string
+	 */
+	public static function buildTreeCats( $data, array $checkedArr = [], string $treeCats = '', int $parent_id = 0, bool $sw = false ): string {
+		if ( ! empty( $data[ $parent_id ] ) ) {
+			$treeCats .= $sw ? '<ul>' . PHP_EOL : '';
+
+			for ( $i = 0; $i < count( $data[ $parent_id ] ); $i ++ ) {
+				if ( empty( $checkedArr ) ) {
+					$checked = $data[ $parent_id ][ $i ]['level'] == 1 ? ' checked' : '';
+				} else {
+					$checked = array_search( $data[ $parent_id ][ $i ]['id'], $checkedArr ) !== false ? ' checked' : '';
+				}
+
+				$treeCats .= '<li><label><input id="categories" type="checkbox" name="oasis_mi_options[oasis_mi_categories][]" value="' . $data[ $parent_id ][ $i ]['id'] . '"' . $checked . '/> ' . $data[ $parent_id ][ $i ]['name'] . '</label>' . PHP_EOL;
+				$treeCats = self::buildTreeCats( $data, $checkedArr, $treeCats, $data[ $parent_id ][ $i ]['id'], true ) . '</li>' . PHP_EOL;
+			}
+			$treeCats .= $sw ? '</ul>' . PHP_EOL : '';
+		}
+
+		return $treeCats;
+	}
+
+	/**
+	 * Update category and currency settings on plugin activation
+	 */
+	public static function activatePluginUpOptions() {
+		self::upOptionsCurrency( [
+			[
+				'code' => 'kzt',
+				'name' => 'Тенге'
+			],
+			[
+				'code' => 'kgs',
+				'name' => 'Киргизский Сом'
+			],
+			[
+				'code' => 'rub',
+				'name' => 'Российский рубль'
+			],
+			[
+				'code' => 'usd',
+				'name' => 'Доллар США'
+			],
+			[
+				'code' => 'byn',
+				'name' => 'Белорусский рубль'
+			],
+			[
+				'code' => 'eur',
+				'name' => 'Евро'
+			],
+			[
+				'code' => 'uah',
+				'name' => 'Гривна'
+			]
+		] );
+	}
+
+	/**
+	 * Update currency options
+	 *
+	 * @param array $data
+	 */
+	public static function upOptionsCurrency( array $data = [] ) {
+		if ( empty( $data ) ) {
+			$currencies = self::getCurrenciesOasis();
+
+			foreach ( $currencies as $currency ) {
+				$data[] = [
+					'code' => $currency->code,
+					'name' => $currency->full_name
+				];
+			}
+		}
+
+		update_option( 'oasis_currencies', $data );
+	}
+
+	/**
 	 * Get categories oasis
+	 *
+	 * @param bool $sleep
 	 *
 	 * @return array
 	 */
-	public static function getCategoriesOasis(): array {
-		return Oasis::curlQuery( 'categories', [ 'fields' => 'id,parent_id,root,level,slug,name,path' ] );
+	public static function getCategoriesOasis( bool $sleep = true ): array {
+		return self::curlQuery( 'categories', [ 'fields' => 'id,parent_id,root,level,slug,name,path' ], $sleep );
 	}
 
 	/**
@@ -663,7 +752,7 @@ class Oasis {
 	 * @return array
 	 */
 	public static function getCurrenciesOasis(): array {
-		return Oasis::curlQuery( 'currencies' );
+		return self::curlQuery( 'currencies' );
 	}
 
 	/**
@@ -672,7 +761,7 @@ class Oasis {
 	 * @return array
 	 */
 	public static function getStockOasis(): array {
-		return Oasis::curlQuery( 'stock', [ 'fields' => 'article,stock,id' ] );
+		return self::curlQuery( 'stock', [ 'fields' => 'article,stock,id' ] );
 	}
 
 	/**
@@ -714,7 +803,7 @@ class Oasis {
 	 * @return array
 	 */
 	public static function getOrderByQueueId( $queueId ) {
-		return Oasis::curlQuery( 'reserves/by-queue/' . $queueId );
+		return self::curlQuery( 'reserves/by-queue/' . $queueId );
 	}
 
 	/**
@@ -722,10 +811,11 @@ class Oasis {
 	 *
 	 * @param $type
 	 * @param array $args
+	 * @param bool $sleep
 	 *
 	 * @return array|mixed
 	 */
-	public static function curlQuery( $type, array $args = [] ) {
+	public static function curlQuery( $type, array $args = [], bool $sleep = true ) {
 		$options = get_option( 'oasis_mi_options' );
 
 		if ( empty( $options['oasis_mi_api_key'] ) ) {
@@ -752,7 +842,10 @@ class Oasis {
 
 			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 			curl_close( $ch );
-			sleep( 1 );
+
+			if ( $sleep ) {
+				sleep( 1 );
+			}
 
 			if ( $http_code === 401 ) {
 				throw new \Exception( 'Error Unauthorized. Invalid API key!' );

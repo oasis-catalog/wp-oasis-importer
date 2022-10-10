@@ -106,9 +106,9 @@ Errors: ' . $errors . PHP_EOL;
 			$args['offset'] = $step * $limit;
 		}
 
-		$products   = $this->getOasisProducts( $args );
 		$categories = Oasis::getCategoriesOasis();
-		$stats      = $this->getStatProducts();
+		$products   = $this->getOasisProducts( $args, $categories );
+		$stats      = $this->getStatProducts( $categories );
 
 		$progressBar              = get_option( 'oasis_progress' );
 		$progressBar['total']     = $stats->products;
@@ -162,7 +162,7 @@ Errors: ' . $errors . PHP_EOL;
 
 		$time_end = microtime( true );
 		update_option( 'oasis_import_time', ( $time_end - $time_start ) );
-		up_currencies_categories( false, $categories );
+		Oasis::upOptionsCurrency();
 	}
 
 	public function cronUpStock() {

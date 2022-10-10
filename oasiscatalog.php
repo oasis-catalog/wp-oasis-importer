@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://forum.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce
-Version: 1.9
+Version: 1.10
 Author: Oasiscatalog Team
 Author URI: https://forum.oasiscatalog.com
 License: GPL2
@@ -33,7 +33,7 @@ function oasis_mi_activate() {
 	}
 	create_table();
 	update_option( 'oasis_step', 0 );
-	up_currencies_categories( true );
+	Oasis::activatePluginUpOptions();
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -207,8 +207,8 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_limit',
-			'Лимит',
-			'oasis_mi_price_cb',
+			'Лимит товаров',
+			'oasis_mi_limit_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
 			[
@@ -304,20 +304,19 @@ function oasis_mi_api_user_id_cb( $args ) {
 	<?php
 }
 
-function oasis_mi_categories_cb( $args ) {
-	$options        = get_option( 'oasis_mi_options' );
-	$oasis_curr_cat = get_option( 'oasis_curr_cat' );
+function oasis_mi_categories_cb() {
+	$options    = get_option( 'oasis_mi_options' );
+	$categories = Oasis::getCategoriesOasis( false );
+	$arr_cat    = [];
 
-	foreach ( $oasis_curr_cat['categories'] as $key => $value ) {
-		$checked = $options[ $args['label_for'] ][ $key ] ?? false;
-		?>
-
-        <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>][<?php echo $key; ?>]"
-               type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
-               class="code" id="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>"/>
-        <label for="<?php echo esc_attr( $args['label_for'] . '-' . $key ); ?>" class="option"><?php echo $value; ?></label><br/>
-		<?php
+	foreach ( $categories as $item ) {
+		if ( empty( $arr_cat[ (int) $item->parent_id ] ) ) {
+			$arr_cat[ (int) $item->parent_id ] = [];
+		}
+		$arr_cat[ (int) $item->parent_id ][] = (array) $item;
 	}
+
+	echo '<ul id="tree">' . PHP_EOL . Oasis::buildTreeCats( $arr_cat, $options['oasis_mi_categories'] ?? [] ) . PHP_EOL . '</ul>' . PHP_EOL;
 }
 
 function oasis_mi_currency_cb( $args ) {
@@ -327,9 +326,21 @@ function oasis_mi_currency_cb( $args ) {
 
     <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-control col-sm-6">
 		<?php
-		$oasis_curr_cat = get_option( 'oasis_curr_cat' );
+		$currencies = get_option( 'oasis_currencies' );
 
-		foreach ( $oasis_curr_cat['currencies'] as $currency ) {
+		if ( empty( $currencies ) ) {
+			$currencies      = [];
+			$currenciesOasis = Oasis::getCurrenciesOasis();
+
+			foreach ( $currenciesOasis as $currency ) {
+				$currencies[] = [
+					'code' => $currency->code,
+					'name' => $currency->full_name
+				];
+			}
+		}
+
+		foreach ( $currencies as $currency ) {
 			$selected = '';
 			if ( $currency['code'] === $defaultCurrency ) {
 				$selected = ' selected="selected"';
@@ -359,6 +370,18 @@ function oasis_mi_price_cb( $args ) {
            step="0.01"
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 120px;"/>
+	<?php
+}
+
+function oasis_mi_limit_cb( $args ) {
+	$options = get_option( 'oasis_mi_options' );
+	?>
+
+    <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+           step="100"
+           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
+           maxlength="255" style="width: 120px;"/>
+    <p class="description">Количество товаров получаемое из API и обрабатываемое за один запуск.</p>
 	<?php
 }
 
@@ -471,6 +494,18 @@ if ( is_admin() ) {
 
 	function oasis_mi_admin_styles() {
 		wp_enqueue_style( 'oasis-stylesheet', plugins_url( 'assets/css/stylesheet.css', __FILE__ ) );
+		wp_enqueue_script( 'jquery-tree', plugins_url( 'assets/js/jquery.tree.js', __FILE__ ), [ 'jquery' ] );
+		add_action( 'admin_print_footer_scripts', 'init_script_tree' );
+	}
+
+	function init_script_tree() {
+		?>
+        <script type="text/javascript">
+            jQuery(document).ready(function () {
+                jQuery("#tree").Tree();
+            });
+        </script>
+		<?php
 	}
 
 	add_action( 'admin_menu', 'oasis_mi_menu' );
@@ -603,7 +638,6 @@ if ( is_admin() ) {
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 
         <div class="wrap">
-            <h1><?= esc_html( 'Настройка импорта товаров Oasis' ); ?></h1>
 			<?php
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
@@ -730,59 +764,6 @@ if ( is_admin() ) {
 			delete_term_meta( $term_id, 'oasis_cat_id' );
 		}
 	}
-
-}
-
-function up_currencies_categories( $activate = false, $categories = null ) {
-	if ( $activate ) {
-		$data['categories'] = [
-			1906 => 'VIP',
-			2269 => 'Праздники',
-			2891 => 'Продукция',
-		];
-		$data['currencies'] = [
-			[
-				'code' => 'kzt',
-				'name' => 'Тенге',
-			],
-			[
-				'code' => 'kgs',
-				'name' => 'Киргизский Сом',
-			],
-			[
-				'code' => 'rub',
-				'name' => 'Российский рубль',
-			],
-			[
-				'code' => 'usd',
-				'name' => 'Доллар США',
-			],
-			[
-				'code' => 'byn',
-				'name' => 'Белорусский рубль',
-			],
-			[
-				'code' => 'eur',
-				'name' => 'Евро',
-			],
-			[
-				'code' => 'uah',
-				'name' => 'Гривна',
-			]
-		];
-	} else {
-		$data['categories'] = Oasis::getOasisMainCategories( $categories );
-		$currencies         = Oasis::getCurrenciesOasis();
-
-		foreach ( $currencies as $currency ) {
-			$data['currencies'][] = [
-				'code' => $currency->code,
-				'name' => $currency->full_name
-			];
-		}
-	}
-
-	update_option( 'oasis_curr_cat', $data );
 }
 
 function create_table() {
@@ -803,3 +784,14 @@ function create_table() {
 
 	dbDelta( $sql );
 }
+
+add_filter( 'plugin_action_links', function ( $links, $file ) {
+	if ( $file != plugin_basename( __FILE__ ) ) {
+		return $links;
+	}
+
+	$settings_link = sprintf( '<a href="%s">%s</a>', admin_url( 'tools.php?page=oasiscatalog_mi' ), __( 'Settings', 'woocommerce' ) );
+	array_unshift( $links, $settings_link );
+
+	return $links;
+}, 10, 2 );
