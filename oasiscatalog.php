@@ -130,7 +130,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_not_on_order',
-			'Под заказ',
+			'Без товаров "под заказ"',
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -142,22 +142,24 @@ function oasis_mi_settings_init() {
 		add_settings_field(
 			'oasis_mi_price_from',
 			'Цена от',
-			'oasis_mi_price_cb',
+			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
 			[
 				'label_for' => 'oasis_mi_price_from',
+				'step'      => '0.01',
 			]
 		);
 
 		add_settings_field(
 			'oasis_mi_price_to',
 			'Цена до',
-			'oasis_mi_price_cb',
+			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
 			[
 				'label_for' => 'oasis_mi_price_to',
+				'step'      => '0.01',
 			]
 		);
 
@@ -208,11 +210,13 @@ function oasis_mi_settings_init() {
 		add_settings_field(
 			'oasis_mi_limit',
 			'Лимит товаров',
-			'oasis_mi_limit_cb',
+			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
 			[
-				'label_for' => 'oasis_mi_limit',
+				'label_for'   => 'oasis_mi_limit',
+				'description' => 'Количество товаров получаемое из API и обрабатываемое за один запуск.',
+				'step'        => '100',
 			]
 		);
 
@@ -226,22 +230,26 @@ function oasis_mi_settings_init() {
 		add_settings_field(
 			'oasis_mi_price_factor',
 			'Коэффициент цены',
-			'oasis_mi_price_cb',
+			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_price',
 			[
-				'label_for' => 'oasis_mi_price_factor',
+				'label_for'   => 'oasis_mi_price_factor',
+				'description' => 'Цена будет умножена на данный коэффициент. Например, для того чтобы увеличить стоимость на 20% необходимо указать 1,2',
+				'step'        => '0.01',
 			]
 		);
 
 		add_settings_field(
 			'oasis_mi_increase',
 			'Надбавка к цене',
-			'oasis_mi_price_cb',
+			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_price',
 			[
-				'label_for' => 'oasis_mi_increase',
+				'label_for'   => 'oasis_mi_increase',
+				'description' => 'К цене будет добавлена данная величина. Например, если указать 100, то у всех товаров к стоимости будет добавлено 100р.',
+				'step'        => '0.01',
 			]
 		);
 
@@ -362,27 +370,16 @@ function oasis_mi_checbox_cb( $args ) {
 	<?php
 }
 
-function oasis_mi_price_cb( $args ) {
+function oasis_mi_number_cb( $args ) {
 	$options = get_option( 'oasis_mi_options' );
 	?>
 
     <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
-           step="0.01"
+		<?php echo $args['step'] ? 'step="' . $args['step'] . '"' : ''; ?>
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 120px;"/>
 	<?php
-}
-
-function oasis_mi_limit_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
-	?>
-
-    <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
-           step="100"
-           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
-           maxlength="255" style="width: 120px;"/>
-    <p class="description">Количество товаров получаемое из API и обрабатываемое за один запуск.</p>
-	<?php
+	echo $args['description'] ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
 function oasis_mi_rating_cb( $args ) {

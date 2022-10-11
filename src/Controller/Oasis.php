@@ -529,6 +529,7 @@ class Oasis {
 	 * Get products oasis
 	 *
 	 * @param array $args
+	 * @param $categories
 	 *
 	 * @return array
 	 */
