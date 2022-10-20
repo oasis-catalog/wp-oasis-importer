@@ -18,22 +18,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'OASIS_MI_PATH', plugin_dir_path( __FILE__ ) );
 
-require_once __DIR__ . '/src/Controller/Oasis.php';
+require_once __DIR__ . '/src/Controller/Api.php';
+require_once __DIR__ . '/src/Controller/Main.php';
 
-use OasisImport\Controller\Oasis\Oasis;
+use OasisImport\Controller\Oasis\Api;
+use OasisImport\Controller\Oasis\Main;
 
 /**
- * Проверка на наличие включенного Woocommerce при активации плагина
+ * Проверка на наличие включенного Woocommerce, создание таблицы и первоначальные настройки при активации плагина
  */
 register_activation_hook( __FILE__, 'oasis_mi_activate' );
 
 function oasis_mi_activate() {
-	if ( ! is_plugin_active( 'woocommerce/woocommerce.php' ) and current_user_can( 'activate_plugins' ) ) {
+	if ( ! is_plugin_active( 'woocommerce/woocommerce.php' ) && current_user_can( 'activate_plugins' ) ) {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
 	create_table();
 	update_option( 'oasis_step', 0 );
-	Oasis::activatePluginUpOptions();
+	Main::activatePluginUpOptions();
+}
+
+/**
+ * Сброс части настроек при отключении плагина
+ */
+register_deactivation_hook(__FILE__, 'oasis_mi_deactivate');
+
+function oasis_mi_deactivate() {
+	delete_option('oasis_progress');
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -314,7 +325,7 @@ function oasis_mi_api_user_id_cb( $args ) {
 
 function oasis_mi_categories_cb() {
 	$options    = get_option( 'oasis_mi_options' );
-	$categories = Oasis::getCategoriesOasis( false );
+	$categories = Api::getCategoriesOasis( false );
 	$arr_cat    = [];
 
 	foreach ( $categories as $item ) {
@@ -324,7 +335,7 @@ function oasis_mi_categories_cb() {
 		$arr_cat[ (int) $item->parent_id ][] = (array) $item;
 	}
 
-	echo '<ul id="tree">' . PHP_EOL . Oasis::buildTreeCats( $arr_cat, $options['oasis_mi_categories'] ?? [] ) . PHP_EOL . '</ul>' . PHP_EOL;
+	echo '<ul id="tree">' . PHP_EOL . Main::buildTreeCats( $arr_cat, $options['oasis_mi_categories'] ?? [] ) . PHP_EOL . '</ul>' . PHP_EOL;
 }
 
 function oasis_mi_currency_cb( $args ) {
@@ -338,7 +349,7 @@ function oasis_mi_currency_cb( $args ) {
 
 		if ( empty( $currencies ) ) {
 			$currencies      = [];
-			$currenciesOasis = Oasis::getCurrenciesOasis();
+			$currenciesOasis = Api::getCurrenciesOasis();
 
 			foreach ( $currenciesOasis as $currency ) {
 				$currencies[] = [
@@ -428,7 +439,7 @@ function oasis_mi_get_orders() {
 
 			if ( $queueId ) {
 				$htmlExport = '';
-				$dataOrder  = Oasis::getOrderByQueueId( $queueId );
+				$dataOrder  = Api::getOrderByQueueId( $queueId );
 
 				if ( isset( $dataOrder->state ) ) {
 					if ( $dataOrder->state == 'created' ) {
@@ -607,7 +618,7 @@ if ( is_admin() ) {
 				}
 				unset( $item );
 
-				$request = Oasis::sendOrder( $apiKey, $data );
+				$request = Api::sendOrder( $apiKey, $data );
 
 				if ( $request ) {
 					update_metadata( 'post', $order_id, 'oasis_queue_id', $request->queueId );
@@ -639,14 +650,14 @@ if ( is_admin() ) {
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
 
-				if ( ! empty( $progressBar['item'] ) || ! empty( $progressBar['total'] ) ) {
+				if ( ! empty( $progressBar['item'] ) && ! empty( $progressBar['total'] ) ) {
 					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 					$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
 				} else {
 					$percentTotal = 0;
 				}
 
-				if ( ! empty( $progressBar['step_item'] ) || ! empty( $progressBar['step_total'] ) ) {
+				if ( ! empty( $progressBar['step_item'] ) && ! empty( $progressBar['step_total'] ) ) {
 					$percentStep = round( ( $progressBar['step_item'] / $progressBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 				} else {
 					$percentStep = 0;
