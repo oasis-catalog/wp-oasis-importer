@@ -62,7 +62,9 @@ class Api {
 	 */
 	public static function getStatProducts( $categories ) {
 		$options = get_option( 'oasis_mi_options' );
-		$args    = [];
+		$args    = [
+			'showDeleted' => 1
+		];
 
 		$data = [
 			'not_on_order' => $options['oasis_mi_not_on_order'] ?? null,
