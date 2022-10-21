@@ -133,6 +133,7 @@ class Main {
 				$wcProduct->set_stock_quantity( $totalStock );
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
+				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
@@ -197,6 +198,7 @@ class Main {
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 				$wcProduct->set_category_ids( $categories );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
+				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
@@ -364,7 +366,7 @@ class Main {
 
 		$data['_price'] = $price;
 
-		if ( ! empty( $old_price ) && $price < $old_price ) {
+		if ( empty( $options['oasis_mi_disable_sales'] ) && ! empty( $old_price ) && $price < $old_price ) {
 			$data['_regular_price'] = $old_price;
 			$data['_sale_price']    = $price;
 		} else {

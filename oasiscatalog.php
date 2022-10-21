@@ -275,6 +275,37 @@ function oasis_mi_settings_init() {
 			]
 		);
 
+		add_settings_section(
+			'oasis_mi_section_additionally',
+			'Дополнительные настройки',
+			null,
+			'oasis_mi'
+		);
+
+		add_settings_field(
+			'oasis_mi_comments',
+			'Включить отзывы',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_additionally',
+			[
+				'label_for' => 'oasis_mi_comments',
+				'description' => 'Включить комментирование импортируемых товаров',
+			]
+		);
+
+		add_settings_field(
+			'oasis_mi_disable_sales',
+			'Скрыть скидки',
+			'oasis_mi_checbox_cb',
+			'oasis_mi',
+			'oasis_mi_section_additionally',
+			[
+				'label_for' => 'oasis_mi_disable_sales',
+				'description' => 'Скрыть "старую" цену в товарах',
+			]
+		);
+
 		// orders
 		register_setting( 'oasis_mi_orders', 'oasis_mi_orders' );
 
@@ -379,6 +410,7 @@ function oasis_mi_checbox_cb( $args ) {
     <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
            class="code"/>
 	<?php
+	echo $args['description'] ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
 function oasis_mi_number_cb( $args ) {
