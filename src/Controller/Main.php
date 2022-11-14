@@ -116,47 +116,42 @@ class Main {
 	 */
 	public static function addWcProduct( $oasisProduct, $model, $categories, $totalStock, $options, string $type ) {
 		try {
-			$productStatus = self::getProductStatus( $oasisProduct, $totalStock );
-			$dataPrice     = self::getDataPrice( $oasisProduct, $options );
+			$dataPrice = self::getDataPrice( $oasisProduct, $options );
 
-			if ( $productStatus !== 'trash' ) {
-				$wcProduct = self::getWcProductObjectType( $type );
-				$wcProduct->set_name( $oasisProduct->name );
-				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
-				$wcProduct->set_category_ids( $categories );
-				$wcProduct->set_slug( self::getUniquePostName( $oasisProduct->name, 'product' ) );
-				$wcProduct->set_manage_stock( true );
-				$wcProduct->set_status( $productStatus );
-				$wcProduct->set_price( $dataPrice['_price'] );
-				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
-				$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
-				$wcProduct->set_stock_quantity( $totalStock );
-				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
-				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
+			$wcProduct = self::getWcProductObjectType( $type );
+			$wcProduct->set_name( $oasisProduct->name );
+			$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
+			$wcProduct->set_category_ids( $categories );
+			$wcProduct->set_slug( self::getUniquePostName( $oasisProduct->name, 'product' ) );
+			$wcProduct->set_manage_stock( true );
+			$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
+			$wcProduct->set_price( $dataPrice['_price'] );
+			$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
+			$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
+			$wcProduct->set_stock_quantity( $totalStock );
+			$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
+			$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
+			$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
 
-				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
-				if ( $defaultAttr ) {
-					$wcProduct->set_default_attributes( self::getProductDefaultAttributes( $oasisProduct->id, $model ) );
-				}
-
-				if ( $type == 'simple' ) {
-					$wcProduct->set_sku( $oasisProduct->article );
-				}
-
-				$wcProduct->save();
-
-				$wcProductId = $wcProduct->get_id();
-				$images      = self::processingPhoto( $oasisProduct->images, $wcProductId );
-				$wcProduct->set_image_id( array_shift( $images ) );
-				$wcProduct->set_gallery_image_ids( $images );
-				$wcProduct->save();
-
-				self::addProductOasisTable( $wcProductId, $oasisProduct->id, $oasisProduct->group_id, 'product' );
-				self::cliMsg( 'Добавлен товар id ' . $oasisProduct->id );
-			} else {
-				self::cliMsg( 'Товар не добален т.к. удален в Oasis. Id ' . $oasisProduct->id );
+			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
+			if ( $defaultAttr ) {
+				$wcProduct->set_default_attributes( self::getProductDefaultAttributes( $oasisProduct->id, $model ) );
 			}
+
+			if ( $type == 'simple' ) {
+				$wcProduct->set_sku( $oasisProduct->article );
+			}
+
+			$wcProduct->save();
+
+			$wcProductId = $wcProduct->get_id();
+			$images      = self::processingPhoto( $oasisProduct->images, $wcProductId );
+			$wcProduct->set_image_id( array_shift( $images ) );
+			$wcProduct->set_gallery_image_ids( $images );
+			$wcProduct->save();
+
+			self::addProductOasisTable( $wcProductId, $oasisProduct->id, $oasisProduct->group_id, 'product' );
+			self::cliMsg( 'Добавлен товар id ' . $oasisProduct->id );
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
@@ -237,38 +232,33 @@ class Main {
 	 */
 	public static function addWcVariation( $productId, $oasisProduct, $options ) {
 		try {
-			$dataPrice       = self::getDataPrice( $oasisProduct, $options );
-			$variationStatus = self::getProductStatus( $oasisProduct, intval( $oasisProduct->total_stock ) );
+			$dataPrice = self::getDataPrice( $oasisProduct, $options );
 
-			if ( $variationStatus !== 'trash' ) {
-				$wcVariation = new \WC_Product_Variation();
-				$wcVariation->set_name( $oasisProduct->full_name );
-				$wcVariation->set_sku( $oasisProduct->article );
-				$wcVariation->set_parent_id( $productId );
-				$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
-				$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-				$wcVariation->set_price( $dataPrice['_price'] );
-				$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
-				$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
-				$wcVariation->set_stock_quantity( intval( $oasisProduct->total_stock ) );
-				$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
+			$wcVariation = new \WC_Product_Variation();
+			$wcVariation->set_name( $oasisProduct->full_name );
+			$wcVariation->set_sku( $oasisProduct->article );
+			$wcVariation->set_parent_id( $productId );
+			$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
+			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
+			$wcVariation->set_price( $dataPrice['_price'] );
+			$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
+			$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
+			$wcVariation->set_stock_quantity( intval( $oasisProduct->total_stock ) );
+			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 
-				$attributes = self::getVariationAttributes( $oasisProduct );
-				if ( $attributes ) {
-					$wcVariation->set_attributes( $attributes );
-				}
-
-				$wcVariation->save();
-				$wcVariationId = $wcVariation->get_id();
-				$images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
-				$wcVariation->set_image_id( array_shift( $images ) );
-				$wcVariation->save();
-
-				self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
-				self::cliMsg( 'Добавлен вариант id ' . $oasisProduct->id );
-			} else {
-				self::cliMsg( 'Вариант не добален т.к. удален в Oasis. Id ' . $oasisProduct->id );
+			$attributes = self::getVariationAttributes( $oasisProduct );
+			if ( $attributes ) {
+				$wcVariation->set_attributes( $attributes );
 			}
+
+			$wcVariation->save();
+			$wcVariationId = $wcVariation->get_id();
+			$images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
+			$wcVariation->set_image_id( array_shift( $images ) );
+			$wcVariation->save();
+
+			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
+			self::cliMsg( 'Добавлен вариант id ' . $oasisProduct->id );
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
