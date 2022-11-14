@@ -31,21 +31,27 @@ class Cli extends Main {
 			$progressBar['total']     = $stats->products;
 			$progressBar['step_item'] = 0;
 
+			$nextStep = $products ? ++ $step : 0;
+
+			$group_ids     = [];
+			$countProducts = 0;
+			foreach ( $products as $product ) {
+				if ( $product->is_deleted === false ) {
+					$group_ids[ $product->group_id ][ $product->id ] = $product;
+					$countProducts ++;
+				} else {
+					parent::checkDeleteProduct( $product->id );
+				}
+			}
+
 			if ( $limit > 0 && ! empty( $products ) ) {
-				$progressBar['step_total'] = count( $products );
+				$progressBar['step_total'] = $countProducts;
 			} else {
 				$progressBar['step_total'] = 0;
 				$progressBar['item']       = 0;
 			}
 
-			$nextStep = $products ? ++ $step : 0;
-
-			$group_ids = [];
-			foreach ( $products as $product ) {
-				$group_ids[ $product->group_id ][ $product->id ] = $product;
-			}
-			unset( $products, $product );
-
+			unset( $products, $product, $countProducts );
 			$total      = count( array_keys( $group_ids ) );
 			$count      = 0;
 			$time_start = microtime( true );
@@ -77,6 +83,9 @@ class Cli extends Main {
 						}
 					} else {
 						$wcProductId = parent::addWcProduct( $firstProduct, $model, $categories, $totalStock, $options, 'variable' );
+						if ( ! $wcProductId ) {
+							continue;
+						}
 					}
 
 					foreach ( $model as $variation ) {

@@ -159,10 +159,15 @@ class Main {
 			}
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
-			die();
+
+			if ( $exception->getErrorCode() == 'product_invalid_sku' ) {
+				self::deleteWcProductBySky( $oasisProduct );
+			} else {
+				die();
+			}
 		}
 
-		return $wcProductId ?? null;
+		return $wcProductId ?? false;
 	}
 
 	/**
@@ -240,6 +245,7 @@ class Main {
 				$wcVariation->set_name( $oasisProduct->full_name );
 				$wcVariation->set_sku( $oasisProduct->article );
 				$wcVariation->set_parent_id( $productId );
+				$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
 				$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
 				$wcVariation->set_price( $dataPrice['_price'] );
 				$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
@@ -265,7 +271,12 @@ class Main {
 			}
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
-			die();
+
+			if ( $exception->getErrorCode() == 'product_invalid_sku' ) {
+				self::deleteWcProductBySky( $oasisProduct );
+			} else {
+				die();
+			}
 		}
 
 		return $wcVariationId ?? null;
@@ -308,17 +319,72 @@ class Main {
 	}
 
 	/**
+	 * Check and delete product by Oasis product id
+	 *
+	 * @param $productId
+	 */
+	public static function checkDeleteProduct( $productId ) {
+		global $wpdb;
+
+		$dbResults = $wpdb->get_results(
+			$wpdb->prepare( "
+				SELECT op.post_id, p.ID 
+				FROM {$wpdb->prefix}oasis_products op
+				LEFT JOIN {$wpdb->prefix}posts p
+				ON op.post_id = p.ID
+				WHERE op.product_id_oasis LIKE '%s'",
+				$productId
+			),
+			ARRAY_A
+		);
+
+		if ( $dbResults ) {
+			foreach ( $dbResults as $dbResult ) {
+				if ( ! is_null( $dbResult['ID'] ) ) {
+					$wcProduct = wc_get_product( intval( $dbResult['post_id'] ) );
+
+					if ( $wcProduct ) {
+						self::deleteWcProduct( $wcProduct );
+					}
+				}
+
+				$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $dbResult['post_id'] ) ] );
+			}
+		}
+	}
+
+	/**
+	 * Delete woocommerce product by sky
+	 *
+	 * @param $product
+	 */
+	private static function deleteWcProductBySky( $product ) {
+		$wcProductID = wc_get_product_id_by_sku( $product->article );
+
+		if ( $wcProductID ) {
+			$wcProduct = wc_get_product( $wcProductID );
+			self::deleteWcProduct( $wcProduct );
+			self::cliMsg( 'Есть артикул! Oasis Id: ' . $product->id );
+		}
+	}
+
+	/**
 	 * Delete woocommerce product
 	 *
 	 * @param $wcProduct
 	 */
 	private static function deleteWcProduct( $wcProduct ) {
+		global $wpdb;
+
 		if ( $wcProduct->is_type( 'variable' ) ) {
 			foreach ( $wcProduct->get_children() as $child_id ) {
 				$child = wc_get_product( $child_id );
 				$child->delete( true );
+				$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $child_id ) ] );
 			}
 		}
+
+		$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $wcProduct->get_id() ) ] );
 		$wcProduct->delete( true );
 	}
 
