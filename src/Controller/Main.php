@@ -190,6 +190,7 @@ class Main {
 
 				$wcProduct->set_name( $oasisProduct->name );
 				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
+                $wcProduct->set_manage_stock( true );
 				$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
 				$wcProduct->set_price( $dataPrice['_price'] );
 				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
@@ -252,10 +253,13 @@ class Main {
 			}
 
 			$wcVariation->save();
-			$wcVariationId = $wcVariation->get_id();
-			$images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
-			$wcVariation->set_image_id( array_shift( $images ) );
-			$wcVariation->save();
+
+            if ( $oasisProduct->images ) {
+                $wcVariationId = $wcVariation->get_id();
+                $images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
+                $wcVariation->set_image_id( array_shift( $images ) );
+                $wcVariation->save();
+            }
 
 			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
 			self::cliMsg( 'Добавлен вариант id ' . $oasisProduct->id );
@@ -281,27 +285,23 @@ class Main {
 	 */
 	public static function upWcVariation( $dbVariation, $oasisProduct, $options ) {
 		try {
-			if ( strtotime( $oasisProduct->updated_at ) > strtotime( $dbVariation['post_modified'] ) ) {
-				$dataPrice   = self::getDataPrice( $oasisProduct, $options );
-				$wcVariation = wc_get_product( $dbVariation['post_id'] );
+			$dataPrice   = self::getDataPrice( $oasisProduct, $options );
+			$wcVariation = wc_get_product( $dbVariation['post_id'] );
 
-				if ( $wcVariation === false ) {
-					throw new Exception( 'Error open variation. No variation with this ID' );
-				}
-
-				$wcVariation->set_name( $oasisProduct->full_name );
-				$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-				$wcVariation->set_price( $dataPrice['_price'] );
-				$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
-				$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
-				$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
-				$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-				$wcVariation->save();
-
-				self::cliMsg( 'Обновлен вариант id ' . $oasisProduct->id );
-			} else {
-				self::cliMsg( 'Вариант не изменился в Oasis id ' . $oasisProduct->id );
+			if ( $wcVariation === false ) {
+				throw new Exception( 'Error open variation. No variation with this ID' );
 			}
+
+			$wcVariation->set_name( $oasisProduct->full_name );
+			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
+			$wcVariation->set_price( $dataPrice['_price'] );
+			$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
+			$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
+			$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
+			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
+			$wcVariation->save();
+
+			self::cliMsg( 'Обновлен вариант id ' . $oasisProduct->id );
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();
@@ -752,7 +752,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		global $wc_product_attributes;
 
 		delete_transient( 'wc_attribute_taxonomies' );
-		\WC_Cache_Helper::incr_cache_prefix( 'woocommerce-attributes' );
+		\WC_Cache_Helper::invalidate_cache_group( 'woocommerce-attributes' );
 
 		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
 		$attribute_name   = array_search( empty( $slug ) ? $raw_name : $slug, $attribute_labels, true );
@@ -1282,47 +1282,49 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
 
 		$attachIds = [];
-		foreach ( $images as $image ) {
-			if ( ! isset( $image->superbig ) ) {
-				continue;
-			}
-
-			if ( ! $parentSizeId ) {
-				$filename   = basename( $image->superbig );
-				$existImage = get_page_by_title( sanitize_file_name( $filename ), OBJECT, 'attachment' );
-
-				if ( $existImage ) {
-					$attachIds[] = $existImage->ID;
+		if ( $images ) {
+			foreach ( $images as $image ) {
+				if ( ! isset( $image->superbig ) ) {
 					continue;
 				}
 
-				$image_data = file_get_contents( $image->superbig );
+				if ( ! $parentSizeId ) {
+					$filename   = basename( $image->superbig );
+					$existImage = get_page_by_title( sanitize_file_name( $filename ), OBJECT, 'attachment' );
 
-				if ( $image_data ) {
-					if ( wp_mkdir_p( $upload_dir['path'] ) ) {
-						$file = $upload_dir['path'] . '/' . $filename;
-					} else {
-						$file = $upload_dir['basedir'] . '/' . $filename;
+					if ( $existImage ) {
+						$attachIds[] = $existImage->ID;
+						continue;
 					}
 
-					file_put_contents( $file, $image_data );
-					$wp_filetype = wp_check_filetype( $filename );
+					$image_data = file_get_contents( $image->superbig );
 
-					$attachment = [
-						'post_mime_type' => $wp_filetype['type'],
-						'post_title'     => sanitize_file_name( $filename ),
-						'post_content'   => '',
-						'post_status'    => 'inherit',
-						'post_parent'    => $product_id,
-					];
+					if ( $image_data ) {
+						if ( wp_mkdir_p( $upload_dir['path'] ) ) {
+							$file = $upload_dir['path'] . '/' . $filename;
+						} else {
+							$file = $upload_dir['basedir'] . '/' . $filename;
+						}
 
-					$attach_id   = wp_insert_attachment( $attachment, $file );
-					$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
-					wp_update_attachment_metadata( $attach_id, $attach_data );
-					$attachIds[] = $attach_id;
+						file_put_contents( $file, $image_data );
+						$wp_filetype = wp_check_filetype( $filename );
+
+						$attachment = [
+							'post_mime_type' => $wp_filetype['type'],
+							'post_title'     => sanitize_file_name( $filename ),
+							'post_content'   => '',
+							'post_status'    => 'inherit',
+							'post_parent'    => $product_id,
+						];
+
+						$attach_id   = wp_insert_attachment( $attachment, $file );
+						$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
+						wp_update_attachment_metadata( $attach_id, $attach_data );
+						$attachIds[] = $attach_id;
+					}
+				} else {
+					$attachIds[] = get_post_thumbnail_id( $parentSizeId );
 				}
-			} else {
-				$attachIds[] = get_post_thumbnail_id( $parentSizeId );
 			}
 		}
 
