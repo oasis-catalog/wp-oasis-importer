@@ -237,6 +237,7 @@ class Main {
 
 			$wcVariation = new \WC_Product_Variation();
 			$wcVariation->set_name( $oasisProduct->full_name );
+			$wcVariation->set_manage_stock( true );
 			$wcVariation->set_sku( $oasisProduct->article );
 			$wcVariation->set_parent_id( $productId );
 			$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
@@ -293,6 +294,7 @@ class Main {
 			}
 
 			$wcVariation->set_name( $oasisProduct->full_name );
+			$wcVariation->set_manage_stock( true );
 			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
 			$wcVariation->set_price( $dataPrice['_price'] );
 			$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
