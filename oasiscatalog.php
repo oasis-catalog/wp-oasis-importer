@@ -410,7 +410,7 @@ function oasis_mi_checbox_cb( $args ) {
     <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
            class="code"/>
 	<?php
-	echo $args['description'] ? '<p class="description">' . $args['description'] . '</p>' : '';
+	echo ! empty( $args['description'] ) ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
 function oasis_mi_number_cb( $args ) {
@@ -422,7 +422,7 @@ function oasis_mi_number_cb( $args ) {
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 120px;"/>
 	<?php
-	echo $args['description'] ? '<p class="description">' . $args['description'] . '</p>' : '';
+	echo ! empty( $args['description'] ) ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
 function oasis_mi_rating_cb( $args ) {
@@ -562,9 +562,8 @@ if ( is_admin() ) {
 				'oasiscatalog_mi_orders',
 				'oasis_mi_orders_html'
 			);
+			add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
 		}
-
-		add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
 	}
 
 	add_action( 'admin_menu', 'oasis_mi_menu_orders' );
