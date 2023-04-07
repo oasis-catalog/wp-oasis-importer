@@ -5,6 +5,7 @@ require_once( __DIR__ . '/../../../wp-load.php' );
 require_once( __DIR__ . '/src/Controller/Cli.php' );
 
 use OasisImport\Controller\Oasis\Cli;
+use OasisImport\Controller\Oasis\Main;
 
 class StartCli {
 
@@ -63,14 +64,7 @@ Errors: ' . $errors . PHP_EOL;
 
 	public function doExecute() {
 		try {
-			$upload_dir = wp_upload_dir();
-			$dir_lock   = $upload_dir['basedir'] . '/oasis_lock';
-
-			if ( ! wp_mkdir_p( $dir_lock ) ) {
-				throw new Exception( 'Failed to create directory ' . $dir_lock );
-			}
-
-			$lock = fopen( $dir_lock . '/lock_start.lock', 'w' );
+			$lock = fopen( Main::getFileNameLock(), 'w' );
 			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
 				throw new Exception( 'Already running' );
 			}

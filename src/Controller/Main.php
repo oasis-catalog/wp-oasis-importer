@@ -1040,18 +1040,18 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	/**
 	 * Update progress bar
 	 *
-	 * @param $progressBar
+	 * @param $bar
 	 *
 	 * @return mixed
 	 */
-	public static function upProgressBar( $progressBar ) {
-		$progressBar['item'] ++;
+	public static function upProgressBar( $bar ) {
+		$bar['item'] ++;
 
-		if ( isset( $progressBar['step_total'] ) ) {
-			$progressBar['step_item'] ++;
+		if ( isset( $bar['step_total'] ) ) {
+			$bar['step_item'] ++;
 		}
 
-		return $progressBar;
+		return $bar;
 	}
 
 	/**
@@ -1331,6 +1331,45 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		}
 
 		return $attachIds;
+	}
+
+	/**
+	 * Check lock php process
+	 *
+	 * @return bool|void
+	 */
+	public static function checkLockProcess() {
+		try {
+			$lock = fopen( self::getFileNameLock(), 'w' );
+			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
+				return true;
+			}
+
+			return false;
+		} catch ( Exception $e ) {
+			echo $e->getMessage() . PHP_EOL;
+			exit();
+		}
+	}
+
+	/**
+	 * Get filename to lock
+	 * @return string|void
+	 */
+	public static function getFileNameLock() {
+		try {
+			$upload_dir = wp_upload_dir();
+			$dir_lock   = $upload_dir['basedir'] . '/oasis_lock';
+
+			if ( ! wp_mkdir_p( $dir_lock ) ) {
+				throw new Exception( 'Failed to create directory ' . $dir_lock );
+			}
+
+			return $dir_lock . '/lock_start.lock';
+		} catch ( Exception $e ) {
+			echo $e->getMessage() . PHP_EOL;
+			exit();
+		}
 	}
 
 	/**

@@ -669,9 +669,9 @@ if ( is_admin() ) {
 
 		settings_errors( 'oasis_mi_messages' );
 
-		$options     = get_option( 'oasis_mi_options' );
-		$progressBar = get_option( 'oasis_progress' );
-		$limit       = isset( $options['oasis_mi_limit'] ) ? (int) $options['oasis_mi_limit'] : null;
+		$options = get_option( 'oasis_mi_options' );
+		$pBar    = get_option( Main::checkLockProcess() ? 'oasis_progress_tmp' : 'oasis_progress' );
+		$limit   = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
 		?>
         <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
@@ -681,15 +681,15 @@ if ( is_admin() ) {
 			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
 
-				if ( ! empty( $progressBar['item'] ) && ! empty( $progressBar['total'] ) ) {
-					$percentTotal = round( ( $progressBar['item'] / $progressBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+				if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
+					$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 					$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
 				} else {
 					$percentTotal = 0;
 				}
 
-				if ( ! empty( $progressBar['step_item'] ) && ! empty( $progressBar['step_total'] ) ) {
-					$percentStep = round( ( $progressBar['step_item'] / $progressBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+				if ( ! empty( $pBar['step_item'] ) && ! empty( $pBar['step_total'] ) ) {
+					$percentStep = round( ( $pBar['step_item'] / $pBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 				} else {
 					$percentStep = 0;
 				}
@@ -707,7 +707,7 @@ if ( is_admin() ) {
                         </div>
                     </div>
 					<?php if ( $limit > 0 ) {
-						$stepTotal  = ! empty( $progressBar['total'] ) ? ceil( intval( $progressBar['total'] ) / intval( $limit ) ) : 0;
+						$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
 						$oasis_step = intval( get_option( 'oasis_step' ) );
 						$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
 						?>
@@ -722,7 +722,7 @@ if ( is_admin() ) {
                             </div>
                         </div>
 					<?php } ?>
-                    <p>Последний импорт завершен: <?php echo $progressBar['date'] ?? ''; ?></p>
+                    <p>Последний импорт завершен: <?php echo $pBar['date'] ?? ''; ?></p>
                 </div>
 
                 <div class="oa-notice">
