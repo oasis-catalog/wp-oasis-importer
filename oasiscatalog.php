@@ -4,6 +4,7 @@ Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://forum.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce
 Version: 2.1
+Text Domain: wp-oasis-importer
 Author: Oasiscatalog Team
 Author URI: https://forum.oasiscatalog.com
 License: GPL2
@@ -25,6 +26,15 @@ use OasisImport\Controller\Oasis\Api;
 use OasisImport\Controller\Oasis\Main;
 
 /**
+ * Init translations
+ */
+add_action( 'plugins_loaded', 'true_load_plugin_textdomain' );
+
+function true_load_plugin_textdomain() {
+	load_plugin_textdomain( 'wp-oasis-importer', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+}
+
+/**
  * Проверка на наличие включенного Woocommerce, создание таблицы и первоначальные настройки при активации плагина
  */
 register_activation_hook( __FILE__, 'oasis_mi_activate' );
@@ -41,10 +51,10 @@ function oasis_mi_activate() {
 /**
  * Сброс части настроек при отключении плагина
  */
-register_deactivation_hook(__FILE__, 'oasis_mi_deactivate');
+register_deactivation_hook( __FILE__, 'oasis_mi_deactivate' );
 
 function oasis_mi_deactivate() {
-	delete_option('oasis_progress');
+	delete_option( 'oasis_progress' );
 }
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -61,7 +71,7 @@ function oasis_mi_admin_validations() {
 	if ( empty( $options['oasis_mi_api_key'] ) ) {
 		?>
         <div class="notice notice-error">
-            <p><strong>Укажите API ключ!</strong></p>
+            <p><strong><?php echo __( 'Specify the API key!', 'wp-oasis-importer' ); ?></strong></p>
         </div>
 		<?php
 	}
@@ -76,14 +86,14 @@ function oasis_mi_settings_init() {
 
 	add_settings_section(
 		'oasis_mi_section_developers',
-		'Настройка импорта товаров Oasis',
+		__( 'Setting up import of Oasis products', 'wp-oasis-importer' ),
 		null,
 		'oasis_mi'
 	);
 
 	add_settings_field(
 		'oasis_mi_api_key',
-		'Ключ API',
+		__( 'Key API', 'wp-oasis-importer' ),
 		'oasis_mi_api_key_cb',
 		'oasis_mi',
 		'oasis_mi_section_developers',
@@ -94,7 +104,7 @@ function oasis_mi_settings_init() {
 
 	add_settings_field(
 		'oasis_mi_api_user_id',
-		'API User ID',
+		__( 'API User ID', 'wp-oasis-importer' ),
 		'oasis_mi_api_user_id_cb',
 		'oasis_mi',
 		'oasis_mi_section_developers',
@@ -108,7 +118,7 @@ function oasis_mi_settings_init() {
 	if ( ! empty( $options['oasis_mi_api_key'] ) ) {
 		add_settings_field(
 			'oasis_mi_currency',
-			'Валюта',
+			__( 'Currency', 'wp-oasis-importer' ),
 			'oasis_mi_currency_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -119,7 +129,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_categories',
-			'Категории',
+			__( 'Categories', 'wp-oasis-importer' ),
 			'oasis_mi_categories_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -130,7 +140,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_no_vat',
-			'Без НДС',
+			__( 'No VAT', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -141,7 +151,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_not_on_order',
-			'Без товаров "под заказ"',
+			__( 'Without goods "to order"', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -152,7 +162,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_price_from',
-			'Цена от',
+			__( 'Price from', 'wp-oasis-importer' ),
 			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -164,7 +174,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_price_to',
-			'Цена до',
+			__( 'Price to', 'wp-oasis-importer' ),
 			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -176,7 +186,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_rating',
-			'Тип',
+			__( 'Type', 'wp-oasis-importer' ),
 			'oasis_mi_rating_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -187,7 +197,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_warehouse_moscow',
-			'На складе в Москве',
+			__( 'In stock in Moscow', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -198,7 +208,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_warehouse_europe',
-			'На складе в Европе',
+			__( 'In stock in Europe', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -209,7 +219,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_remote_warehouse',
-			'На удаленном складе',
+			__( 'At a remote warehouse', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
@@ -220,53 +230,53 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_limit',
-			'Лимит товаров',
+			__( 'Limit products', 'wp-oasis-importer' ),
 			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_developers',
 			[
 				'label_for'   => 'oasis_mi_limit',
-				'description' => 'Количество товаров получаемое из API и обрабатываемое за один запуск.',
+				'description' => __( 'The number of products received from the API and processed in one run.', 'wp-oasis-importer' ),
 				'step'        => '100',
 			]
 		);
 
 		add_settings_section(
 			'oasis_mi_section_price',
-			'Настройки цен',
+			__( 'Price settings', 'wp-oasis-importer' ),
 			null,
 			'oasis_mi'
 		);
 
 		add_settings_field(
 			'oasis_mi_price_factor',
-			'Коэффициент цены',
+			__( 'Price factor', 'wp-oasis-importer' ),
 			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_price',
 			[
 				'label_for'   => 'oasis_mi_price_factor',
-				'description' => 'Цена будет умножена на данный коэффициент. Например, для того чтобы увеличить стоимость на 20% необходимо указать 1,2',
+				'description' => __( 'The price will be multiplied by this factor. For example, in order to increase the cost by 20%, you need to specify 1.2', 'wp-oasis-importer' ),
 				'step'        => '0.01',
 			]
 		);
 
 		add_settings_field(
 			'oasis_mi_increase',
-			'Надбавка к цене',
+			__( 'Add to price', 'wp-oasis-importer' ),
 			'oasis_mi_number_cb',
 			'oasis_mi',
 			'oasis_mi_section_price',
 			[
 				'label_for'   => 'oasis_mi_increase',
-				'description' => 'К цене будет добавлена данная величина. Например, если указать 100, то у всех товаров к стоимости будет добавлено 100р.',
+				'description' => __( 'This value will be added to the price. For example, if you specify 100, then 100 will be added to the cost of all products.', 'wp-oasis-importer' ),
 				'step'        => '0.01',
 			]
 		);
 
 		add_settings_field(
 			'oasis_mi_dealer',
-			'Использовать диллерские цены',
+			__( 'Use dealer prices', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_price',
@@ -277,32 +287,32 @@ function oasis_mi_settings_init() {
 
 		add_settings_section(
 			'oasis_mi_section_additionally',
-			'Дополнительные настройки',
+			__( 'Additional settings', 'wp-oasis-importer' ),
 			null,
 			'oasis_mi'
 		);
 
 		add_settings_field(
 			'oasis_mi_comments',
-			'Включить отзывы',
+			__( 'Enable reviews', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_additionally',
 			[
-				'label_for' => 'oasis_mi_comments',
-				'description' => 'Включить комментирование импортируемых товаров',
+				'label_for'   => 'oasis_mi_comments',
+				'description' => __( 'Enable commenting on imported products', 'wp-oasis-importer' ),
 			]
 		);
 
 		add_settings_field(
 			'oasis_mi_disable_sales',
-			'Скрыть скидки',
+			__( 'Hide discounts', 'wp-oasis-importer' ),
 			'oasis_mi_checbox_cb',
 			'oasis_mi',
 			'oasis_mi_section_additionally',
 			[
-				'label_for' => 'oasis_mi_disable_sales',
-				'description' => 'Скрыть "старую" цену в товарах',
+				'label_for'   => 'oasis_mi_disable_sales',
+				'description' => __( 'Hide "old" price in products', 'wp-oasis-importer' ),
 			]
 		);
 
@@ -318,7 +328,7 @@ function oasis_mi_settings_init() {
 
 		add_settings_field(
 			'oasis_mi_orders',
-			'Заказы',
+			__( 'Orders', 'wp-oasis-importer' ),
 			'oasis_mi_orders_cb',
 			'oasis_mi_orders',
 			'oasis_mi_section_orders',
@@ -338,7 +348,7 @@ function oasis_mi_api_key_cb( $args ) {
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 300px;"/>
 
-    <p class="description">После указания ключа можно будет настроить импорт товаров в Woocommerce с сайта Oasis</p>
+    <p class="description"><?php echo __( 'After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website', 'wp-oasis-importer' ); ?></p>
 	<?php
 }
 
@@ -350,7 +360,7 @@ function oasis_mi_api_user_id_cb( $args ) {
            value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
            maxlength="255" style="width: 120px;"/>
 
-    <p class="description">После указания user id можно будет выгружать заказы в Oasis</p>
+    <p class="description"><?php echo __( 'After specifying the user id, it will be possible to upload orders to Oasis', 'wp-oasis-importer' ); ?></p>
 	<?php
 }
 
@@ -430,10 +440,10 @@ function oasis_mi_rating_cb( $args ) {
 	?>
 
     <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-control col-sm-6">
-        <option value="">---Выбрать---</option>
-        <option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>>Только новинки</option>
-        <option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>>Только хиты</option>
-        <option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>>Только со скидкой</option>
+        <option value=""><?php echo __( '---Select---', 'wp-oasis-importer' ); ?></option>
+        <option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>><?php echo __( 'Only new items', 'wp-oasis-importer' ); ?></option>
+        <option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>><?php echo __( 'Only hits', 'wp-oasis-importer' ); ?></option>
+        <option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>><?php echo __( 'Discount only', 'wp-oasis-importer' ); ?></option>
     </select>
 	<?php
 }
@@ -443,10 +453,10 @@ function oasis_mi_orders_cb( $args ) {
 <table class="wp-list-table widefat fixed striped table-view-list oasis-orders">
     <thead>
         <tr>
-            <th class="manage-column">Заказ</th>
-            <th class="manage-column">Дата</th>
-            <th class="manage-column">Итого</th>
-            <th class="manage-column export">Выгрузить</th>
+            <th class="manage-column">' . __( 'Order', 'wp-oasis-importer' ) . '</th>
+            <th class="manage-column">' . __( 'Date', 'wp-oasis-importer' ) . '</th>
+            <th class="manage-column">' . __( 'Total', 'wp-oasis-importer' ) . '</th>
+            <th class="manage-column export">' . __( 'Unload', 'wp-oasis-importer' ) . '</th>
         </tr>
     </thead>
     <tbody>' . PHP_EOL;
@@ -477,13 +487,13 @@ function oasis_mi_get_orders() {
 					if ( $dataOrder->state == 'created' ) {
 						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__success"><span class="dashicons dashicons-yes-alt"></span>' . $dataOrder->order->statusText . '. Заказ №' . $dataOrder->order->number . '</div></div>';
 					} elseif ( $dataOrder->state == 'pending' ) {
-						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__warning"><span class="dashicons dashicons-warning"></span>Заказ обрабатывается в Oasiscatalog, ожидайте.</div></div>';
+						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__warning"><span class="dashicons dashicons-warning"></span>' . __( 'The order is being processed in Oasiscatalog, please wait.', 'wp-oasis-importer' ) . '</div></div>';
 					} elseif ( $dataOrder->state == 'error' ) {
-						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__danger"><span class="dashicons dashicons-dismiss"></span>Ошибка, попробуйте еще раз.</div></div> <input type="submit" name="send_order" class="button send_order" value="Выгрузить" data-order-id="' . $order->get_order_number() . '">';
+						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__danger"><span class="dashicons dashicons-dismiss"></span>' . __( 'Orders not found', 'wp-oasis-importer' ) . '</div></div> <input type="submit" name="send_order" class="button send_order" value="' . __( 'Error, please try again.', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
 					}
 				}
 			} else {
-				$htmlExport = '<input type="submit" name="send_order" class="button send_order" value="Выгрузить" data-order-id="' . $order->get_order_number() . '">';
+				$htmlExport = '<input type="submit" name="send_order" class="button send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
 			}
 
 			echo '        <tr>
@@ -496,7 +506,7 @@ function oasis_mi_get_orders() {
 	} else {
 		echo '
         <tr>
-            <td colspan="5">Заказы не найдены</td>
+            <td colspan="5">' . __( 'Orders not found', 'wp-oasis-importer' ) . '</td>
         </tr>';
 	}
 }
@@ -520,8 +530,8 @@ if ( is_admin() ) {
 	function oasis_mi_menu() {
 		$page = add_submenu_page(
 			'tools.php',
-			'Импорт Oasis',
-			'Импорт Oasis',
+			__( 'Import Oasis', 'wp-oasis-importer' ),
+			__( 'Import Oasis', 'wp-oasis-importer' ),
 			'manage_options',
 			'oasiscatalog_mi',
 			'oasis_mi_page_html'
@@ -556,8 +566,8 @@ if ( is_admin() ) {
 		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) ) {
 			$page = add_submenu_page(
 				'tools.php',
-				'Заказы Oasis',
-				'Заказы Oasis',
+				__( 'Orders Oasis', 'wp-oasis-importer' ),
+				__( 'Orders Oasis', 'wp-oasis-importer' ),
 				'manage_options',
 				'oasiscatalog_mi_orders',
 				'oasis_mi_orders_html'
@@ -580,8 +590,8 @@ if ( is_admin() ) {
 		?>
 
         <div class="wrap">
-            <h1><?= esc_html( 'Экспорт заказов в oasiscatalog' ); ?></h1>
-            <p>Экспортировать заказы возможно только со статусами: <b>«В ожидании оплаты», «Обработка», «На удержании», «Выполнен»</b></p>
+            <h1><?php echo __( 'Export orders to oasiscatalog', 'wp-oasis-importer' ); ?></h1>
+            <p><?php echo __( 'It is possible to export orders only with statuses: <b>"Pending payment", "Processing", "On hold", "Completed"</b>', 'wp-oasis-importer' ); ?></p>
 
             <form action="options.php" method="post" class="oasis-mi-orders-form">
 				<?php
@@ -664,7 +674,7 @@ if ( is_admin() ) {
 			return;
 		}
 		if ( isset( $_GET['settings-updated'] ) ) {
-			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', 'Настройки сохранены', 'updated' );
+			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message',  __( 'Settings saved', 'wp-oasis-importer' ), 'updated' );
 		}
 
 		settings_errors( 'oasis_mi_messages' );
@@ -698,7 +708,7 @@ if ( is_admin() ) {
                 <div class="oa-notice oa-notice-info">
                     <div class="oa-row">
                         <div class="oa-label">
-                            <h3>Общий статус обработки</h3>
+                            <h3><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h3>
                         </div>
                         <div class="oa-container">
                             <div class="progress-bar">
@@ -713,7 +723,7 @@ if ( is_admin() ) {
 						?>
                         <div class="oa-row">
                             <div class="oa-label">
-                                <h3>Выполняется <?php echo $step; ?> шаг из <?php echo $stepTotal; ?>. Статус текущего шага</h3>
+                                <h3><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval($step), strval($stepTotal) ); ?></h3>
                             </div>
                             <div class="oa-container">
                                 <div class="progress-bar">
@@ -722,17 +732,17 @@ if ( is_admin() ) {
                             </div>
                         </div>
 					<?php } ?>
-                    <p>Последний импорт завершен: <?php echo $pBar['date'] ?? ''; ?></p>
+                    <p><?php echo sprintf( __( 'Last import completed: %s', 'wp-oasis-importer' ), $pBar['date'] ?? '' ); ?></p>
                 </div>
 
                 <div class="oa-notice">
                     <div class="oa-row">
-                        <p>Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи:<br/>
-                            <strong>Не разглашайте эти данные!</strong></p>
+                        <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
+<strong>Do not disclose this information!</strong>', 'wp-oasis-importer' ); ?></p>
                     </div>
                     <div class="oa-row">
                         <div class="oa-label">
-                            <p>Загрузка/обновление товаров 1 раз в сутки</p>
+                            <p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
                         </div>
                         <div class="oa-container">
                             <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>" aria-label="<?php echo $cronTask; ?>"
@@ -741,7 +751,7 @@ if ( is_admin() ) {
                     </div>
                     <div class="oa-row">
                         <div class="oa-label">
-                            <p>Обновление остатков 1 раз в 30 минут</p>
+                            <p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
                         </div>
                         <div class="oa-container">
                             <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
@@ -757,7 +767,7 @@ if ( is_admin() ) {
 				<?php
 				settings_fields( 'oasis_mi' );
 				do_settings_sections( 'oasis_mi' );
-				submit_button( 'Сохранить настройки' );
+				submit_button( __( 'Save settings', 'wp-oasis-importer' ) );
 				?>
             </form>
         </div>
@@ -829,7 +839,7 @@ add_filter( 'plugin_action_links', function ( $links, $file ) {
 		return $links;
 	}
 
-	$settings_link = sprintf( '<a href="%s">%s</a>', admin_url( 'tools.php?page=oasiscatalog_mi' ), __( 'Settings', 'woocommerce' ) );
+	$settings_link = sprintf( '<a href="%s">%s</a>', admin_url( 'tools.php?page=oasiscatalog_mi' ), __( 'Settings', 'wp-oasis-importer' ) );
 	array_unshift( $links, $settings_link );
 
 	return $links;
