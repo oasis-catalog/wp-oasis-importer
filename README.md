@@ -12,7 +12,9 @@ WordPress version: 5.8+
 
 Скачать архив wp-oasis-importer.zip из [свежего релиза](https://github.com/oasis-catalog/wp-oasis-importer/releases), установить и активировать плагин на вашем сайте в разделе: http://site.com/wp-admin/plugin-install.php
 
-Перейдите на страницу настроек модуля «Инструменты» -> «Импорт Oasis» и укажите действующий API ключ и User ID из [личного кабинета oasiscatalog](https://www.oasiscatalog.com/cabinet/integrations) и сохраните настройки модуля.
+Перейдите на страницу настроек модуля «Инструменты» -> «Импорт Oasis» и укажите действующий API ключ и User ID из [личного кабинета oasiscatalog](https://www.oasiscatalog.com/cabinet/integrations) и сохраните настройки модуля. 
+
+Рекомендуем указывать лимит 5000. 
 
 В панели управления хостингом добавить crontab задачи со страницы настроек модуля
 
