@@ -722,13 +722,13 @@ if ( is_admin() ) {
                     <div class="row">
                         <div class="col-md-12">
                             <div class="oa-notice oa-notice-info">
-                                <div class="oa-row">
-                                    <div class="oa-label">
-                                        <h3><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h3>
+                                <div class="row">
+                                    <div class="col-md-4 col-sm-12">
+                                        <h5><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h5>
                                     </div>
-                                    <div class="oa-container">
-                                        <div class="progress-bar">
-                                            <div class="progress total" style="width: <?php echo $percentTotal; ?>%;"><?php echo $percentTotal; ?>%</div>
+                                    <div class="col-md-8 col-sm-12">
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%"><?php echo $percentTotal; ?>%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -737,13 +737,13 @@ if ( is_admin() ) {
 									$oasis_step = intval( get_option( 'oasis_step' ) );
 									$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
 									?>
-                                    <div class="oa-row">
-                                        <div class="oa-label">
-                                            <h3><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) ); ?></h3>
+                                    <div class="row">
+                                        <div class="col-md-4 col-sm-12">
+                                            <h5><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) ); ?></h5>
                                         </div>
-                                        <div class="oa-container">
-                                            <div class="progress-bar">
-                                                <div class="progress step" style="width: <?php echo $percentStep; ?>%;"><?php echo $percentStep; ?>%</div>
+                                        <div class="col-md-8 col-sm-12">
+                                            <div class="progress">
+                                                <div class="progress-bar" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%</div>
                                             </div>
                                         </div>
                                     </div>
@@ -756,25 +756,27 @@ if ( is_admin() ) {
                     <div class="row">
                         <div class="col-md-12">
                             <div class="oa-notice">
-                                <div class="oa-row">
-                                    <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
 <strong>Do not disclose this information!</strong>', 'wp-oasis-importer' ); ?></p>
+                                    </div>
                                 </div>
-                                <div class="oa-row">
-                                    <div class="oa-label">
+                                <div class="row">
+                                    <div class="col-md-4 col-sm-12">
                                         <p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
                                     </div>
-                                    <div class="oa-container">
+                                    <div class="col-md-8 col-sm-12">
                                         <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>"
                                                aria-label="<?php echo $cronTask; ?>"
                                                readonly="readonly" onFocus="this.select()">
                                     </div>
                                 </div>
-                                <div class="oa-row">
-                                    <div class="oa-label">
+                                <div class="row">
+                                    <div class="col-md-4 col-sm-12">
                                         <p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
                                     </div>
-                                    <div class="oa-container">
+                                    <div class="col-md-8 col-sm-12">
                                         <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
                                                aria-label="<?php echo $cronTask; ?> --up" readonly="readonly" onFocus="this.select()">
                                     </div>
