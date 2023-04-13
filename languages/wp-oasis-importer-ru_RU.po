@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: wp-oasis-importer\n"
-"POT-Creation-Date: 2023-04-07 17:44+0300\n"
-"PO-Revision-Date: 2023-04-07 18:48+0300\n"
+"POT-Creation-Date: 2023-04-08 00:05+0300\n"
+"PO-Revision-Date: 2023-04-08 00:05+0300\n"
 "Last-Translator: \n"
 "Language-Team: https://sitever.ru\n"
 "Language: ru_RU\n"
@@ -17,7 +17,7 @@ msgstr ""
 "X-Poedit-SearchPath-0: oasiscatalog.php\n"
 "X-Poedit-SearchPath-1: src/Controller\n"
 
-#: oasiscatalog.php:74
+#: oasiscatalog.php:74 oasiscatalog.php:119
 msgid "Specify the API key!"
 msgstr "Укажите API ключ!"
 
@@ -34,62 +34,66 @@ msgid "API User ID"
 msgstr "ID пользователя"
 
 #: oasiscatalog.php:121
+msgid "API key is invalid"
+msgstr "API ключ не верный"
+
+#: oasiscatalog.php:125
 msgid "Currency"
 msgstr "Валюта"
 
-#: oasiscatalog.php:132
+#: oasiscatalog.php:136
 msgid "Categories"
 msgstr "Категории"
 
-#: oasiscatalog.php:143
+#: oasiscatalog.php:147
 msgid "No VAT"
 msgstr "Без НДС"
 
-#: oasiscatalog.php:154
+#: oasiscatalog.php:158
 msgid "Without goods \"to order\""
 msgstr "Без товаров \"под заказ\""
 
-#: oasiscatalog.php:165
+#: oasiscatalog.php:169
 msgid "Price from"
 msgstr "Цена от"
 
-#: oasiscatalog.php:177
+#: oasiscatalog.php:181
 msgid "Price to"
 msgstr "Цена до"
 
-#: oasiscatalog.php:189
+#: oasiscatalog.php:193
 msgid "Type"
 msgstr "Тип"
 
-#: oasiscatalog.php:200
+#: oasiscatalog.php:204
 msgid "In stock in Moscow"
 msgstr "На складе в Москве"
 
-#: oasiscatalog.php:211
+#: oasiscatalog.php:215
 msgid "In stock in Europe"
 msgstr "На складе в Европе"
 
-#: oasiscatalog.php:222
+#: oasiscatalog.php:226
 msgid "At a remote warehouse"
 msgstr "На удаленном складе"
 
-#: oasiscatalog.php:233
+#: oasiscatalog.php:237
 msgid "Limit products"
 msgstr "Лимит товаров"
 
-#: oasiscatalog.php:239
+#: oasiscatalog.php:243
 msgid "The number of products received from the API and processed in one run."
 msgstr "Количество товаров получаемое из API и обрабатываемое за один запуск."
 
-#: oasiscatalog.php:246
+#: oasiscatalog.php:250
 msgid "Price settings"
 msgstr "Настройки цен"
 
-#: oasiscatalog.php:253
+#: oasiscatalog.php:257
 msgid "Price factor"
 msgstr "Коэффициент цены"
 
-#: oasiscatalog.php:259
+#: oasiscatalog.php:263
 msgid ""
 "The price will be multiplied by this factor. For example, in order to "
 "increase the cost by 20%, you need to specify 1.2"
@@ -97,11 +101,11 @@ msgstr ""
 "Цена будет умножена на данный коэффициент. Например, для того чтобы "
 "увеличить стоимость на 20% необходимо указать 1,2"
 
-#: oasiscatalog.php:266
+#: oasiscatalog.php:270
 msgid "Add to price"
 msgstr "Добавить к цене"
 
-#: oasiscatalog.php:272
+#: oasiscatalog.php:276
 msgid ""
 "This value will be added to the price. For example, if you specify 100, then "
 "100 will be added to the cost of all products."
@@ -109,35 +113,35 @@ msgstr ""
 "К цене будет добавлена данная величина. Например, если указать 100, то у "
 "всех товаров к стоимости будет добавлено 100."
 
-#: oasiscatalog.php:279
+#: oasiscatalog.php:283
 msgid "Use dealer prices"
 msgstr "Использовать диллерские цены"
 
-#: oasiscatalog.php:290
+#: oasiscatalog.php:294
 msgid "Additional settings"
 msgstr "Дополнительные настройки"
 
-#: oasiscatalog.php:297
+#: oasiscatalog.php:301
 msgid "Enable reviews"
 msgstr "Включить отзывы"
 
-#: oasiscatalog.php:303
+#: oasiscatalog.php:307
 msgid "Enable commenting on imported products"
 msgstr "Включить комментирование импортируемых товаров"
 
-#: oasiscatalog.php:309
+#: oasiscatalog.php:313
 msgid "Hide discounts"
 msgstr "Скрыть скидки"
 
-#: oasiscatalog.php:315
+#: oasiscatalog.php:319
 msgid "Hide \"old\" price in products"
 msgstr "Скрыть \"старую\" цену в товарах"
 
-#: oasiscatalog.php:331
+#: oasiscatalog.php:335
 msgid "Orders"
 msgstr "Заказы"
 
-#: oasiscatalog.php:351
+#: oasiscatalog.php:354
 msgid ""
 "After specifying the key, it will be possible to configure the import of "
 "products into Woocommerce from the Oasis website"
@@ -145,68 +149,68 @@ msgstr ""
 "После указания ключа можно будет настроить импорт товаров в Woocommerce с "
 "сайта Oasis"
 
-#: oasiscatalog.php:363
+#: oasiscatalog.php:366
 msgid ""
 "After specifying the user id, it will be possible to upload orders to Oasis"
 msgstr "После указания user id можно будет выгружать заказы в Oasis"
 
-#: oasiscatalog.php:443
+#: oasiscatalog.php:446
 msgid "---Select---"
 msgstr "---Выбирать---"
 
-#: oasiscatalog.php:444
+#: oasiscatalog.php:447
 msgid "Only new items"
 msgstr "Только новинки"
 
-#: oasiscatalog.php:445
+#: oasiscatalog.php:448
 msgid "Only hits"
 msgstr "Только хиты"
 
-#: oasiscatalog.php:446
+#: oasiscatalog.php:449
 msgid "Discount only"
 msgstr "Только со скидкой"
 
-#: oasiscatalog.php:456
+#: oasiscatalog.php:459
 msgid "Order"
 msgstr "Заказ"
 
-#: oasiscatalog.php:457
+#: oasiscatalog.php:460
 msgid "Date"
 msgstr "Дата"
 
-#: oasiscatalog.php:458
+#: oasiscatalog.php:461
 msgid "Total"
 msgstr "Итого"
 
-#: oasiscatalog.php:459 oasiscatalog.php:496
+#: oasiscatalog.php:462 oasiscatalog.php:499
 msgid "Unload"
 msgstr "Выгрузить"
 
-#: oasiscatalog.php:490
+#: oasiscatalog.php:493
 msgid "The order is being processed in Oasiscatalog, please wait."
 msgstr "Заказ обрабатывается в Oasiscatalog, ожидайте."
 
-#: oasiscatalog.php:492 oasiscatalog.php:509
+#: oasiscatalog.php:495 oasiscatalog.php:512
 msgid "Orders not found"
 msgstr "Заказы не найдены"
 
-#: oasiscatalog.php:492
+#: oasiscatalog.php:495
 msgid "Error, please try again."
 msgstr "Ошибка, попробуйте еще раз."
 
-#: oasiscatalog.php:533 oasiscatalog.php:534
+#: oasiscatalog.php:536 oasiscatalog.php:537
 msgid "Import Oasis"
 msgstr "Импорт Oasis"
 
-#: oasiscatalog.php:569 oasiscatalog.php:570
+#: oasiscatalog.php:594 oasiscatalog.php:595
 msgid "Orders Oasis"
 msgstr "Заказы Oasis"
 
-#: oasiscatalog.php:593
+#: oasiscatalog.php:618
 msgid "Export orders to oasiscatalog"
 msgstr "Экспорт заказов в oasiscatalog"
 
-#: oasiscatalog.php:594
+#: oasiscatalog.php:619
 msgid ""
 "It is possible to export orders only with statuses: <b>\"Pending payment\", "
 "\"Processing\", \"On hold\", \"Completed\"</b>"
@@ -214,25 +218,25 @@ msgstr ""
 "Экспортировать заказы возможно только со статусами: <b>«В ожидании оплаты», "
 "«Обработка», «На удержании», «Выполнен»</b>"
 
-#: oasiscatalog.php:677
+#: oasiscatalog.php:702
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: oasiscatalog.php:713
+#: oasiscatalog.php:737
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: oasiscatalog.php:728
+#: oasiscatalog.php:752
 #, php-format
 msgid "%s step in progress out of %s. Current step status"
 msgstr "Выполняется %s шаг из %s. Статус текущего шага"
 
-#: oasiscatalog.php:737
+#: oasiscatalog.php:761
 #, php-format
 msgid "Last import completed: %s"
 msgstr "Последний импорт завершен: %s"
 
-#: oasiscatalog.php:742
+#: oasiscatalog.php:770
 msgid ""
 "To enable automatic updating of the directory, you need to add crontab tasks "
 "in the hosting control panel: <br/>\n"
@@ -242,19 +246,19 @@ msgstr ""
 "управления хостингом добавить crontab задачи: <br/>\n"
 "<strong>Не разглашайте эти данные!</strong>"
 
-#: oasiscatalog.php:747
+#: oasiscatalog.php:775
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: oasiscatalog.php:756
+#: oasiscatalog.php:785
 msgid "Renewal of balances 1 time in 30 minutes"
 msgstr "Обновление остатков 1 раз в 30 минут"
 
-#: oasiscatalog.php:772
+#: oasiscatalog.php:805
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: oasiscatalog.php:844
+#: oasiscatalog.php:875
 msgid "Settings"
 msgstr "Настройки"
 

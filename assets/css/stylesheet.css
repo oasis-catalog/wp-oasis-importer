@@ -111,6 +111,22 @@ table.oasis-orders th.export {
     background-color: #f2dede;
 }
 
+/**
+Form
+ */
+form.oasis-mi-form table.form-table th {
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+}
+
+form.oasis-mi-form table.form-table td {
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+}
+
+/**
+Tree categories
+ */
 .jquery-tree {
     list-style: none;
 }

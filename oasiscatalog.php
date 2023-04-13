@@ -65,16 +65,6 @@ function oasis_mi_admin_validations() {
 	if ( ! is_php_version_compatible( '7.3' ) ) {
 		wp_die( 'Вы используете старую версию PHP ' . phpversion() . '. Попросите администратора сервера её обновить до 7.3 или выше! <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
-
-	$options = get_option( 'oasis_mi_options' );
-
-	if ( empty( $options['oasis_mi_api_key'] ) ) {
-		?>
-        <div class="notice notice-error">
-            <p><strong><?php echo __( 'Specify the API key!', 'wp-oasis-importer' ); ?></strong></p>
-        </div>
-		<?php
-	}
 }
 
 /**
@@ -115,7 +105,11 @@ function oasis_mi_settings_init() {
 
 	$options = get_option( 'oasis_mi_options' );
 
-	if ( ! empty( $options['oasis_mi_api_key'] ) ) {
+	if ( empty( $options['oasis_mi_api_key'] ) ) {
+		add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'Specify the API key!', 'wp-oasis-importer' ) );
+	} elseif ( empty( Api::getCurrenciesOasis( false ) ) ) {
+		add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'API key is invalid', 'wp-oasis-importer' ) );
+	} else {
 		add_settings_field(
 			'oasis_mi_currency',
 			__( 'Currency', 'wp-oasis-importer' ),
@@ -336,7 +330,6 @@ function oasis_mi_settings_init() {
 				'label_for' => 'oasis_mi_orders',
 			]
 		);
-
 	}
 }
 
@@ -384,7 +377,7 @@ function oasis_mi_currency_cb( $args ) {
 	$defaultCurrency = $options['oasis_mi_currency'] ?? 'rub';
 	?>
 
-    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-control col-sm-6">
+    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-select">
 		<?php
 		$currencies = get_option( 'oasis_currencies' );
 
@@ -439,7 +432,7 @@ function oasis_mi_rating_cb( $args ) {
 	$options = get_option( 'oasis_mi_options' );
 	?>
 
-    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-control col-sm-6">
+    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-select col-sm-6">
         <option value=""><?php echo __( '---Select---', 'wp-oasis-importer' ); ?></option>
         <option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>><?php echo __( 'Only new items', 'wp-oasis-importer' ); ?></option>
         <option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>><?php echo __( 'Only hits', 'wp-oasis-importer' ); ?></option>
@@ -544,9 +537,31 @@ if ( is_admin() ) {
 
 	function oasis_mi_admin_styles() {
 		wp_enqueue_style( 'oasis-stylesheet', plugins_url( 'assets/css/stylesheet.css', __FILE__ ) );
+		wp_enqueue_style( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css' );
+		wp_enqueue_script( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js' );
 		wp_enqueue_script( 'jquery-tree', plugins_url( 'assets/js/jquery.tree.js', __FILE__ ), [ 'jquery' ] );
 		add_action( 'admin_print_footer_scripts', 'init_script_tree' );
 	}
+
+	function add_bootstrap530_alpha3_style( $html, $handle ) {
+		if ( 'bootstrap530-alpha3' === $handle ) {
+			return str_replace( "media='all'", "media='all' integrity='sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ' crossorigin='anonymous'", $html );
+		}
+
+		return $html;
+	}
+
+	add_filter( 'style_loader_tag', 'add_bootstrap530_alpha3_style', 10, 2 );
+
+	function add_bootstrap530_alpha3_script( $html, $handle ) {
+		if ( 'bootstrap530-alpha3' === $handle ) {
+			return str_replace( "'>", "' integrity='sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe' crossorigin='anonymous'>", $html );
+		}
+
+		return $html;
+	}
+
+	add_filter( 'script_loader_tag', 'add_bootstrap530_alpha3_script', 10, 2 );
 
 	function init_script_tree() {
 		?>
@@ -674,7 +689,7 @@ if ( is_admin() ) {
 			return;
 		}
 		if ( isset( $_GET['settings-updated'] ) ) {
-			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message',  __( 'Settings saved', 'wp-oasis-importer' ), 'updated' );
+			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'Settings saved', 'wp-oasis-importer' ), 'updated' );
 		}
 
 		settings_errors( 'oasis_mi_messages' );
@@ -683,99 +698,107 @@ if ( is_admin() ) {
 		$pBar    = get_option( Main::checkLockProcess() ? 'oasis_progress_tmp' : 'oasis_progress' );
 		$limit   = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
 		?>
-        <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 
         <div class="wrap">
-			<?php
-			if ( ! empty( $options['oasis_mi_api_key'] ) ) {
-				$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
+            <div class="container-fluid">
+				<?php
+				if ( ! empty( $options['oasis_mi_api_key'] ) ) {
+					$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
 
-				if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
-					$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
-					$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
-				} else {
-					$percentTotal = 0;
-				}
+					if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
+						$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+						$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
+					} else {
+						$percentTotal = 0;
+					}
 
-				if ( ! empty( $pBar['step_item'] ) && ! empty( $pBar['step_total'] ) ) {
-					$percentStep = round( ( $pBar['step_item'] / $pBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
-				} else {
-					$percentStep = 0;
-				}
-				?>
+					if ( ! empty( $pBar['step_item'] ) && ! empty( $pBar['step_total'] ) ) {
+						$percentStep = round( ( $pBar['step_item'] / $pBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+					} else {
+						$percentStep = 0;
+					}
+					?>
 
-                <div class="oa-notice oa-notice-info">
-                    <div class="oa-row">
-                        <div class="oa-label">
-                            <h3><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h3>
-                        </div>
-                        <div class="oa-container">
-                            <div class="progress-bar">
-                                <div class="progress total" style="width: <?php echo $percentTotal; ?>%;"><?php echo $percentTotal; ?>%</div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="oa-notice oa-notice-info">
+                                <div class="oa-row">
+                                    <div class="oa-label">
+                                        <h3><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h3>
+                                    </div>
+                                    <div class="oa-container">
+                                        <div class="progress-bar">
+                                            <div class="progress total" style="width: <?php echo $percentTotal; ?>%;"><?php echo $percentTotal; ?>%</div>
+                                        </div>
+                                    </div>
+                                </div>
+								<?php if ( $limit > 0 ) {
+									$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
+									$oasis_step = intval( get_option( 'oasis_step' ) );
+									$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
+									?>
+                                    <div class="oa-row">
+                                        <div class="oa-label">
+                                            <h3><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) ); ?></h3>
+                                        </div>
+                                        <div class="oa-container">
+                                            <div class="progress-bar">
+                                                <div class="progress step" style="width: <?php echo $percentStep; ?>%;"><?php echo $percentStep; ?>%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+								<?php } ?>
+                                <p><?php echo sprintf( __( 'Last import completed: %s', 'wp-oasis-importer' ), $pBar['date'] ?? '' ); ?></p>
                             </div>
                         </div>
                     </div>
-					<?php if ( $limit > 0 ) {
-						$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
-						$oasis_step = intval( get_option( 'oasis_step' ) );
-						$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
-						?>
-                        <div class="oa-row">
-                            <div class="oa-label">
-                                <h3><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval($step), strval($stepTotal) ); ?></h3>
-                            </div>
-                            <div class="oa-container">
-                                <div class="progress-bar">
-                                    <div class="progress step" style="width: <?php echo $percentStep; ?>%;"><?php echo $percentStep; ?>%</div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="oa-notice">
+                                <div class="oa-row">
+                                    <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
+<strong>Do not disclose this information!</strong>', 'wp-oasis-importer' ); ?></p>
+                                </div>
+                                <div class="oa-row">
+                                    <div class="oa-label">
+                                        <p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
+                                    </div>
+                                    <div class="oa-container">
+                                        <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>"
+                                               aria-label="<?php echo $cronTask; ?>"
+                                               readonly="readonly" onFocus="this.select()">
+                                    </div>
+                                </div>
+                                <div class="oa-row">
+                                    <div class="oa-label">
+                                        <p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
+                                    </div>
+                                    <div class="oa-container">
+                                        <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
+                                               aria-label="<?php echo $cronTask; ?> --up" readonly="readonly" onFocus="this.select()">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-					<?php } ?>
-                    <p><?php echo sprintf( __( 'Last import completed: %s', 'wp-oasis-importer' ), $pBar['date'] ?? '' ); ?></p>
-                </div>
-
-                <div class="oa-notice">
-                    <div class="oa-row">
-                        <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
-<strong>Do not disclose this information!</strong>', 'wp-oasis-importer' ); ?></p>
                     </div>
-                    <div class="oa-row">
-                        <div class="oa-label">
-                            <p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
-                        </div>
-                        <div class="oa-container">
-                            <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>" aria-label="<?php echo $cronTask; ?>"
-                                   readonly="readonly" onFocus="this.select()">
-                        </div>
-                    </div>
-                    <div class="oa-row">
-                        <div class="oa-label">
-                            <p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
-                        </div>
-                        <div class="oa-container">
-                            <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
-                                   aria-label="<?php echo $cronTask; ?> --up" readonly="readonly" onFocus="this.select()">
-                        </div>
-                    </div>
-                </div>
-				<?php
-			}
-			?>
-
-            <form action="options.php" method="post" class="oasis-mi-form">
-				<?php
-				settings_fields( 'oasis_mi' );
-				do_settings_sections( 'oasis_mi' );
-				submit_button( __( 'Save settings', 'wp-oasis-importer' ) );
+					<?php
+				}
 				?>
-            </form>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <form action="options.php" method="post" class="oasis-mi-form">
+							<?php
+							settings_fields( 'oasis_mi' );
+							do_settings_sections( 'oasis_mi' );
+							submit_button( __( 'Save settings', 'wp-oasis-importer' ) );
+							?>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        <script>
-            jQuery(document).ready(function () {
-                jQuery('.oasis-mi-form select').select2();
-            });
-        </script>
 		<?php
 	}
 

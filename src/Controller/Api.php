@@ -119,7 +119,7 @@ class Api {
 			}
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
-			die();
+			return [];
 		}
 
 		return $result;
@@ -128,10 +128,12 @@ class Api {
 	/**
 	 * Get currencies oasis
 	 *
+	 * @param bool $sleep
+	 *
 	 * @return array
 	 */
-	public static function getCurrenciesOasis(): array {
-		return self::curlQuery( 'currencies' );
+	public static function getCurrenciesOasis( bool $sleep = true ): array {
+		return self::curlQuery( 'currencies', [], $sleep );
 	}
 
 	/**
@@ -235,7 +237,7 @@ class Api {
 			unset( $content, $options, $args_pref, $args, $type, $ch, $http_code );
 		} catch ( \Exception $e ) {
 			echo $e->getMessage() . PHP_EOL;
-			die();
+			return [];
 		}
 
 		return $result;
