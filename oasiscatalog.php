@@ -537,6 +537,7 @@ if ( is_admin() ) {
 
 	function oasis_mi_admin_styles() {
 		wp_enqueue_style( 'oasis-stylesheet', plugins_url( 'assets/css/stylesheet.css', __FILE__ ) );
+		wp_enqueue_style( 'font-awesome', plugins_url( 'assets/css/font-awesome.min.css', __FILE__ ) );
 		wp_enqueue_style( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css' );
 		wp_enqueue_script( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js' );
 		wp_enqueue_script( 'jquery-tree', plugins_url( 'assets/js/jquery.tree.js', __FILE__ ), [ 'jquery' ] );
@@ -569,6 +570,12 @@ if ( is_admin() ) {
             jQuery(document).ready(function () {
                 jQuery("#tree").Tree();
             });
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
         </script>
 		<?php
 	}
@@ -694,8 +701,9 @@ if ( is_admin() ) {
 
 		settings_errors( 'oasis_mi_messages' );
 
+        $lockProcess = Main::checkLockProcess();
 		$options = get_option( 'oasis_mi_options' );
-		$pBar    = get_option( Main::checkLockProcess() ? 'oasis_progress_tmp' : 'oasis_progress' );
+		$pBar    = get_option( $lockProcess ? 'oasis_progress_tmp' : 'oasis_progress' );
 		$limit   = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
 		?>
 
@@ -717,18 +725,25 @@ if ( is_admin() ) {
 					} else {
 						$percentStep = 0;
 					}
-					?>
+
+					$progressClass = $lockProcess ? 'progress-bar progress-bar-striped progress-bar-animated' : 'progress-bar';
+					if ($lockProcess) {
+                        $dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Process active', 'wp-oasis-importer' ) . '"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
+                    } else {
+						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Next launch expected', 'wp-oasis-importer' ) . '"><i class="fa fa-pause" aria-hidden="true" style="color: #b37100;"></i></span>';
+                    }
+                    ?>
 
                     <div class="row">
                         <div class="col-md-12">
                             <div class="oa-notice oa-notice-info">
                                 <div class="row">
                                     <div class="col-md-4 col-sm-12">
-                                        <h5><?php echo __( 'General processing status', 'wp-oasis-importer' ); ?></h5>
+                                        <h5><?php echo __( 'General processing status', 'wp-oasis-importer' ) . $dIcon; ?></h5>
                                     </div>
                                     <div class="col-md-8 col-sm-12">
                                         <div class="progress">
-                                            <div class="progress-bar" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%"><?php echo $percentTotal; ?>%</div>
+                                            <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%"><?php echo $percentTotal; ?>%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -736,14 +751,20 @@ if ( is_admin() ) {
 									$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
 									$oasis_step = intval( get_option( 'oasis_step' ) );
 									$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
+
+									if ($lockProcess) {
+										$step_text = sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
+									} else {
+										$step_text = sprintf( __( 'Next step %s of %s.', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
+									}
 									?>
                                     <div class="row">
                                         <div class="col-md-4 col-sm-12">
-                                            <h5><?php echo sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) ); ?></h5>
+                                            <h5><?php echo $step_text; ?></h5>
                                         </div>
                                         <div class="col-md-8 col-sm-12">
                                             <div class="progress">
-                                                <div class="progress-bar" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%</div>
+                                                <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%</div>
                                             </div>
                                         </div>
                                     </div>
