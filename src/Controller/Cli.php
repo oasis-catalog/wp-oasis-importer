@@ -13,6 +13,7 @@ class Cli extends Main {
 		try {
 			parent::cliMsg( 'Начало обновления товаров' );
 
+			delete_option( 'oasis_progress_tmp' );
 			$args    = [];
 			$options = get_option( 'oasis_mi_options' );
 			$limit   = isset( $options['oasis_mi_limit'] ) ? (int) $options['oasis_mi_limit'] : null;
@@ -108,18 +109,17 @@ class Cli extends Main {
 					parent::cliMsg( 'Done ' . ++ $count . ' from ' . $total );
 				}
 
-				if ( ! empty( $limit ) ) {
-					$tmpBar['step_item'] = $tmpBar['step_total'];
-				} else {
+				if ( empty( $limit ) ) {
 					$tmpBar['item'] = 0;
 				}
 
 				$pBar = $tmpBar;
 			} else {
-				$pBar['step_total'] = 0;
 				$pBar['item']       = 0;
 			}
 			unset( $tmpBar );
+
+			$pBar['step_total'] = 0;
 
 			parent::cliMsg( 'Окончание обновления товаров' );
 			$pBar['date'] = current_time( 'mysql' );

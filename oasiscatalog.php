@@ -701,10 +701,16 @@ if ( is_admin() ) {
 
 		settings_errors( 'oasis_mi_messages' );
 
-        $lockProcess = Main::checkLockProcess();
-		$options = get_option( 'oasis_mi_options' );
-		$pBar    = get_option( $lockProcess ? 'oasis_progress_tmp' : 'oasis_progress' );
-		$limit   = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
+		$lockProcess = Main::checkLockProcess();
+		$options     = get_option( 'oasis_mi_options' );
+		$pBar        = get_option( $lockProcess ? 'oasis_progress_tmp' : 'oasis_progress' );
+		$limit       = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
+
+		if ( empty( $pBar ) ) {
+			$pBar              = get_option( 'oasis_progress' );
+			$pBar['step_item'] = 0;
+		}
+
 		?>
 
         <div class="wrap">
@@ -727,12 +733,13 @@ if ( is_admin() ) {
 					}
 
 					$progressClass = $lockProcess ? 'progress-bar progress-bar-striped progress-bar-animated' : 'progress-bar';
-					if ($lockProcess) {
-                        $dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Process active', 'wp-oasis-importer' ) . '"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
-                    } else {
-						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Next launch expected', 'wp-oasis-importer' ) . '"><i class="fa fa-pause" aria-hidden="true" style="color: #b37100;"></i></span>';
-                    }
-                    ?>
+
+					if ( $lockProcess ) {
+						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Process active', 'wp-oasis-importer' ) . '"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
+					} else {
+						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Next launch expected', 'wp-oasis-importer' ) . '"><i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i></span>';
+					}
+					?>
 
                     <div class="row">
                         <div class="col-md-12">
@@ -743,7 +750,10 @@ if ( is_admin() ) {
                                     </div>
                                     <div class="col-md-8 col-sm-12">
                                         <div class="progress">
-                                            <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%"><?php echo $percentTotal; ?>%</div>
+                                            <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>"
+                                                 aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%">
+												<?php echo $percentTotal; ?>%
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -752,7 +762,7 @@ if ( is_admin() ) {
 									$oasis_step = intval( get_option( 'oasis_step' ) );
 									$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
 
-									if ($lockProcess) {
+									if ( $lockProcess ) {
 										$step_text = sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
 									} else {
 										$step_text = sprintf( __( 'Next step %s of %s.', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
@@ -764,7 +774,10 @@ if ( is_admin() ) {
                                         </div>
                                         <div class="col-md-8 col-sm-12">
                                             <div class="progress">
-                                                <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%</div>
+                                                <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>"
+                                                     aria-valuemin="0" aria-valuemax="100"
+                                                     style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
