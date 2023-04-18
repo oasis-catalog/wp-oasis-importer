@@ -735,6 +735,8 @@ if ( is_admin() ) {
 					$progressClass = $lockProcess ? 'progress-bar progress-bar-striped progress-bar-animated' : 'progress-bar';
 
 					if ( $lockProcess ) {
+						add_action( 'admin_print_footer_scripts', 'init_ajax_up_progress_bar', 99 );
+
 						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Process active', 'wp-oasis-importer' ) . '"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
 					} else {
 						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Next launch expected', 'wp-oasis-importer' ) . '"><i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i></span>';
@@ -750,7 +752,8 @@ if ( is_admin() ) {
                                     </div>
                                     <div class="col-md-8 col-sm-12">
                                         <div class="progress">
-                                            <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentTotal; ?>"
+                                            <div id="upAjaxTotal" class="<?php echo $progressClass; ?>" role="progressbar"
+                                                 aria-valuenow="<?php echo $percentTotal; ?>"
                                                  aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%">
 												<?php echo $percentTotal; ?>%
                                             </div>
@@ -774,7 +777,8 @@ if ( is_admin() ) {
                                         </div>
                                         <div class="col-md-8 col-sm-12">
                                             <div class="progress">
-                                                <div class="<?php echo $progressClass; ?>" role="progressbar" aria-valuenow="<?php echo $percentStep; ?>"
+                                                <div id="upAjaxStep" class="<?php echo $progressClass; ?>" role="progressbar"
+                                                     aria-valuenow="<?php echo $percentStep; ?>"
                                                      aria-valuemin="0" aria-valuemax="100"
                                                      style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%
                                                 </div>
@@ -903,3 +907,54 @@ add_filter( 'plugin_action_links', function ( $links, $file ) {
 
 	return $links;
 }, 10, 2 );
+
+function init_ajax_up_progress_bar() {
+	?>
+    <script type="application/javascript">
+        setInterval(upAjaxProgressBar, 5000);
+
+        function upAjaxProgressBar() {
+            jQuery(function ($) {
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {action: 'up_progress_bar'},
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response) {
+                            if ('step_item' in response) {
+                                document.getElementById('upAjaxStep').style.width = response.step_item + '%';
+                                $('#upAjaxStep').html(response.step_item + '%');
+                            }
+
+                            if ('total_item' in response) {
+                                document.getElementById('upAjaxTotal').style.width = response.total_item + '%';
+                                $('#upAjaxTotal').html(response.total_item + '%');
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    </script>
+	<?php
+}
+
+add_action( 'wp_ajax_up_progress_bar', 'get_percent_progress_bar' );
+
+function get_percent_progress_bar() {
+	if ( Main::checkLockProcess() ) {
+		$pBar = get_option( 'oasis_progress_tmp' );
+
+		if ( $pBar ) {
+			$step_item  = round( ( $pBar['step_item'] / $pBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+			$total_item = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
+
+			echo json_encode( [
+				'step_item'  => $step_item > 99.5 ? 100 : $step_item,
+				'total_item' => $total_item > 100 ? 100 : $total_item,
+			] );
+		}
+	}
+	wp_die();
+}
