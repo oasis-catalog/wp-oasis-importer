@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: wp-oasis-importer\n"
-"POT-Creation-Date: 2023-04-17 10:39+0300\n"
-"PO-Revision-Date: 2023-04-17 10:40+0300\n"
+"POT-Creation-Date: 2023-04-19 11:33+0300\n"
+"PO-Revision-Date: 2023-04-19 11:33+0300\n"
 "Last-Translator: \n"
 "Language-Team: https://sitever.ru\n"
 "Language: ru_RU\n"
@@ -202,15 +202,15 @@ msgstr "Ошибка, попробуйте еще раз."
 msgid "Import Oasis"
 msgstr "Импорт Oasis"
 
-#: oasiscatalog.php:591 oasiscatalog.php:592
+#: oasiscatalog.php:605 oasiscatalog.php:606
 msgid "Orders Oasis"
 msgstr "Заказы Oasis"
 
-#: oasiscatalog.php:615
+#: oasiscatalog.php:629
 msgid "Export orders to oasiscatalog"
 msgstr "Экспорт заказов в oasiscatalog"
 
-#: oasiscatalog.php:616
+#: oasiscatalog.php:630
 msgid ""
 "It is possible to export orders only with statuses: <b>\"Pending payment\", "
 "\"Processing\", \"On hold\", \"Completed\"</b>"
@@ -218,42 +218,42 @@ msgstr ""
 "Экспортировать заказы возможно только со статусами: <b>«В ожидании оплаты», "
 "«Обработка», «На удержании», «Выполнен»</b>"
 
-#: oasiscatalog.php:699
+#: oasiscatalog.php:713
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: oasiscatalog.php:731
+#: oasiscatalog.php:754
 msgid "Process active"
 msgstr "Процесс активен"
 
-#: oasiscatalog.php:731
+#: oasiscatalog.php:754
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: oasiscatalog.php:733
+#: oasiscatalog.php:756
 msgid "Next launch expected"
 msgstr "Ожидается следующий запуск"
 
-#: oasiscatalog.php:742
+#: oasiscatalog.php:765
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: oasiscatalog.php:756
+#: oasiscatalog.php:783
 #, php-format
 msgid "%s step in progress out of %s. Current step status"
 msgstr "Выполняется %s шаг из %s. Статус текущего шага"
 
-#: oasiscatalog.php:758
+#: oasiscatalog.php:785
 #, php-format
 msgid "Next step %s of %s."
 msgstr "Следующий шаг %s из %s."
 
-#: oasiscatalog.php:772
+#: oasiscatalog.php:803
 #, php-format
 msgid "Last import completed: %s"
 msgstr "Последний импорт завершен: %s"
 
-#: oasiscatalog.php:782
+#: oasiscatalog.php:813
 msgid ""
 "To enable automatic updating of the directory, you need to add crontab tasks "
 "in the hosting control panel: <br/>\n"
@@ -263,19 +263,23 @@ msgstr ""
 "управления хостингом добавить crontab задачи: <br/>\n"
 "<strong>Не разглашайте эти данные!</strong>"
 
-#: oasiscatalog.php:788
+#: oasiscatalog.php:819
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: oasiscatalog.php:798
+#: oasiscatalog.php:825 oasiscatalog.php:838
+msgid "Copy"
+msgstr "Копировать"
+
+#: oasiscatalog.php:832
 msgid "Renewal of balances 1 time in 30 minutes"
 msgstr "Обновление остатков 1 раз в 30 минут"
 
-#: oasiscatalog.php:818
+#: oasiscatalog.php:856
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: oasiscatalog.php:888
+#: oasiscatalog.php:926
 msgid "Settings"
 msgstr "Настройки"
 

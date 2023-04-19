@@ -576,6 +576,20 @@ if ( is_admin() ) {
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl)
             })
+
+            var texti = document.getElementById('inputImport');
+            var btni = document.getElementById('copyImport');
+            var textu = document.getElementById('inputUp');
+            var btnu = document.getElementById('copyUp');
+
+            btni.onclick = function () {
+                texti.select();
+                document.execCommand("copy");
+            }
+            btnu.onclick = function () {
+                textu.select();
+                document.execCommand("copy");
+            }
         </script>
 		<?php
 	}
@@ -806,8 +820,11 @@ if ( is_admin() ) {
                                     </div>
                                     <div class="col-md-8 col-sm-12">
                                         <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>"
-                                               aria-label="<?php echo $cronTask; ?>"
-                                               readonly="readonly" onFocus="this.select()">
+                                               aria-label="<?php echo $cronTask; ?>" id="inputImport" readonly="readonly" onFocus="this.select()">
+                                        <span id="copyImport" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
+                                              data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
+                                            <i class="fa fa-clone" aria-hidden="true"></i>
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -816,7 +833,11 @@ if ( is_admin() ) {
                                     </div>
                                     <div class="col-md-8 col-sm-12">
                                         <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
-                                               aria-label="<?php echo $cronTask; ?> --up" readonly="readonly" onFocus="this.select()">
+                                               aria-label="<?php echo $cronTask; ?> --up" id="inputUp" readonly="readonly" onFocus="this.select()">
+                                        <span id="copyUp" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
+                                              data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
+                                            <i class="fa fa-clone" aria-hidden="true"></i>
+                                        </span>
                                     </div>
                                 </div>
                             </div>

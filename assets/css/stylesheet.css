@@ -27,42 +27,21 @@ Progress bar
     border-left-color: #d63638;
 }
 
-/*.oa-row {*/
-/*    display: flex;*/
-/*    flex-flow: row wrap;*/
-/*    justify-content: start;*/
-/*}*/
+.ispan {
+    float: right;
+    margin-right: 6px;
+    margin-top: -30px;
+    position: relative;
+    z-index: 2;
+    color: #32a1ce;
+    border: 1px dotted #32a1ce;
+    padding-right: 5px;
+    padding-left: 5px;
+}
 
-/*.oa-label {*/
-/*    width: 30%;*/
-/*    min-width: 300px;*/
-/*}*/
-
-/*.oa-container {*/
-/*    display: flex;*/
-/*    align-items: center;*/
-/*    justify-content: center;*/
-/*    width: 70%;*/
-/*    margin: 1em 0;*/
-/*    height: 100%;*/
-/*    min-width: 100px;*/
-/*}*/
-
-/*.progress-bar {*/
-/*    height: 1.1rem;*/
-/*    width: 100rem;*/
-/*    border-radius: 0.2rem;*/
-/*    background: #f0f0f1;*/
-/*    color: #fff;*/
-/*}*/
-
-/*.progress-bar .progress {*/
-/*    height: 100%;*/
-/*    border-radius: 0.2rem;*/
-/*    background: #228b09;*/
-/*    transition: width 0.4s ease;*/
-/*    text-align: center;*/
-/*}*/
+input.input-cron-task {
+    padding-right: 40px;
+}
 
 .input-cron-task {
     width: 100%;
