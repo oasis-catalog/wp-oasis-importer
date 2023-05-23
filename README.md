@@ -18,3 +18,13 @@ WordPress version: 5.8+
 
 В панели управления хостингом добавить crontab задачи со страницы настроек модуля
 
+**Возможные ошибки на хостинге Timeweb:**
+
+```libgomp: Thread creation failed: Resource temporarily unavailable```
+
+Для исправления необходимо привести команду запуска к такому виду:
+
+```
+env MAGICK_THREAD_LIMIT=1 /opt/php74/bin/php /YOUR_PATH/public_html/wp-content/plugins/wp-oasis-importer/cron_import.php --key=YOUR_KEY
+```
+
