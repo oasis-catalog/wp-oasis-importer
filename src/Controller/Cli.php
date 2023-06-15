@@ -15,8 +15,8 @@ class Cli extends Main {
 
 			delete_option( 'oasis_progress_tmp' );
 			$args    = [];
-			$options = get_option( 'oasis_mi_options' );
-			$limit   = isset( $options['oasis_mi_limit'] ) ? (int) $options['oasis_mi_limit'] : null;
+			$options = get_option( 'oasis_options' );
+			$limit   = isset( $options['oasis_limit'] ) ? (int) $options['oasis_limit'] : null;
 			$step    = (int) get_option( 'oasis_step' );
 
 			if ( $limit > 0 ) {

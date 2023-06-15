@@ -46,8 +46,8 @@ Errors: ' . $errors . PHP_EOL;
 			die( $help );
 		}
 
-		$options = get_option( 'oasis_mi_options' );
-		define( 'API_KEY', $options['oasis_mi_api_key'] ?? '' );
+		$options = get_option( 'oasis_options' );
+		define( 'API_KEY', $options['oasis_api_key'] ?? '' );
 
 		if ( CRON_KEY !== md5( API_KEY ) ) {
 			die( 'Error! Invalid --key' );

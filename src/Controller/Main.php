@@ -131,7 +131,7 @@ class Main {
 			$wcProduct->set_stock_quantity( $totalStock );
 			$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
-			$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
+			$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
 
 			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 			if ( $defaultAttr ) {
@@ -199,7 +199,7 @@ class Main {
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 				$wcProduct->set_category_ids( $categories );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
-				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_mi_comments'] ) );
+				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
@@ -403,28 +403,28 @@ class Main {
 	 * @return array
 	 */
 	public static function getDataPrice( $product, $options ): array {
-		$price     = ! empty( $options['oasis_mi_dealer'] ) ? $product->discount_price : $product->price;
+		$price     = ! empty( $options['oasis_dealer'] ) ? $product->discount_price : $product->price;
 		$old_price = ! empty( $product->old_price ) ? $product->old_price : null;
 
-		if ( ! empty( $options['oasis_mi_price_factor'] ) ) {
-			$price = $price * (float) $options['oasis_mi_price_factor'];
+		if ( ! empty( $options['oasis_price_factor'] ) ) {
+			$price = $price * (float) $options['oasis_price_factor'];
 
-			if ( empty( $options['oasis_mi_dealer'] ) ) {
-				$old_price = $old_price * (float) $options['oasis_mi_price_factor'];
+			if ( empty( $options['oasis_dealer'] ) ) {
+				$old_price = $old_price * (float) $options['oasis_price_factor'];
 			}
 		}
 
-		if ( ! empty( $options['oasis_mi_increase'] ) ) {
-			$price = $price + (float) $options['oasis_mi_increase'];
+		if ( ! empty( $options['oasis_increase'] ) ) {
+			$price = $price + (float) $options['oasis_increase'];
 
-			if ( empty( $options['oasis_mi_dealer'] ) ) {
-				$old_price = $old_price + (float) $options['oasis_mi_increase'];
+			if ( empty( $options['oasis_dealer'] ) ) {
+				$old_price = $old_price + (float) $options['oasis_increase'];
 			}
 		}
 
 		$data['_price'] = $price;
 
-		if ( empty( $options['oasis_mi_disable_sales'] ) && ! empty( $old_price ) && $price < $old_price ) {
+		if ( empty( $options['oasis_disable_sales'] ) && ! empty( $old_price ) && $price < $old_price ) {
 			$data['_regular_price'] = $old_price;
 			$data['_sale_price']    = $price;
 		} else {
@@ -697,6 +697,23 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		}
 
 		return $result ?? null;
+	}
+
+	/**
+	 * Get oasis product id by post_id
+	 *
+	 * @param $postId
+	 *
+	 * @return string|null
+	 */
+	public static function getOasisProductIdByPostId( $postId ): ?string {
+		global $wpdb;
+
+		$dbResults = $wpdb->get_row( "
+SELECT `product_id_oasis` FROM {$wpdb->prefix}oasis_products
+WHERE `post_id` = " . intval( $postId ), ARRAY_A );
+
+		return ! empty( $dbResults['product_id_oasis'] ) ? strval( $dbResults['product_id_oasis'] ) : null;
 	}
 
 	/**
@@ -1100,7 +1117,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 					$checked = array_search( $data[ $parent_id ][ $i ]['id'], $checkedArr ) !== false ? ' checked' : '';
 				}
 
-				$treeCats .= '<li><label><input id="categories" type="checkbox" name="oasis_mi_options[oasis_mi_categories][]" value="' . $data[ $parent_id ][ $i ]['id'] . '"' . $checked . '/> ' . $data[ $parent_id ][ $i ]['name'] . '</label>' . PHP_EOL;
+				$treeCats .= '<li><label><input id="categories" type="checkbox" name="oasis_options[oasis_categories][]" value="' . $data[ $parent_id ][ $i ]['id'] . '"' . $checked . '/> ' . $data[ $parent_id ][ $i ]['name'] . '</label>' . PHP_EOL;
 				$treeCats = self::buildTreeCats( $data, $checkedArr, $treeCats, $data[ $parent_id ][ $i ]['id'], true ) . '</li>' . PHP_EOL;
 			}
 			$treeCats .= $sw ? '</ul>' . PHP_EOL : '';
@@ -1370,6 +1387,27 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			echo $e->getMessage() . PHP_EOL;
 			exit();
 		}
+	}
+
+	/**
+	 * Finding an array within an array.
+	 *
+	 * @param array $needle The array to be found
+	 * @param array $haystack Array to be searched
+	 *
+	 * @return int|string|null Returns the key of the found array. If not found will return NULL
+	 */
+	public static function checkDiffArray( array $needle, array $haystack ) {
+		ksort( $needle );
+		foreach ( $haystack as $key => $value ) {
+			ksort( $value );
+
+			if ( $needle === $value ) {
+				return $key;
+			}
+		}
+
+		return NULL;
 	}
 
 	/**

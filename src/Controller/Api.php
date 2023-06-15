@@ -15,7 +15,7 @@ class Api {
 	 * @return array
 	 */
 	public static function getOasisProducts( array $args = [], $categories ): array {
-		$options = get_option( 'oasis_mi_options' );
+		$options = get_option( 'oasis_options' );
 
 		$args += [
 			'fieldset'    => 'full',
@@ -24,21 +24,21 @@ class Api {
 		];
 
 		$data = [
-			'currency'     => $options['oasis_mi_currency'] ?? 'rub',
-			'no_vat'       => $options['oasis_mi_no_vat'] ?? 0,
-			'not_on_order' => $options['oasis_mi_not_on_order'] ?? null,
-			'price_from'   => $options['oasis_mi_price_from'] ?? null,
-			'price_to'     => $options['oasis_mi_price_to'] ?? null,
-			'rating'       => $options['oasis_mi_rating'] ?? null,
-			'moscow'       => $options['oasis_mi_warehouse_moscow'] ?? null,
-			'europe'       => $options['oasis_mi_warehouse_europe'] ?? null,
-			'remote'       => $options['oasis_mi_remote_warehouse'] ?? null,
+			'currency'     => $options['oasis_currency'] ?? 'rub',
+			'no_vat'       => $options['oasis_no_vat'] ?? 0,
+			'not_on_order' => $options['oasis_not_on_order'] ?? null,
+			'price_from'   => $options['oasis_price_from'] ?? null,
+			'price_to'     => $options['oasis_price_to'] ?? null,
+			'rating'       => $options['oasis_rating'] ?? null,
+			'moscow'       => $options['oasis_warehouse_moscow'] ?? null,
+			'europe'       => $options['oasis_warehouse_europe'] ?? null,
+			'remote'       => $options['oasis_remote_warehouse'] ?? null,
 		];
 
-		if ( empty( $options['oasis_mi_categories'] ) ) {
+		if ( empty( $options['oasis_categories'] ) ) {
 			$categoryIds = Main::getOasisMainCategories( $categories );
 		} else {
-			$categoryIds = $options['oasis_mi_categories'];
+			$categoryIds = $options['oasis_categories'];
 		}
 
 		$args += [
@@ -61,25 +61,25 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function getStatProducts( $categories ) {
-		$options = get_option( 'oasis_mi_options' );
+		$options = get_option( 'oasis_options' );
 		$args    = [
 			'showDeleted' => 1
 		];
 
 		$data = [
-			'not_on_order' => $options['oasis_mi_not_on_order'] ?? null,
-			'price_from'   => $options['oasis_mi_price_from'] ?? null,
-			'price_to'     => $options['oasis_mi_price_to'] ?? null,
-			'rating'       => ! empty( $options['oasis_mi_rating'] ) ? $options['oasis_mi_rating'] : '0,1,2,3,4,5',
-			'moscow'       => $options['oasis_mi_warehouse_moscow'] ?? null,
-			'europe'       => $options['oasis_mi_warehouse_europe'] ?? null,
-			'remote'       => $options['oasis_mi_remote_warehouse'] ?? null,
+			'not_on_order' => $options['oasis_not_on_order'] ?? null,
+			'price_from'   => $options['oasis_price_from'] ?? null,
+			'price_to'     => $options['oasis_price_to'] ?? null,
+			'rating'       => ! empty( $options['oasis_rating'] ) ? $options['oasis_rating'] : '0,1,2,3,4,5',
+			'moscow'       => $options['oasis_warehouse_moscow'] ?? null,
+			'europe'       => $options['oasis_warehouse_europe'] ?? null,
+			'remote'       => $options['oasis_remote_warehouse'] ?? null,
 		];
 
-		if ( empty( $options['oasis_mi_categories'] ) ) {
+		if ( empty( $options['oasis_categories'] ) ) {
 			$data['category'] = implode( ',', Main::getOasisMainCategories( $categories ) );
 		} else {
-			$data['category'] = implode( ',', $options['oasis_mi_categories'] );
+			$data['category'] = implode( ',', $options['oasis_categories'] );
 		}
 
 		foreach ( $data as $key => $value ) {
@@ -148,32 +148,12 @@ class Api {
 	/**
 	 * Export order to Oasiscatalog
 	 *
-	 * @param $apiKey
 	 * @param $data
 	 *
 	 * @return array|mixed
 	 */
-	public static function sendOrder( $apiKey, $data ) {
-		$result = [];
-
-		try {
-			$options = [
-				'http' => [
-					'method' => 'POST',
-					'header' => 'Content-Type: application/json' . PHP_EOL .
-					            'Accept: application/json' . PHP_EOL,
-
-					'content' => json_encode( $data ),
-				],
-			];
-
-			return json_decode( file_get_contents( 'https://api.oasiscatalog.com/v4/reserves/?key=' . $apiKey, 0, stream_context_create( $options ) ) );
-
-		} catch ( \Exception $exception ) {
-		}
-		unset( $options, $data, $apiKey );
-
-		return $result;
+	public static function sendOrder( $data ) {
+		return self::curlSend('reserves/', $data);
 	}
 
 	/**
@@ -181,10 +161,66 @@ class Api {
 	 *
 	 * @param $queueId
 	 *
-	 * @return array
+	 * @return array|mixed
 	 */
 	public static function getOrderByQueueId( $queueId ) {
 		return self::curlQuery( 'reserves/by-queue/' . $queueId );
+	}
+
+	public static function getBranding( $params ) {
+		return self::curlSend('branding/calc', $params);
+	}
+
+	/**
+	 * Send data by POST method
+	 *
+	 * @param string $type
+	 * @param array $data
+	 *
+	 * @return array|mixed
+	 */
+	public static function curlSend( string $type, array $data ) {
+		$options = get_option( 'oasis_options' );
+
+		if ( empty( $options['oasis_api_key'] ) ) {
+			return [];
+		}
+
+		$args_pref = [
+			'key'    => $options['oasis_api_key'],
+			'format' => 'json',
+		];
+
+		try {
+			$ch = curl_init( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args_pref ) );
+			curl_setopt( $ch, CURLOPT_POST, 1 );
+			curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $data, '', '&' ) );
+			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+			curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+			curl_setopt( $ch, CURLOPT_HEADER, false );
+			$content = curl_exec( $ch );
+
+			if ( $content === false ) {
+				throw new \Exception( 'Error: ' . curl_error( $ch ) );
+			} else {
+				$result = json_decode( $content );
+			}
+
+			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			curl_close( $ch );
+
+			if ( $http_code === 401 ) {
+				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
+			} elseif ( $http_code != 200 && $http_code != 500 ) {
+				throw new \Exception( 'Error: ' . ( $result->error ?? '') . PHP_EOL . 'Code: ' . $http_code );
+			}
+		} catch ( \Exception $e ) {
+			echo $e->getMessage() . PHP_EOL;
+
+			return [];
+		}
+
+		return $result;
 	}
 
 	/**
@@ -197,14 +233,14 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function curlQuery( $type, array $args = [], bool $sleep = true ) {
-		$options = get_option( 'oasis_mi_options' );
+		$options = get_option( 'oasis_options' );
 
-		if ( empty( $options['oasis_mi_api_key'] ) ) {
+		if ( empty( $options['oasis_api_key'] ) ) {
 			return [];
 		}
 
 		$args_pref = [
-			'key'    => $options['oasis_mi_api_key'],
+			'key'    => $options['oasis_api_key'],
 			'format' => 'json',
 		];
 		$args      = array_merge( $args_pref, $args );

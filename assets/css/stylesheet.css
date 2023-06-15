@@ -50,55 +50,28 @@ input.input-cron-task {
 /*
 Orders
  */
-.widefat td, .widefat th {
-    padding: 8px 10px;
-}
-
-table.oasis-orders th.export {
-    width: 400px;
-}
-
-.oasis-order__wrap {
-    padding: 0 10px 0 0;
-    display: inline-block;
-}
-
-.oasis-order {
-    border-radius: 3px;
-    padding: 4px;
-}
-
 .oasis-order .dashicons {
     margin-right: 3px;
 }
 
-.oasis-order__success {
-    border: solid 1px #d6e9c6;
-    color: #3c763d;
-    background-color: #dff0d8;
+.oasis-order .badge .dashicons {
+    margin-right: 3px;
 }
 
-.oasis-order__warning {
-    border: solid 1px #faebcc;
-    color: #8a6d3b;
-    background-color: #fcf8e3;
-}
-
-.oasis-order__danger {
-    border: solid 1px #ebccd1;
-    color: #a94442;
-    background-color: #f2dede;
+.oasis-order .badge {
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 /**
 Form
  */
-form.oasis-mi-form table.form-table th {
+form.oasis-form table.form-table th {
     padding-top: 7px !important;
     padding-bottom: 7px !important;
 }
 
-form.oasis-mi-form table.form-table td {
+form.oasis-form table.form-table td {
     padding-top: 7px !important;
     padding-bottom: 7px !important;
 }

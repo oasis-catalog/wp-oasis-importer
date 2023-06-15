@@ -17,10 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OASIS_MI_PATH', plugin_dir_path( __FILE__ ) );
+define( 'OASIS_PATH', plugin_dir_path( __FILE__ ) );
 
 require_once __DIR__ . '/src/Controller/Api.php';
 require_once __DIR__ . '/src/Controller/Main.php';
+require_once __DIR__ . '/src/order.php';
 
 use OasisImport\Controller\Oasis\Api;
 use OasisImport\Controller\Oasis\Main;
@@ -37,9 +38,9 @@ function true_load_plugin_textdomain() {
 /**
  * Проверка на наличие включенного Woocommerce, создание таблицы и первоначальные настройки при активации плагина
  */
-register_activation_hook( __FILE__, 'oasis_mi_activate' );
+register_activation_hook( __FILE__, 'oasis_activate' );
 
-function oasis_mi_activate() {
+function oasis_activate() {
 	if ( ! is_plugin_active( 'woocommerce/woocommerce.php' ) && current_user_can( 'activate_plugins' ) ) {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
@@ -51,9 +52,9 @@ function oasis_mi_activate() {
 /**
  * Сброс части настроек при отключении плагина
  */
-register_deactivation_hook( __FILE__, 'oasis_mi_deactivate' );
+register_deactivation_hook( __FILE__, 'oasis_deactivate' );
 
-function oasis_mi_deactivate() {
+function oasis_deactivate() {
 	delete_option( 'oasis_progress' );
 }
 
@@ -61,7 +62,7 @@ if ( ! function_exists( 'wp_get_current_user' ) ) {
 	include( ABSPATH . "wp-includes/pluggable.php" );
 }
 
-function oasis_mi_admin_validations() {
+function oasis_admin_validations() {
 	if ( ! is_php_version_compatible( '7.3' ) ) {
 		wp_die( 'Вы используете старую версию PHP ' . phpversion() . '. Попросите администратора сервера её обновить до 7.3 или выше! <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
@@ -70,295 +71,274 @@ function oasis_mi_admin_validations() {
 /**
  * custom option and settings
  */
-function oasis_mi_settings_init() {
+function oasis_settings_init() {
 
-	register_setting( 'oasis_mi', 'oasis_mi_options', 'sanitize_data' );
+	register_setting( 'oasis', 'oasis_options', 'sanitize_data' );
 
 	add_settings_section(
-		'oasis_mi_section_developers',
+		'oasis_section_developers',
 		__( 'Setting up import of Oasis products', 'wp-oasis-importer' ),
 		null,
-		'oasis_mi'
+		'oasis'
 	);
 
 	add_settings_field(
-		'oasis_mi_api_key',
+		'oasis_api_key',
 		__( 'Key API', 'wp-oasis-importer' ),
-		'oasis_mi_api_key_cb',
-		'oasis_mi',
-		'oasis_mi_section_developers',
+		'oasis_api_key_cb',
+		'oasis',
+		'oasis_section_developers',
 		[
-			'label_for' => 'oasis_mi_api_key',
+			'label_for' => 'oasis_api_key',
 		]
 	);
 
 	add_settings_field(
-		'oasis_mi_api_user_id',
+		'oasis_api_user_id',
 		__( 'API User ID', 'wp-oasis-importer' ),
-		'oasis_mi_api_user_id_cb',
-		'oasis_mi',
-		'oasis_mi_section_developers',
+		'oasis_api_user_id_cb',
+		'oasis',
+		'oasis_section_developers',
 		[
-			'label_for' => 'oasis_mi_api_user_id',
+			'label_for' => 'oasis_api_user_id',
 		]
 	);
 
-	$options = get_option( 'oasis_mi_options' );
+	$options = get_option( 'oasis_options' );
 
-	if ( empty( $options['oasis_mi_api_key'] ) ) {
-		add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'Specify the API key!', 'wp-oasis-importer' ) );
+	if ( empty( $options['oasis_api_key'] ) ) {
+		add_settings_error( 'oasis_messages', 'oasis_messag', __( 'Specify the API key!', 'wp-oasis-importer' ) );
 	} elseif ( empty( Api::getCurrenciesOasis( false ) ) ) {
-		add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'API key is invalid', 'wp-oasis-importer' ) );
+		add_settings_error( 'oasis_messages', 'oasis_messag', __( 'API key is invalid', 'wp-oasis-importer' ) );
 	} else {
 		add_settings_field(
-			'oasis_mi_currency',
+			'oasis_currency',
 			__( 'Currency', 'wp-oasis-importer' ),
-			'oasis_mi_currency_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_currency_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_currency',
+				'label_for' => 'oasis_currency',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_categories',
+			'oasis_categories',
 			__( 'Categories', 'wp-oasis-importer' ),
-			'oasis_mi_categories_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_categories_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_categories',
+				'label_for' => 'oasis_categories',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_no_vat',
+			'oasis_no_vat',
 			__( 'No VAT', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_no_vat',
+				'label_for' => 'oasis_no_vat',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_not_on_order',
+			'oasis_not_on_order',
 			__( 'Without goods "to order"', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_not_on_order',
+				'label_for' => 'oasis_not_on_order',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_price_from',
+			'oasis_price_from',
 			__( 'Price from', 'wp-oasis-importer' ),
-			'oasis_mi_number_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_number_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_price_from',
+				'label_for' => 'oasis_price_from',
 				'step'      => '0.01',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_price_to',
+			'oasis_price_to',
 			__( 'Price to', 'wp-oasis-importer' ),
-			'oasis_mi_number_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_number_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_price_to',
+				'label_for' => 'oasis_price_to',
 				'step'      => '0.01',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_rating',
+			'oasis_rating',
 			__( 'Type', 'wp-oasis-importer' ),
-			'oasis_mi_rating_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_rating_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_rating',
+				'label_for' => 'oasis_rating',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_warehouse_moscow',
+			'oasis_warehouse_moscow',
 			__( 'In stock in Moscow', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_warehouse_moscow',
+				'label_for' => 'oasis_warehouse_moscow',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_warehouse_europe',
+			'oasis_warehouse_europe',
 			__( 'In stock in Europe', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_warehouse_europe',
+				'label_for' => 'oasis_warehouse_europe',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_remote_warehouse',
+			'oasis_remote_warehouse',
 			__( 'At a remote warehouse', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for' => 'oasis_mi_remote_warehouse',
+				'label_for' => 'oasis_remote_warehouse',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_limit',
+			'oasis_limit',
 			__( 'Limit products', 'wp-oasis-importer' ),
-			'oasis_mi_number_cb',
-			'oasis_mi',
-			'oasis_mi_section_developers',
+			'oasis_number_cb',
+			'oasis',
+			'oasis_section_developers',
 			[
-				'label_for'   => 'oasis_mi_limit',
+				'label_for'   => 'oasis_limit',
 				'description' => __( 'The number of products received from the API and processed in one run.', 'wp-oasis-importer' ),
 				'step'        => '100',
 			]
 		);
 
 		add_settings_section(
-			'oasis_mi_section_price',
+			'oasis_section_price',
 			__( 'Price settings', 'wp-oasis-importer' ),
 			null,
-			'oasis_mi'
+			'oasis'
 		);
 
 		add_settings_field(
-			'oasis_mi_price_factor',
+			'oasis_price_factor',
 			__( 'Price factor', 'wp-oasis-importer' ),
-			'oasis_mi_number_cb',
-			'oasis_mi',
-			'oasis_mi_section_price',
+			'oasis_number_cb',
+			'oasis',
+			'oasis_section_price',
 			[
-				'label_for'   => 'oasis_mi_price_factor',
+				'label_for'   => 'oasis_price_factor',
 				'description' => __( 'The price will be multiplied by this factor. For example, in order to increase the cost by 20%, you need to specify 1.2', 'wp-oasis-importer' ),
 				'step'        => '0.01',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_increase',
+			'oasis_increase',
 			__( 'Add to price', 'wp-oasis-importer' ),
-			'oasis_mi_number_cb',
-			'oasis_mi',
-			'oasis_mi_section_price',
+			'oasis_number_cb',
+			'oasis',
+			'oasis_section_price',
 			[
-				'label_for'   => 'oasis_mi_increase',
+				'label_for'   => 'oasis_increase',
 				'description' => __( 'This value will be added to the price. For example, if you specify 100, then 100 will be added to the cost of all products.', 'wp-oasis-importer' ),
 				'step'        => '0.01',
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_dealer',
+			'oasis_dealer',
 			__( 'Use dealer prices', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_price',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_price',
 			[
-				'label_for' => 'oasis_mi_dealer',
+				'label_for' => 'oasis_dealer',
 			]
 		);
 
 		add_settings_section(
-			'oasis_mi_section_additionally',
+			'oasis_section_additionally',
 			__( 'Additional settings', 'wp-oasis-importer' ),
 			null,
-			'oasis_mi'
+			'oasis'
 		);
 
 		add_settings_field(
-			'oasis_mi_comments',
+			'oasis_comments',
 			__( 'Enable reviews', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_additionally',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_additionally',
 			[
-				'label_for'   => 'oasis_mi_comments',
+				'label_for'   => 'oasis_comments',
 				'description' => __( 'Enable commenting on imported products', 'wp-oasis-importer' ),
 			]
 		);
 
 		add_settings_field(
-			'oasis_mi_disable_sales',
+			'oasis_disable_sales',
 			__( 'Hide discounts', 'wp-oasis-importer' ),
-			'oasis_mi_checbox_cb',
-			'oasis_mi',
-			'oasis_mi_section_additionally',
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_additionally',
 			[
-				'label_for'   => 'oasis_mi_disable_sales',
+				'label_for'   => 'oasis_disable_sales',
 				'description' => __( 'Hide "old" price in products', 'wp-oasis-importer' ),
-			]
-		);
-
-		// orders
-		register_setting( 'oasis_mi_orders', 'oasis_mi_orders' );
-
-		add_settings_section(
-			'oasis_mi_section_orders',
-			'',
-			null,
-			'oasis_mi_orders'
-		);
-
-		add_settings_field(
-			'oasis_mi_orders',
-			__( 'Orders', 'wp-oasis-importer' ),
-			'oasis_mi_orders_cb',
-			'oasis_mi_orders',
-			'oasis_mi_section_orders',
-			[
-				'label_for' => 'oasis_mi_orders',
 			]
 		);
 	}
 }
 
-function oasis_mi_api_key_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
+function oasis_api_key_cb( $args ) {
+	$options = get_option( 'oasis_options' );
 	?>
 
-    <input type="text" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
-           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
-           maxlength="255" style="width: 300px;"/>
+	<input type="text" name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+	       value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
+	       maxlength="255" style="width: 300px;"/>
 
-    <p class="description"><?php echo __( 'After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website', 'wp-oasis-importer' ); ?></p>
+	<p class="description"><?php echo __( 'After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website', 'wp-oasis-importer' ); ?></p>
 	<?php
 }
 
-function oasis_mi_api_user_id_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
+function oasis_api_user_id_cb( $args ) {
+	$options = get_option( 'oasis_options' );
 	?>
 
-    <input type="text" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
-           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
-           maxlength="255" style="width: 120px;"/>
+	<input type="text" name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+	       value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
+	       maxlength="255" style="width: 120px;"/>
 
-    <p class="description"><?php echo __( 'After specifying the user id, it will be possible to upload orders to Oasis', 'wp-oasis-importer' ); ?></p>
+	<p class="description"><?php echo __( 'After specifying the user id, it will be possible to upload orders to Oasis', 'wp-oasis-importer' ); ?></p>
 	<?php
 }
 
-function oasis_mi_categories_cb() {
-	$options    = get_option( 'oasis_mi_options' );
+function oasis_categories_cb() {
+	$options    = get_option( 'oasis_options' );
 	$categories = Api::getCategoriesOasis( false );
 	$arr_cat    = [];
 
@@ -369,15 +349,15 @@ function oasis_mi_categories_cb() {
 		$arr_cat[ (int) $item->parent_id ][] = (array) $item;
 	}
 
-	echo '<ul id="tree">' . PHP_EOL . Main::buildTreeCats( $arr_cat, $options['oasis_mi_categories'] ?? [] ) . PHP_EOL . '</ul>' . PHP_EOL;
+	echo '<ul id="tree">' . PHP_EOL . Main::buildTreeCats( $arr_cat, $options['oasis_categories'] ?? [] ) . PHP_EOL . '</ul>' . PHP_EOL;
 }
 
-function oasis_mi_currency_cb( $args ) {
-	$options         = get_option( 'oasis_mi_options' );
-	$defaultCurrency = $options['oasis_mi_currency'] ?? 'rub';
+function oasis_currency_cb( $args ) {
+	$options         = get_option( 'oasis_options' );
+	$defaultCurrency = $options['oasis_currency'] ?? 'rub';
 	?>
 
-    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-select">
+	<select name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-currency" class="form-select">
 		<?php
 		$currencies = get_option( 'oasis_currencies' );
 
@@ -402,113 +382,51 @@ function oasis_mi_currency_cb( $args ) {
 		}
 		unset( $currency );
 		?>
-    </select>
+	</select>
 	<?php
 }
 
-function oasis_mi_checbox_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
+function oasis_checbox_cb( $args ) {
+	$options = get_option( 'oasis_options' );
 	$checked = $options[ $args['label_for'] ] ?? false;
 	?>
-    <input name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
-           class="code"/>
+	<input name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]" type="checkbox"<?php echo checked( 1, $checked, false ); ?> value="1"
+	       class="code"/>
 	<?php
 	echo ! empty( $args['description'] ) ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
-function oasis_mi_number_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
+function oasis_number_cb( $args ) {
+	$options = get_option( 'oasis_options' );
 	?>
 
-    <input type="number" name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+	<input type="number" name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
 		<?php echo $args['step'] ? 'step="' . $args['step'] . '"' : ''; ?>
-           value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
-           maxlength="255" style="width: 120px;"/>
+		   value="<?php echo $options[ $args['label_for'] ] ?? ''; ?>"
+		   maxlength="255" style="width: 120px;"/>
 	<?php
 	echo ! empty( $args['description'] ) ? '<p class="description">' . $args['description'] . '</p>' : '';
 }
 
-function oasis_mi_rating_cb( $args ) {
-	$options = get_option( 'oasis_mi_options' );
+function oasis_rating_cb( $args ) {
+	$options = get_option( 'oasis_options' );
 	?>
 
-    <select name="oasis_mi_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-select col-sm-6">
-        <option value=""><?php echo __( '---Select---', 'wp-oasis-importer' ); ?></option>
-        <option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>><?php echo __( 'Only new items', 'wp-oasis-importer' ); ?></option>
-        <option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>><?php echo __( 'Only hits', 'wp-oasis-importer' ); ?></option>
-        <option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>><?php echo __( 'Discount only', 'wp-oasis-importer' ); ?></option>
-    </select>
+	<select name="oasis_options[<?php echo esc_attr( $args['label_for'] ); ?>]" id="input-rating" class="form-select col-sm-6">
+		<option value=""><?php echo __( '---Select---', 'wp-oasis-importer' ); ?></option>
+		<option value="1" <?php selected( $options[ $args['label_for'] ], 1 ); ?>><?php echo __( 'Only new items', 'wp-oasis-importer' ); ?></option>
+		<option value="2" <?php selected( $options[ $args['label_for'] ], 2 ); ?>><?php echo __( 'Only hits', 'wp-oasis-importer' ); ?></option>
+		<option value="3" <?php selected( $options[ $args['label_for'] ], 3 ); ?>><?php echo __( 'Discount only', 'wp-oasis-importer' ); ?></option>
+	</select>
 	<?php
 }
 
-function oasis_mi_orders_cb( $args ) {
-	echo '
-<table class="wp-list-table widefat fixed striped table-view-list oasis-orders">
-    <thead>
-        <tr>
-            <th class="manage-column">' . __( 'Order', 'wp-oasis-importer' ) . '</th>
-            <th class="manage-column">' . __( 'Date', 'wp-oasis-importer' ) . '</th>
-            <th class="manage-column">' . __( 'Total', 'wp-oasis-importer' ) . '</th>
-            <th class="manage-column export">' . __( 'Unload', 'wp-oasis-importer' ) . '</th>
-        </tr>
-    </thead>
-    <tbody>' . PHP_EOL;
-
-	oasis_mi_get_orders();
-
-	echo '    </tbody>
-</table>' . PHP_EOL;
-}
-
-function oasis_mi_get_orders() {
-	$orders = wc_get_orders( [
-		'limit'   => - 1,
-		'orderby' => 'date',
-		'order'   => 'DESC',
-		'status'  => [ 'wc-processing', 'wc-pending', 'wc-on-hold', 'wc-completed' ],
-	] );
-
-	if ( $orders ) {
-		foreach ( $orders as $order ) {
-			$queueId = get_metadata( 'post', $order->get_order_number(), 'oasis_queue_id', true );
-
-			if ( $queueId ) {
-				$htmlExport = '';
-				$dataOrder  = Api::getOrderByQueueId( $queueId );
-
-				if ( isset( $dataOrder->state ) ) {
-					if ( $dataOrder->state == 'created' ) {
-						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__success"><span class="dashicons dashicons-yes-alt"></span>' . $dataOrder->order->statusText . '. Заказ №' . $dataOrder->order->number . '</div></div>';
-					} elseif ( $dataOrder->state == 'pending' ) {
-						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__warning"><span class="dashicons dashicons-warning"></span>' . __( 'The order is being processed in Oasiscatalog, please wait.', 'wp-oasis-importer' ) . '</div></div>';
-					} elseif ( $dataOrder->state == 'error' ) {
-						$htmlExport = '<div class="oasis-order__wrap"><div class="oasis-order oasis-order__danger"><span class="dashicons dashicons-dismiss"></span>' . __( 'Orders not found', 'wp-oasis-importer' ) . '</div></div> <input type="submit" name="send_order" class="button send_order" value="' . __( 'Error, please try again.', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
-					}
-				}
-			} else {
-				$htmlExport = '<input type="submit" name="send_order" class="button send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
-			}
-
-			echo '        <tr>
-            <td><a href="' . $order->get_edit_order_url() . '">' . $order->get_order_number() . '</a></td>
-            <td>' . date( 'Y-m-d H:i:s', strtotime( $order->get_date_created() ) ) . '</td>
-            <td>' . $order->total . '</td>
-            <td>' . $htmlExport . '</td>
-        </tr>' . PHP_EOL;
-		}
-	} else {
-		echo '
-        <tr>
-            <td colspan="5">' . __( 'Orders not found', 'wp-oasis-importer' ) . '</td>
-        </tr>';
-	}
-}
 
 function sanitize_data( $options ) {
 	foreach ( $options as $name => & $val ) {
-		if ( $name === 'oasis_mi_api_key' || $name === 'oasis_mi_api_user_id' ) {
+		if ( $name === 'oasis_api_key' || $name === 'oasis_api_user_id' ) {
 			$val = trim( $val );
-		} elseif ( $name === 'oasis_mi_limit' && empty( $val ) ) {
+		} elseif ( $name === 'oasis_limit' && empty( $val ) ) {
 			update_option( 'oasis_step', 0 );
 		}
 	}
@@ -520,28 +438,28 @@ function sanitize_data( $options ) {
  * Добавление пункта меню в раздел Инструменты для настройки импорта
  */
 if ( is_admin() ) {
-	function oasis_mi_menu() {
+	function oasis_menu() {
 		$page = add_submenu_page(
-			'tools.php',
-			__( 'Import Oasis', 'wp-oasis-importer' ),
-			__( 'Import Oasis', 'wp-oasis-importer' ),
+			'woocommerce',
+			__( 'Oasis Import', 'wp-oasis-importer' ),
+			__( 'Oasis Import', 'wp-oasis-importer' ),
 			'manage_options',
-			'oasiscatalog_mi',
-			'oasis_mi_page_html'
+			'oasis',
+			'oasis_page_html'
 		);
 
-		add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
-		add_action( 'load-' . $page, 'oasis_mi_admin_validations' );
-		oasis_mi_settings_init();
+		add_action( 'load-' . $page, 'oasis_admin_styles' );
+		add_action( 'load-' . $page, 'oasis_admin_validations' );
+		oasis_settings_init();
 	}
 
-	function oasis_mi_admin_styles() {
+	function oasis_admin_styles() {
 		wp_enqueue_style( 'oasis-stylesheet', plugins_url( 'assets/css/stylesheet.css', __FILE__ ) );
 		wp_enqueue_style( 'font-awesome', plugins_url( 'assets/css/font-awesome.min.css', __FILE__ ) );
 		wp_enqueue_style( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css' );
 		wp_enqueue_script( 'bootstrap530-alpha3', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js' );
 		wp_enqueue_script( 'jquery-tree', plugins_url( 'assets/js/jquery.tree.js', __FILE__ ), [ 'jquery' ] );
-		add_action( 'admin_print_footer_scripts', 'init_script_tree' );
+		wp_enqueue_script( 'custom', plugins_url( 'assets/js/custom.js', __FILE__ ), [ 'jquery' ], false, true );
 	}
 
 	function add_bootstrap530_alpha3_style( $html, $handle ) {
@@ -564,161 +482,23 @@ if ( is_admin() ) {
 
 	add_filter( 'script_loader_tag', 'add_bootstrap530_alpha3_script', 10, 2 );
 
-	function init_script_tree() {
-		?>
-        <script type="text/javascript">
-            jQuery(document).ready(function () {
-                jQuery("#tree").Tree();
-            });
+	add_action( 'admin_menu', 'oasis_menu' );
 
-            // Initialize tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl)
-            })
-
-            var texti = document.getElementById('inputImport');
-            var btni = document.getElementById('copyImport');
-            var textu = document.getElementById('inputUp');
-            var btnu = document.getElementById('copyUp');
-
-            btni.onclick = function () {
-                texti.select();
-                document.execCommand("copy");
-            }
-            btnu.onclick = function () {
-                textu.select();
-                document.execCommand("copy");
-            }
-        </script>
-		<?php
-	}
-
-	add_action( 'admin_menu', 'oasis_mi_menu' );
-
-	function oasis_mi_menu_orders() {
-		$options = get_option( 'oasis_mi_options' );
-
-		if ( ! empty( $options['oasis_mi_api_key'] ) && ! empty( $options['oasis_mi_api_user_id'] ) ) {
-			$page = add_submenu_page(
-				'tools.php',
-				__( 'Orders Oasis', 'wp-oasis-importer' ),
-				__( 'Orders Oasis', 'wp-oasis-importer' ),
-				'manage_options',
-				'oasiscatalog_mi_orders',
-				'oasis_mi_orders_html'
-			);
-			add_action( 'load-' . $page, 'oasis_mi_admin_styles' );
-		}
-	}
-
-	add_action( 'admin_menu', 'oasis_mi_menu_orders' );
-
-	function oasis_mi_orders_html() {
+	function oasis_page_html() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		add_action( 'admin_print_footer_scripts', 'init_order_ajax', 99 );
-
-		// show error/update messages
-		settings_errors( 'oasis_mi_messages' );
-		?>
-
-        <div class="wrap">
-            <h1><?php echo __( 'Export orders to oasiscatalog', 'wp-oasis-importer' ); ?></h1>
-            <p><?php echo __( 'It is possible to export orders only with statuses: <b>"Pending payment", "Processing", "On hold", "Completed"</b>', 'wp-oasis-importer' ); ?></p>
-
-            <form action="options.php" method="post" class="oasis-mi-orders-form">
-				<?php
-				settings_fields( 'oasis_mi_orders' );
-				do_settings_sections( 'oasis_mi_orders' );
-				?>
-            </form>
-        </div>
-		<?php
-	}
-
-	function init_order_ajax() {
-		?>
-        <script>
-            jQuery(function ($) {
-                $('.send_order').click(function () {
-                    var data = {
-                        action: 'send_order',
-                        order_id: this.getAttribute('data-order-id')
-                    };
-                    this.setAttribute("disabled", "disabled");
-
-                    $.ajax({
-                        url: ajaxurl,
-                        type: 'POST',
-                        data: data,
-                        success: function (data) {
-                            setTimeout(function () {
-                                location.reload();
-                            }, 2 * 1000);
-                        }
-                    });
-                    return false;
-                });
-            });
-        </script>
-		<?php
-	}
-
-	add_action( 'wp_ajax_send_order', 'send_order_ajax' );
-
-	function send_order_ajax() {
-		$order_id = strval( $_POST['order_id'] );
-		$options  = get_option( 'oasis_mi_options' );
-
-		if ( ! empty( $order_id ) ) {
-			$apiKey = $options['oasis_mi_api_key'];
-			$data   = [
-				'userId' => $options['oasis_mi_api_user_id'],
-			];
-			if ( ! empty( $apiKey ) && ! empty( $data['userId'] ) ) {
-				$order = wc_get_order( $order_id );
-
-				foreach ( $order->get_items() as $item ) {
-					if ( $item->get_variation_id() ) {
-						$oasisProductId = get_metadata( 'post', $item->get_variation_id(), 'variation_id', true );
-					} else {
-						$oasisProductId = get_metadata( 'post', $item->get_product_id(), 'product_id', true );
-					}
-					$data['items'][] = [
-						'productId' => $oasisProductId,
-						'quantity'  => $item->get_quantity(),
-					];
-
-				}
-				unset( $item );
-
-				$request = Api::sendOrder( $apiKey, $data );
-
-				if ( $request ) {
-					update_metadata( 'post', $order_id, 'oasis_queue_id', $request->queueId );
-				}
-			}
-		}
-		wp_die();
-	}
-
-	function oasis_mi_page_html() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
 		if ( isset( $_GET['settings-updated'] ) ) {
-			add_settings_error( 'oasis_mi_messages', 'oasis_mi_message', __( 'Settings saved', 'wp-oasis-importer' ), 'updated' );
+			add_settings_error( 'oasis_messages', 'oasis_messag', __( 'Settings saved', 'wp-oasis-importer' ), 'updated' );
 		}
 
-		settings_errors( 'oasis_mi_messages' );
+		settings_errors( 'oasis_messages' );
 
 		$lockProcess = Main::checkLockProcess();
-		$options     = get_option( 'oasis_mi_options' );
+		$options     = get_option( 'oasis_options' );
 		$pBar        = get_option( $lockProcess ? 'oasis_progress_tmp' : 'oasis_progress' );
-		$limit       = isset( $options['oasis_mi_limit'] ) ? intval( $options['oasis_mi_limit'] ) : null;
+		$limit       = isset( $options['oasis_limit'] ) ? intval( $options['oasis_limit'] ) : null;
 
 		if ( empty( $pBar ) ) {
 			$pBar              = get_option( 'oasis_progress' );
@@ -727,11 +507,11 @@ if ( is_admin() ) {
 
 		?>
 
-        <div class="wrap">
-            <div class="container-fluid">
+		<div class="wrap">
+			<div class="container-fluid">
 				<?php
-				if ( ! empty( $options['oasis_mi_api_key'] ) ) {
-					$cronTask = 'php ' . OASIS_MI_PATH . 'cron_import.php --key=' . md5( $options['oasis_mi_api_key'] );
+				if ( ! empty( $options['oasis_api_key'] ) ) {
+					$cronTask = 'php ' . OASIS_PATH . 'cron_import.php --key=' . md5( $options['oasis_api_key'] );
 
 					if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
 						$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
@@ -749,31 +529,29 @@ if ( is_admin() ) {
 					$progressClass = $lockProcess ? 'progress-bar progress-bar-striped progress-bar-animated' : 'progress-bar';
 
 					if ( $lockProcess ) {
-						add_action( 'admin_print_footer_scripts', 'init_ajax_up_progress_bar', 99 );
-
-						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Process active', 'wp-oasis-importer' ) . '"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
+						$dIcon = '<span class="oasis-process-icon"><i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span></span>';
 					} else {
-						$dIcon = ' <span data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="' . __( 'Next launch expected', 'wp-oasis-importer' ) . '"><i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i></span>';
+						$dIcon = '<span class="oasis-process-icon"><i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i></span>';
 					}
 					?>
 
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="oa-notice oa-notice-info">
-                                <div class="row">
-                                    <div class="col-md-4 col-sm-12">
-                                        <h5><?php echo __( 'General processing status', 'wp-oasis-importer' ) . $dIcon; ?></h5>
-                                    </div>
-                                    <div class="col-md-8 col-sm-12">
-                                        <div class="progress">
-                                            <div id="upAjaxTotal" class="<?php echo $progressClass; ?>" role="progressbar"
-                                                 aria-valuenow="<?php echo $percentTotal; ?>"
-                                                 aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="oa-notice oa-notice-info">
+								<div class="row">
+									<div class="col-md-4 col-sm-12">
+										<h5><?php echo __( 'General processing status', 'wp-oasis-importer' ) . ' ' . $dIcon; ?></h5>
+									</div>
+									<div class="col-md-8 col-sm-12">
+										<div class="progress">
+											<div id="upAjaxTotal" class="<?php echo $progressClass; ?>" role="progressbar"
+											     aria-valuenow="<?php echo $percentTotal; ?>"
+											     aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $percentTotal; ?>%">
 												<?php echo $percentTotal; ?>%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+											</div>
+										</div>
+									</div>
+								</div>
 								<?php if ( $limit > 0 ) {
 									$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
 									$oasis_step = intval( get_option( 'oasis_step' ) );
@@ -785,81 +563,81 @@ if ( is_admin() ) {
 										$step_text = sprintf( __( 'Next step %s of %s.', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
 									}
 									?>
-                                    <div class="row">
-                                        <div class="col-md-4 col-sm-12">
-                                            <h5><?php echo $step_text; ?></h5>
-                                        </div>
-                                        <div class="col-md-8 col-sm-12">
-                                            <div class="progress">
-                                                <div id="upAjaxStep" class="<?php echo $progressClass; ?>" role="progressbar"
-                                                     aria-valuenow="<?php echo $percentStep; ?>"
-                                                     aria-valuemin="0" aria-valuemax="100"
-                                                     style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+									<div class="row">
+										<div class="col-md-4 col-sm-12">
+											<h5><span class="oasis-process-text"><?php echo $step_text; ?></span></h5>
+										</div>
+										<div class="col-md-8 col-sm-12">
+											<div class="progress">
+												<div id="upAjaxStep" class="<?php echo $progressClass; ?>" role="progressbar"
+												     aria-valuenow="<?php echo $percentStep; ?>"
+												     aria-valuemin="0" aria-valuemax="100"
+												     style="width: <?php echo $percentStep; ?>%"><?php echo $percentStep; ?>%
+												</div>
+											</div>
+										</div>
+									</div>
 								<?php } ?>
-                                <p><?php echo sprintf( __( 'Last import completed: %s', 'wp-oasis-importer' ), $pBar['date'] ?? '' ); ?></p>
-                            </div>
-                        </div>
-                    </div>
+								<p><?php echo sprintf( __( 'Last import completed: %s', 'wp-oasis-importer' ), $pBar['date'] ?? '' ); ?></p>
+							</div>
+						</div>
+					</div>
 
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="oa-notice">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
+					<div class="row">
+						<div class="col-md-12">
+							<div class="oa-notice">
+								<div class="row">
+									<div class="col-md-12">
+										<p><?php echo __( 'To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>
 <strong>Do not disclose this information!</strong>', 'wp-oasis-importer' ); ?></p>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4 col-sm-12">
-                                        <p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
-                                    </div>
-                                    <div class="col-md-8 col-sm-12">
-                                        <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>"
-                                               aria-label="<?php echo $cronTask; ?>" id="inputImport" readonly="readonly" onFocus="this.select()">
-                                        <span id="copyImport" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
-                                              data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-4 col-sm-12">
+										<p><?php echo __( 'Download / update products 1 time per day', 'wp-oasis-importer' ); ?></p>
+									</div>
+									<div class="col-md-8 col-sm-12">
+										<input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?>"
+										       aria-label="<?php echo $cronTask; ?>" id="inputImport" readonly="readonly" onFocus="this.select()">
+										<span id="copyImport" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
+										      data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
                                             <i class="fa fa-clone" aria-hidden="true"></i>
                                         </span>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4 col-sm-12">
-                                        <p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
-                                    </div>
-                                    <div class="col-md-8 col-sm-12">
-                                        <input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
-                                               aria-label="<?php echo $cronTask; ?> --up" id="inputUp" readonly="readonly" onFocus="this.select()">
-                                        <span id="copyUp" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
-                                              data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-4 col-sm-12">
+										<p><?php echo __( 'Renewal of balances 1 time in 30 minutes', 'wp-oasis-importer' ); ?></p>
+									</div>
+									<div class="col-md-8 col-sm-12">
+										<input type="text" class="form-control input-cron-task" value="<?php echo $cronTask; ?> --up"
+										       aria-label="<?php echo $cronTask; ?> --up" id="inputUp" readonly="readonly" onFocus="this.select()">
+										<span id="copyUp" class="ispan" data-bs-toggle="tooltip" data-bs-placement="right"
+										      data-bs-title="<?php echo __( 'Copy', 'wp-oasis-importer' ); ?>">
                                             <i class="fa fa-clone" aria-hidden="true"></i>
                                         </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 					<?php
 				}
 				?>
 
-                <div class="row">
-                    <div class="col-md-12">
-                        <form action="options.php" method="post" class="oasis-mi-form">
+				<div class="row">
+					<div class="col-md-12">
+						<form action="options.php" method="post" class="oasis-form">
 							<?php
-							settings_fields( 'oasis_mi' );
-							do_settings_sections( 'oasis_mi' );
+							settings_fields( 'oasis' );
+							do_settings_sections( 'oasis' );
 							submit_button( __( 'Save settings', 'wp-oasis-importer' ) );
 							?>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
 		<?php
 	}
 
@@ -923,59 +701,61 @@ add_filter( 'plugin_action_links', function ( $links, $file ) {
 		return $links;
 	}
 
-	$settings_link = sprintf( '<a href="%s">%s</a>', admin_url( 'tools.php?page=oasiscatalog_mi' ), __( 'Settings', 'wp-oasis-importer' ) );
+	$settings_link = sprintf( '<a href="%s">%s</a>', admin_url( 'admin.php?page=oasis' ), __( 'Settings', 'wp-oasis-importer' ) );
 	array_unshift( $links, $settings_link );
 
 	return $links;
 }, 10, 2 );
 
-function init_ajax_up_progress_bar() {
-	?>
-    <script type="application/javascript">
-        setInterval(upAjaxProgressBar, 5000);
-
-        function upAjaxProgressBar() {
-            jQuery(function ($) {
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {action: 'up_progress_bar'},
-                    dataType: 'json',
-                    success: function (response) {
-                        if (response) {
-                            if ('step_item' in response) {
-                                document.getElementById('upAjaxStep').style.width = response.step_item + '%';
-                                $('#upAjaxStep').html(response.step_item + '%');
-                            }
-
-                            if ('total_item' in response) {
-                                document.getElementById('upAjaxTotal').style.width = response.total_item + '%';
-                                $('#upAjaxTotal').html(response.total_item + '%');
-                            }
-                        }
-                    }
-                });
-            });
-        }
-    </script>
-	<?php
-}
-
 add_action( 'wp_ajax_up_progress_bar', 'get_percent_progress_bar' );
 
 function get_percent_progress_bar() {
-	if ( Main::checkLockProcess() ) {
+	$lockProcess = Main::checkLockProcess();
+
+	$options    = get_option( 'oasis_options' );
+	$pBar       = get_option( $lockProcess ? 'oasis_progress_tmp' : 'oasis_progress' );
+	$limit      = isset( $options['oasis_limit'] ) ? intval( $options['oasis_limit'] ) : null;
+	$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
+	$oasis_step = intval( get_option( 'oasis_step' ) );
+	$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
+
+	$result = [
+		'status_progress' => false,
+		'progress_icon'   => '<i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i>',
+	];
+
+	if ( $limit ) {
+		$result['progress_step_text'] = sprintf( __( 'Next step %s of %s.', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
+		if ( ! $lockProcess ) {
+			$result['step_item'] = 0;
+		}
+	}
+
+	if ( $lockProcess ) {
 		$pBar = get_option( 'oasis_progress_tmp' );
 
 		if ( $pBar ) {
 			$step_item  = round( ( $pBar['step_item'] / $pBar['step_total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 			$total_item = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
 
-			echo json_encode( [
-				'step_item'  => $step_item > 99.5 ? 100 : $step_item,
-				'total_item' => $total_item > 100 ? 100 : $total_item,
-			] );
+			$result['total_item']      = min( $total_item, 100 );
+			$result['status_progress'] = true;
+			$result['progress_icon']   = '<i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span>';
+
+			if ( $limit ) {
+				$result['step_item'] = $step_item > 99.5 ? 100 : $step_item;
+				$result['progress_step_text'] = sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
+			}
 		}
 	}
+
+	echo json_encode( $result );
+	wp_die();
+}
+
+add_action( 'wp_ajax_check_status_progress', 'check_status_progress' );
+
+function check_status_progress() {
+	echo json_encode( [ 'status_progress' => (bool) Main::checkLockProcess(), ] );
 	wp_die();
 }

@@ -28,3 +28,9 @@ WordPress version: 5.8+
 env MAGICK_THREAD_LIMIT=1 /opt/php74/bin/php /YOUR_PATH/public_html/wp-content/plugins/wp-oasis-importer/cron_import.php --key=YOUR_KEY
 ```
 
+### Заказы
+
+После установки плагина и указания USER ID на станице WooCommerce->Заказы у заказов появится кнопка «Выгрузить» при условии что в заказе только товары Оазиса. 
+
+**Возможность выгрузить имеется только у пользователей с правами «Супер-Админ», «Админ» и «Менеджера магазина»** 
+
