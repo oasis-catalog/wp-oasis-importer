@@ -115,7 +115,7 @@ class Cli extends Main {
 
 				$pBar = $tmpBar;
 			} else {
-				$pBar['item']       = 0;
+				$pBar['item'] = 0;
 			}
 			unset( $tmpBar );
 

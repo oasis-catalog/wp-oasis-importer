@@ -119,6 +119,7 @@ class Api {
 			}
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
+
 			return [];
 		}
 
@@ -153,7 +154,7 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function sendOrder( $data ) {
-		return self::curlSend('reserves/', $data);
+		return self::curlSend( 'reserves/', $data );
 	}
 
 	/**
@@ -168,7 +169,7 @@ class Api {
 	}
 
 	public static function getBranding( $params ) {
-		return self::curlSend('branding/calc', $params);
+		return self::curlSend( 'branding/calc', $params );
 	}
 
 	/**
@@ -201,7 +202,7 @@ class Api {
 			$content = curl_exec( $ch );
 
 			if ( $content === false ) {
-				throw new \Exception( 'Error: ' . curl_error( $ch ) );
+				throw new Exception( 'Error: ' . curl_error( $ch ) );
 			} else {
 				$result = json_decode( $content );
 			}
@@ -210,11 +211,11 @@ class Api {
 			curl_close( $ch );
 
 			if ( $http_code === 401 ) {
-				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
+				throw new Exception( 'Error Unauthorized. Invalid API key!' );
 			} elseif ( $http_code != 200 && $http_code != 500 ) {
-				throw new \Exception( 'Error: ' . ( $result->error ?? '') . PHP_EOL . 'Code: ' . $http_code );
+				throw new Exception( 'Error: ' . ( $result->error ?? '' ) . PHP_EOL . 'Code: ' . $http_code );
 			}
-		} catch ( \Exception $e ) {
+		} catch ( Exception $e ) {
 			echo $e->getMessage() . PHP_EOL;
 
 			return [];
@@ -252,7 +253,7 @@ class Api {
 			$content = curl_exec( $ch );
 
 			if ( $content === false ) {
-				throw new \Exception( 'Error: ' . curl_error( $ch ) );
+				throw new Exception( 'Error: ' . curl_error( $ch ) );
 			} else {
 				$result = json_decode( $content );
 			}
@@ -265,14 +266,15 @@ class Api {
 			}
 
 			if ( $http_code === 401 ) {
-				throw new \Exception( 'Error Unauthorized. Invalid API key!' );
+				throw new Exception( 'Error Unauthorized. Invalid API key!' );
 			} elseif ( $http_code != 200 ) {
-				throw new \Exception( 'Error. Code: ' . $http_code );
+				throw new Exception( 'Error. Code: ' . $http_code );
 			}
 
 			unset( $content, $options, $args_pref, $args, $type, $ch, $http_code );
-		} catch ( \Exception $e ) {
+		} catch ( Exception $e ) {
 			echo $e->getMessage() . PHP_EOL;
+
 			return [];
 		}
 

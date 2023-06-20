@@ -190,7 +190,7 @@ class Main {
 
 				$wcProduct->set_name( $oasisProduct->name );
 				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
-                $wcProduct->set_manage_stock( true );
+				$wcProduct->set_manage_stock( true );
 				$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
 				$wcProduct->set_price( $dataPrice['_price'] );
 				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
@@ -255,12 +255,12 @@ class Main {
 
 			$wcVariation->save();
 
-            if ( $oasisProduct->images ) {
-                $wcVariationId = $wcVariation->get_id();
-                $images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
-                $wcVariation->set_image_id( array_shift( $images ) );
-                $wcVariation->save();
-            }
+			if ( $oasisProduct->images ) {
+				$wcVariationId = $wcVariation->get_id();
+				$images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
+				$wcVariation->set_image_id( array_shift( $images ) );
+				$wcVariation->save();
+			}
 
 			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
 			self::cliMsg( 'Добавлен вариант id ' . $oasisProduct->id );
@@ -697,6 +697,17 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		}
 
 		return $result ?? null;
+	}
+
+	/**
+	 * Get product id oasis by order item
+	 *
+	 * @param $item
+	 *
+	 * @return string|null
+	 */
+	public static function getOasisProductIdByOrderItem( $item ) {
+		return Main::getOasisProductIdByPostId( $item->get_variation_id() ? $item->get_variation_id() : $item->get_product_id() );
 	}
 
 	/**
@@ -1407,7 +1418,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 			}
 		}
 
-		return NULL;
+		return null;
 	}
 
 	/**
@@ -1420,13 +1431,48 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
-	 * Debug func
+	 * Debug function
 	 *
 	 * @param $data
+	 * @param bool $saveToLog
 	 */
-	public static function d( $data ) {
-		echo '<pre>';
-		print_r( $data, false );
-		echo '</pre>';
+	public static function d( $data, bool $saveToLog = false ) {
+		if ( $saveToLog ) {
+			self::saveToLog( $data );
+		} else {
+			echo '<pre>' . print_r( $data, true ) . '</pre>';
+		}
+	}
+
+	/**
+	 * Debug function save to log
+	 *
+	 * @param  $data
+	 *
+	 * @return void
+	 */
+	protected static function saveToLog( $data ) {
+		try {
+			$upload_dir = wp_upload_dir();
+			$dir_lock   = $upload_dir['basedir'] . '/oasis_log/';
+
+			if ( ! wp_mkdir_p( $dir_lock ) ) {
+				throw new Exception( 'Failed to create directory ' . $dir_lock );
+			}
+
+			$filename = $dir_lock . date( 'Ymd_His' ) . '.txt';
+			$str      = print_r( $data, true ) . PHP_EOL;
+
+			if ( ! file_exists( $filename ) ) {
+				$fp = fopen( $filename, 'wb' );
+				fwrite( $fp, $str );
+				fclose( $fp );
+			} else {
+				file_put_contents( $filename, $str, FILE_APPEND | LOCK_EX );
+			}
+		} catch ( Exception $e ) {
+			echo $e->getMessage() . PHP_EOL;
+			exit();
+		}
 	}
 }

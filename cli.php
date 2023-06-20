@@ -32,15 +32,15 @@ class StartCli {
 
 		if ( $errors ) {
 			$help = '
-usage:  php ' . __DIR__ . '/cron_import.php [-k|--key=secret] [-u|--up]
+usage:  php ' . __DIR__ . '/cli.php [-k|--key=secret] [-u|--up]
 
 Options:
         -k  --key      substitute your secret key from the Oasis module
         -u  --up       specify this key to use the update
 Example import products:
-        php ' . __DIR__ . '/cron_import.php --key=secret
+        php ' . __DIR__ . '/cli.php --key=secret
 Example update stock (quantity) products:
-        php ' . __DIR__ . '/cron_import.php --key=secret --up
+        php ' . __DIR__ . '/cli.php --key=secret --up
 
 Errors: ' . $errors . PHP_EOL;
 			die( $help );
@@ -55,8 +55,8 @@ Errors: ' . $errors . PHP_EOL;
 
 		$version_php = intval( PHP_MAJOR_VERSION . PHP_MINOR_VERSION );
 
-		if ( $version_php < 73 ) {
-			die( 'Error! Minimum PHP version 7.3, your PHP version ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION );
+		if ( $version_php < 74 ) {
+			die( 'Error! Minimum PHP version 7.4, your PHP version ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION );
 		}
 
 		$this->doExecute();

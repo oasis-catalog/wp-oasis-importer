@@ -3,14 +3,14 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://forum.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce
-Version: 2.3
+Version: 2.4.0
 Text Domain: wp-oasis-importer
-Author: Oasiscatalog Team
-Author URI: https://forum.oasiscatalog.com
+Author: Viktor Grishin
+Author URI: https://sitever.ru
 License: GPL2
 
-WordPress tested:   5.9
-Woocommerce tested: 5.9
+WordPress tested:   6.2
+Woocommerce tested: 6.2
 */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,6 +22,7 @@ define( 'OASIS_PATH', plugin_dir_path( __FILE__ ) );
 require_once __DIR__ . '/src/Controller/Api.php';
 require_once __DIR__ . '/src/Controller/Main.php';
 require_once __DIR__ . '/src/order.php';
+require_once __DIR__ . '/src/branding.php';
 
 use OasisImport\Controller\Oasis\Api;
 use OasisImport\Controller\Oasis\Main;
@@ -511,7 +512,7 @@ if ( is_admin() ) {
 			<div class="container-fluid">
 				<?php
 				if ( ! empty( $options['oasis_api_key'] ) ) {
-					$cronTask = 'php ' . OASIS_PATH . 'cron_import.php --key=' . md5( $options['oasis_api_key'] );
+					$cronTask = 'php ' . OASIS_PATH . 'cli.php --key=' . md5( $options['oasis_api_key'] );
 
 					if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
 						$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
@@ -743,7 +744,7 @@ function get_percent_progress_bar() {
 			$result['progress_icon']   = '<i class="fa fa-cog fa-spin fa-fw" style="color: #0c7a0a;"></i><span class="sr-only">' . __( 'Loading...', 'wp-oasis-importer' ) . '</span>';
 
 			if ( $limit ) {
-				$result['step_item'] = $step_item > 99.5 ? 100 : $step_item;
+				$result['step_item']          = $step_item > 99.5 ? 100 : $step_item;
 				$result['progress_step_text'] = sprintf( __( '%s step in progress out of %s. Current step status', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
 			}
 		}

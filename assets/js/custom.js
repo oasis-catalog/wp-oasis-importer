@@ -74,7 +74,7 @@ function upAjaxProgressBar() {
 function addAnimatedBar(classStr) {
     let lassArr = classStr.split(' ');
 
-    lassArr.forEach(function(item, index, array) {
+    lassArr.forEach(function (item, index, array) {
         let upAjaxTotal = document.getElementById('upAjaxTotal');
 
         if (upAjaxTotal && !upAjaxTotal.classList.contains(item)) {
@@ -92,7 +92,7 @@ function addAnimatedBar(classStr) {
 function removeAnimatedBar(classStr) {
     let lassArr = classStr.split(' ');
 
-    lassArr.forEach(function(item, index, array) {
+    lassArr.forEach(function (item, index, array) {
         let upAjaxTotal = document.getElementById('upAjaxTotal');
 
         if (upAjaxTotal && upAjaxTotal.classList.contains(item)) {
