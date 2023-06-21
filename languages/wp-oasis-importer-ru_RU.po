@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: wp-oasis-importer\n"
-"POT-Creation-Date: 2023-06-21 13:07+0300\n"
-"PO-Revision-Date: 2023-06-21 13:08+0300\n"
+"POT-Creation-Date: 2023-06-21 13:49+0300\n"
+"PO-Revision-Date: 2023-06-21 13:50+0300\n"
 "Last-Translator: \n"
 "Language-Team: https://sitever.ru\n"
 "Language: ru_RU\n"
@@ -137,7 +137,15 @@ msgstr "Скрыть скидки"
 msgid "Hide \"old\" price in products"
 msgstr "Скрыть \"старую\" цену в товарах"
 
-#: oasiscatalog.php:325
+#: oasiscatalog.php:317
+msgid "Widget branding"
+msgstr "Виджет нанесения"
+
+#: oasiscatalog.php:323
+msgid "Enable branding widget on checkout page"
+msgstr "Включить виджет нанесения на странице оформления заказа"
+
+#: oasiscatalog.php:337
 msgid ""
 "After specifying the key, it will be possible to configure the import of "
 "products into Woocommerce from the Oasis website"
@@ -145,59 +153,59 @@ msgstr ""
 "После указания ключа можно будет настроить импорт товаров в Woocommerce с "
 "сайта Oasis"
 
-#: oasiscatalog.php:337
+#: oasiscatalog.php:349
 msgid ""
 "After specifying the user id, it will be possible to upload orders to Oasis"
 msgstr "После указания user id можно будет выгружать заказы в Oasis"
 
-#: oasiscatalog.php:417
+#: oasiscatalog.php:429
 msgid "---Select---"
 msgstr "---Выбирать---"
 
-#: oasiscatalog.php:418
+#: oasiscatalog.php:430
 msgid "Only new items"
 msgstr "Только новинки"
 
-#: oasiscatalog.php:419
+#: oasiscatalog.php:431
 msgid "Only hits"
 msgstr "Только хиты"
 
-#: oasiscatalog.php:420
+#: oasiscatalog.php:432
 msgid "Discount only"
 msgstr "Только со скидкой"
 
-#: oasiscatalog.php:445 oasiscatalog.php:446
+#: oasiscatalog.php:457 oasiscatalog.php:458
 msgid "Oasis Import"
 msgstr "Оазис импорт"
 
-#: oasiscatalog.php:494
+#: oasiscatalog.php:506
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: oasiscatalog.php:533 oasiscatalog.php:744
+#: oasiscatalog.php:545 oasiscatalog.php:756
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: oasiscatalog.php:544
+#: oasiscatalog.php:556
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: oasiscatalog.php:562 oasiscatalog.php:748
+#: oasiscatalog.php:574 oasiscatalog.php:760
 #, php-format
 msgid "%s step in progress out of %s. Current step status"
 msgstr "Выполняется %s шаг из %s. Статус текущего шага"
 
-#: oasiscatalog.php:564 oasiscatalog.php:729
+#: oasiscatalog.php:576 oasiscatalog.php:741
 #, php-format
 msgid "Next step %s of %s."
 msgstr "Следующий шаг %s из %s."
 
-#: oasiscatalog.php:582
+#: oasiscatalog.php:594
 #, php-format
 msgid "Last import completed: %s"
 msgstr "Последний импорт завершен: %s"
 
-#: oasiscatalog.php:592
+#: oasiscatalog.php:604
 msgid ""
 "To enable automatic updating of the directory, you need to add crontab tasks "
 "in the hosting control panel: <br/>\n"
@@ -207,23 +215,23 @@ msgstr ""
 "управления хостингом добавить crontab задачи: <br/>\n"
 "<strong>Не разглашайте эти данные!</strong>"
 
-#: oasiscatalog.php:598
+#: oasiscatalog.php:610
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: oasiscatalog.php:604 oasiscatalog.php:617
+#: oasiscatalog.php:616 oasiscatalog.php:629
 msgid "Copy"
 msgstr "Копировать"
 
-#: oasiscatalog.php:611
+#: oasiscatalog.php:623
 msgid "Renewal of balances 1 time in 30 minutes"
 msgstr "Обновление остатков 1 раз в 30 минут"
 
-#: oasiscatalog.php:635
+#: oasiscatalog.php:647
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: oasiscatalog.php:705
+#: oasiscatalog.php:717
 msgid "Settings"
 msgstr "Настройки"
 
@@ -242,6 +250,9 @@ msgstr "Заказ обрабатывается, ожидайте."
 #: src/order.php:50
 msgid "Error, please try again."
 msgstr "Ошибка, попробуйте еще раз."
+
+#~ msgid "Enable widget branding"
+#~ msgstr "Включить виджет нанесения"
 
 #~ msgid "Orders"
 #~ msgstr "Заказы"
