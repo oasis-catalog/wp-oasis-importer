@@ -19,27 +19,6 @@ function init_branding() {
 	}
 
 	/**
-	 * Get oasis product id by cart item
-	 *
-	 * @param $cart_item
-	 *
-	 * @return mixed|string
-	 */
-	function get_product_id_oasis_by_cart_item( $cart_item ) {
-		global $wpdb;
-
-		$product_id = ! empty( $cart_item['variation_id'] ) ? $cart_item['variation_id'] : $cart_item['product_id'];
-
-		if ( $product_id ) {
-			$dbResult = $wpdb->get_row( "
-SELECT * FROM {$wpdb->prefix}oasis_products 
-WHERE post_id = '" . $product_id . "'", ARRAY_A );
-		}
-
-		return $dbResult['product_id_oasis'] ?? '';
-	}
-
-	/**
 	 * Add button up total price in page checkout
 	 *
 	 * @return void
@@ -198,4 +177,31 @@ WHERE post_id = '" . $product_id . "'", ARRAY_A );
 
 		return $result;
 	}
+}
+
+/**
+ * Get oasis product id by cart item
+ *
+ * @param $cart_item
+ *
+ * @return mixed|string
+ */
+function get_product_id_oasis_by_cart_item( $cart_item ) {
+	$options = get_option( 'oasis_options' );
+
+	if ( empty( $options['oasis_branding'] ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	$product_id = ! empty( $cart_item['variation_id'] ) ? $cart_item['variation_id'] : $cart_item['product_id'];
+
+	if ( $product_id ) {
+		$dbResult = $wpdb->get_row( "
+SELECT * FROM {$wpdb->prefix}oasis_products 
+WHERE post_id = '" . $product_id . "'", ARRAY_A );
+	}
+
+	return $dbResult['product_id_oasis'] ?? '';
 }
