@@ -3,6 +3,14 @@
 namespace OasisImport\Controller\Oasis;
 
 use Exception;
+use WC_Cache_Helper;
+use WC_Product;
+use WC_Product_Attribute;
+use WC_Product_Simple;
+use WC_Product_Variable;
+use WC_Product_Variation;
+use WP_Post;
+use WP_Query;
 
 class Main {
 
@@ -12,7 +20,7 @@ class Main {
 	 * @param array $where
 	 * @param string $type
 	 *
-	 * @return array|\WP_Post|null
+	 * @return array|WP_Post|null
 	 */
 	public static function checkProductOasisTable( array $where, string $type ) {
 		global $wpdb;
@@ -142,9 +150,7 @@ class Main {
 				$wcProduct->set_sku( $oasisProduct->article );
 			}
 
-			$wcProduct->save();
-
-			$wcProductId = $wcProduct->get_id();
+			$wcProductId = $wcProduct->save();
 			$images      = self::processingPhoto( $oasisProduct->images, $wcProductId );
 			$wcProduct->set_image_id( array_shift( $images ) );
 			$wcProduct->set_gallery_image_ids( $images );
@@ -235,7 +241,7 @@ class Main {
 		try {
 			$dataPrice = self::getDataPrice( $oasisProduct, $options );
 
-			$wcVariation = new \WC_Product_Variation();
+			$wcVariation = new WC_Product_Variation();
 			$wcVariation->set_name( $oasisProduct->full_name );
 			$wcVariation->set_manage_stock( true );
 			$wcVariation->set_sku( $oasisProduct->article );
@@ -253,11 +259,10 @@ class Main {
 				$wcVariation->set_attributes( $attributes );
 			}
 
-			$wcVariation->save();
+			$wcVariationId = $wcVariation->save();
 
 			if ( $oasisProduct->images ) {
-				$wcVariationId = $wcVariation->get_id();
-				$images        = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
+				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
 				$wcVariation->set_image_id( array_shift( $images ) );
 				$wcVariation->save();
 			}
@@ -460,14 +465,14 @@ class Main {
 	 *
 	 * @param string $type
 	 *
-	 * @return void|\WC_Product|\WC_Product_Simple|\WC_Product_Variable
+	 * @return void|WC_Product|WC_Product_Simple|WC_Product_Variable
 	 */
 	public static function getWcProductObjectType( string $type = 'simple' ) {
 		try {
 			if ( $type === 'variable' ) {
-				$product = new \WC_Product_Variable();
+				$product = new WC_Product_Variable();
 			} else {
-				$product = new \WC_Product_Simple();
+				$product = new WC_Product_Simple();
 			}
 
 			if ( ! is_a( $product, 'WC_Product' ) ) {
@@ -719,7 +724,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 *
 	 * @return string|null
 	 */
-	public static function getOasisProductIdByOrderItem( $item ) {
+	public static function getOasisProductIdByOrderItem( $item ): ?string {
 		return Main::getOasisProductIdByPostId( $item->get_variation_id() ? $item->get_variation_id() : $item->get_product_id() );
 	}
 
@@ -748,10 +753,10 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @param bool $visible
 	 * @param $variation
 	 *
-	 * @return \WC_Product_Attribute
+	 * @return WC_Product_Attribute
 	 */
-	public static function getWcObjectProductAttribute( $attr, $value, bool $visible, $variation ): \WC_Product_Attribute {
-		$attribute = new \WC_Product_Attribute();
+	public static function getWcObjectProductAttribute( $attr, $value, bool $visible, $variation ): WC_Product_Attribute {
+		$attribute = new WC_Product_Attribute();
 		$attribute->set_id( $attr['attribute_id'] );
 		$attribute->set_name( $attr['attribute_taxonomy'] );
 		$attribute->set_visible( $visible );
@@ -786,7 +791,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * Create attribute
 	 *
 	 * @param string $raw_name Name of attribute to create.
-	 * @param array(string) $terms Terms to create for the attribute.
+	 * @param array $terms Terms to create for the attribute.
 	 * @param string $slug
 	 *
 	 * @return array
@@ -795,7 +800,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		global $wc_product_attributes;
 
 		delete_transient( 'wc_attribute_taxonomies' );
-		\WC_Cache_Helper::invalidate_cache_group( 'woocommerce-attributes' );
+		WC_Cache_Helper::invalidate_cache_group( 'woocommerce-attributes' );
 
 		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
 		$attribute_name   = array_search( empty( $slug ) ? $raw_name : $slug, $attribute_labels, true );
@@ -1139,7 +1144,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				if ( empty( $checkedArr ) ) {
 					$checked = $data[ $parent_id ][ $i ]['level'] == 1 ? ' checked' : '';
 				} else {
-					$checked = array_search( $data[ $parent_id ][ $i ]['id'], $checkedArr ) !== false ? ' checked' : '';
+					$checked = in_array( $data[ $parent_id ][ $i ]['id'], $checkedArr ) ? ' checked' : '';
 				}
 
 				$treeCats .= '<li><label><input id="categories" type="checkbox" name="oasis_options[oasis_categories][]" value="' . $data[ $parent_id ][ $i ]['id'] . '"' . $checked . '/> ' . $data[ $parent_id ][ $i ]['name'] . '</label>' . PHP_EOL;
@@ -1333,11 +1338,11 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				}
 
 				if ( ! $parentSizeId ) {
-					$filename   = basename( $image->superbig );
-					$existImage = get_page_by_title( sanitize_file_name( $filename ), OBJECT, 'attachment' );
+					$filename     = basename( $image->superbig );
+					$existImageId = self::getAttachmentIdByTitle( $filename );
 
-					if ( $existImage ) {
-						$attachIds[] = $existImage->ID;
+					if ( $existImageId ) {
+						$attachIds[] = $existImageId;
 						continue;
 					}
 
@@ -1373,6 +1378,35 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		}
 
 		return $attachIds;
+	}
+
+	/**
+	 * Get page by title
+	 *
+	 * @param $title
+	 *
+	 * @return int|null
+	 */
+	public static function getAttachmentIdByTitle( $title ): ?int {
+		$query = new WP_Query( [
+			'post_type'              => 'attachment',
+			'title'                  => sanitize_file_name( $title ),
+			'post_status'            => 'all',
+			'posts_per_page'         => 1,
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+			'orderby'                => 'post_date ID',
+			'order'                  => 'ASC',
+			'no_found_rows'          => true,
+			'ignore_sticky_posts'    => true,
+			'fields'                 => 'ids'
+		] );
+
+		if ( ! empty( $query->posts ) ) {
+			return $query->posts[0];
+		} else {
+			return null;
+		}
 	}
 
 	/**
