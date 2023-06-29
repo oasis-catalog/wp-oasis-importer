@@ -52,7 +52,30 @@ class Api {
 		}
 		unset( $categoryIds, $category, $data, $key, $value );
 
-		return self::curlQuery( 'products', $args );
+		$products = self::curlQuery( 'products', $args );
+
+		if ( ! empty( $products ) && ! empty( $args['limit'] ) ) {
+			unset( $args['limit'], $args['offset'], $args['ids'] );
+
+			$group_id = [ $products[ array_key_first( $products ) ]->group_id ];
+
+			if ( count( $products ) > 1 ) {
+				$group_id[] = $products[ array_key_last( $products ) ]->group_id;
+			}
+
+			$args['group_id']   = implode( ',', array_unique( $group_id ) );
+			$additionalProducts = self::curlQuery( 'products', $args );
+
+			foreach ( $additionalProducts as $additionalProduct ) {
+				$neededProduct = Main::searchObject( $products, $additionalProduct->id );
+
+				if ( $neededProduct === false ) {
+					$products[] = $additionalProduct;
+				}
+			}
+		}
+
+		return $products;
 	}
 
 	/**

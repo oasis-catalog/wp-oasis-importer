@@ -526,9 +526,10 @@ class Main {
 						unset( $color );
 					}
 				}
+				unset( $model );
 
 				if ( ! empty( $filterColors ) ) {
-					$filterColors   = self::checkColorsToFilter( array_unique( $filterColors ) );
+					$filterColors   = self::checkColorsToFilter( $filterColors );
 					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Фильтр цвет', $filterColors, 'color' ), $filterColors, false, false );
 					unset( $filterColors );
 				}
@@ -536,6 +537,7 @@ class Main {
 				$dataColor = self::getProductAttributeColor( $attribute, $models );
 
 				if ( ! empty( $dataColor ) ) {
+					sort( $dataColor );
 					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Цвет', $dataColor ), $dataColor, true, count( $models ) > 1 );
 					unset( $dataColor );
 				}
@@ -641,31 +643,42 @@ class Main {
 				}
 			}
 
-			$etalonSizes = [
-				'3XS',
-				'2XS',
-				'XS',
-				'XS-S',
-				'S',
-				'M',
-				'M-L',
-				'L',
-				'XL',
-				'XL-2XL',
-				'2XL',
-				'3XL',
-				'4XL',
-				'5XL',
-			];
-
-			usort( $result, function ( $key1, $key2 ) use ( $etalonSizes ) {
-				return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
-			} );
-
-			$result = array_values( array_unique( $result ) );
+			$result = self::sortSizeByStandard( $result );
 		}
 
 		return $result ?? [];
+	}
+
+	/**
+	 * Sort sizes according to standard. Returns unique values
+	 *
+	 * @param array $data
+	 *
+	 * @return array
+	 */
+	public static function sortSizeByStandard( array $data ): array {
+		$etalonSizes = [
+			'3XS',
+			'2XS',
+			'XS',
+			'XS-S',
+			'S',
+			'M',
+			'M-L',
+			'L',
+			'XL',
+			'XL-2XL',
+			'2XL',
+			'3XL',
+			'4XL',
+			'5XL',
+		];
+
+		usort( $data, function ( $key1, $key2 ) use ( $etalonSizes ) {
+			return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
+		} );
+
+		return array_values( array_unique( $data ) );
 	}
 
 	/**
@@ -856,6 +869,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @return array
 	 */
 	public static function checkColorsToFilter( $data ): array {
+		$data   = array_unique( $data );
 		$result = [];
 		$colors = [
 			1480 => 'Голубой',
