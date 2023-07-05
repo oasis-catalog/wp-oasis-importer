@@ -546,23 +546,40 @@ class Main {
 					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Цвет', $dataColor ), $dataColor, true, count( $models ) > 1 );
 					unset( $dataColor );
 				}
-			} elseif ( ! empty( $attribute->id ) && $attribute->id == '1000000008' ) {
+			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000008' ) {
 				$branding['attr']['attribute_id']       = 0;
 				$branding['attr']['attribute_taxonomy'] = $attribute->name;
 				$branding['value'][]                    = trim( $attribute->value );
+			} elseif ( isset( $attribute->id ) && $attribute->id == '65' ) {
+				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( $attribute->name, [ $attribute->value ] ), [ $attribute->value ], true, false );
+			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000002' ) {
+				$materials      = self::getStandardAttributeMaterial( $attribute->value );
+				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Материал (фильтр)', $materials, 'material' ), $materials, false, false );
+				$wcAttributes[] = self::getWcObjectProductAttribute(
+					[
+						'attribute_id'       => 0,
+						'attribute_taxonomy' => $attribute->name
+					],
+					[ trim( $attribute->value ) ],
+					true,
+					false
+				);
+				unset( $materials );
 			} elseif ( $attribute->name != 'Размер' ) {
-				$attr = [
-					'attribute_id'       => 0,
-					'attribute_taxonomy' => $attribute->name
-				];
-
-				$wcAttributes[] = self::getWcObjectProductAttribute( $attr, [ trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ) ], true, false );
-				unset( $attr );
+				$wcAttributes[] = self::getWcObjectProductAttribute(
+					[
+						'attribute_id'       => 0,
+						'attribute_taxonomy' => $attribute->name
+					],
+					[ trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ) ],
+					true,
+					false
+				);
 			}
 		}
 
 		if ( ! empty( $branding ) ) {
-			$wcAttributes[] = self::getWcObjectProductAttribute( $branding['attr'], $branding['value'], true, false );
+			$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( $branding['attr']['attribute_taxonomy'], $branding['value'] ), $branding['value'], true, false );
 			unset( $branding );
 		}
 
@@ -1317,6 +1334,109 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
+	 * Get standard attribute material
+	 *
+	 * @param $str
+	 *
+	 * @return array
+	 */
+	static public function getStandardAttributeMaterial( $str ): array {
+		$result     = [];
+		$attributes = [
+			'акрил',
+			'нейлон',
+			'синтепон',
+			'полиэстер',
+			'микрофлис',
+			'сатин',
+			'хлопок',
+			'шелк',
+			'шерсть',
+			'эластан',
+			'поликарбонат',
+			'стекло',
+			'бамбук',
+			'силикон',
+			'полипропилен',
+			'полиуретан',
+			'фарфор',
+			'трикотаж',
+			'каучук',
+			'керамика',
+			'хрусталь',
+			'лак',
+			'пластик'            => [
+				'пластик',
+				'ПВХ'
+			],
+			'металл'             => [
+				'металл',
+				'алюминий',
+				'бронза',
+				'бронзовым',
+				'хром',
+				'тритан',
+				'олово',
+				'медь',
+				'цинк'
+			],
+			'драгметалл'         => [
+				'серебро',
+				'посеребрение',
+				'золото',
+				'позолота',
+				'позолочение'
+			],
+			'дерево'             => [
+				'дерево',
+				'МДФ'
+			],
+			'искусственная кожа' => [
+				'искусственная кожа',
+				'кожзам'
+			],
+			'натуральная кожа'   => [
+				'натуральная кожа',
+				'телячья кожа'
+			],
+			'бумага'             => [
+				'бумага',
+				'картон'
+			],
+			'камень'             => [
+				'камень',
+				'мрамор',
+				'гранит'
+			],
+			'soft-touch'         => [
+				'soft-touch',
+				'софт-тач'
+			],
+		];
+
+		foreach ( $attributes as $key => $attribute ) {
+			if ( is_array( $attribute ) ) {
+				foreach ( $attribute as $subAttribute ) {
+					if ( strpos( $str, $subAttribute ) !== false ) {
+						$result[] = $key;
+						break;
+					}
+				}
+			} else {
+				if (
+					strpos( $str, $attribute ) !== false
+					&& strpos( $str, 'стекловолокно' ) === false
+					&& strpos( $str, 'стеклопластик' ) === false
+				) {
+					$result[] = $attribute;
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Add/update product photos
 	 *
 	 * @param $images
@@ -1412,20 +1532,15 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	/**
 	 * Check lock php process
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
-	public static function checkLockProcess() {
-		try {
-			$lock = fopen( self::getFileNameLock(), 'w' );
-			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
-				return true;
-			}
-
-			return false;
-		} catch ( Exception $e ) {
-			echo $e->getMessage() . PHP_EOL;
-			exit();
+	public static function checkLockProcess(): bool {
+		$lock = fopen( self::getFileNameLock(), 'w' );
+		if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
+			return true;
 		}
+
+		return false;
 	}
 
 	/**
