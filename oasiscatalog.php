@@ -532,7 +532,7 @@ if ( is_admin() ) {
 
 					if ( ! empty( $pBar['item'] ) && ! empty( $pBar['total'] ) ) {
 						$percentTotal = round( ( $pBar['item'] / $pBar['total'] ) * 100, 2, PHP_ROUND_HALF_DOWN );
-						$percentTotal = $percentTotal > 100 ? 100 : $percentTotal;
+						$percentTotal = min( $percentTotal, 100 );
 					} else {
 						$percentTotal = 0;
 					}
@@ -734,12 +734,16 @@ function get_percent_progress_bar() {
 	$limit      = isset( $options['oasis_limit'] ) ? intval( $options['oasis_limit'] ) : null;
 	$stepTotal  = ! empty( $pBar['total'] ) ? ceil( intval( $pBar['total'] ) / intval( $limit ) ) : 0;
 	$oasis_step = intval( get_option( 'oasis_step' ) );
-	$step       = $oasis_step < $stepTotal ? ++ $oasis_step : $oasis_step;
+	$step       = $oasis_step < $stepTotal ? $oasis_step + 1 : $oasis_step;
 
 	$result = [
 		'status_progress' => false,
 		'progress_icon'   => '<i class="fa fa-pause" aria-hidden="true" style="color: #e97906;"></i>',
 	];
+
+	if ( $oasis_step === 0 && ! $lockProcess ) {
+		$result['total_item'] = 0;
+	}
 
 	if ( $limit ) {
 		$result['progress_step_text'] = sprintf( __( 'Next step %s of %s.', 'wp-oasis-importer' ), strval( $step ), strval( $stepTotal ) );
