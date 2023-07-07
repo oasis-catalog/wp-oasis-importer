@@ -206,6 +206,7 @@ class Main {
 				$wcProduct->set_category_ids( $categories );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
 				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
+				$wcProduct->set_date_modified( time() );
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
@@ -306,6 +307,7 @@ class Main {
 			$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
 			$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
 			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
+			$wcVariation->set_date_modified( time() );
 			$wcVariation->save();
 
 			self::cliMsg( 'Обновлен вариант id ' . $oasisProduct->id );
