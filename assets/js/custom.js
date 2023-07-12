@@ -66,6 +66,9 @@ function upAjaxProgressBar() {
                     removeAnimatedBar('progress-bar-striped progress-bar-animated');
                     setTimeout(upAjaxProgressBar, 600000);
                 }
+            },
+            error: function (error) {
+                setTimeout(upAjaxProgressBar, 60000);
             }
         });
     });
