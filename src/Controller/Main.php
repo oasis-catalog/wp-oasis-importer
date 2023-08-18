@@ -143,7 +143,7 @@ class Main {
 
 			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 			if ( $defaultAttr ) {
-				$wcProduct->set_default_attributes( self::getProductDefaultAttributes( $oasisProduct->id, $model ) );
+				$wcProduct->set_default_attributes( $defaultAttr );
 			}
 
 			if ( $type == 'simple' ) {
@@ -210,7 +210,7 @@ class Main {
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
-					$wcProduct->set_default_attributes( self::getProductDefaultAttributes( $oasisProduct->id, $model ) );
+					$wcProduct->set_default_attributes( $defaultAttr );
 				}
 
 				$wcProduct->save();
@@ -553,7 +553,7 @@ class Main {
 				$branding['attr']['attribute_taxonomy'] = $attribute->name;
 				$branding['value'][]                    = trim( $attribute->value );
 			} elseif ( isset( $attribute->id ) && $attribute->id == '65' ) {
-				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( $attribute->name, [ $attribute->value ] ), [ $attribute->value ], true, false );
+				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Пол', [ $attribute->value ] ), [ $attribute->value ], true, false );
 			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000002' ) {
 				$materials      = self::getStandardAttributeMaterial( $attribute->value );
 				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Материал (фильтр)', $materials, 'material' ), $materials, false, false );
