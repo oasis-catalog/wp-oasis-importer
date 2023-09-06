@@ -156,7 +156,7 @@ class Cli extends Main {
 
 			foreach ( $stock as $item ) {
 				if ( ! empty( $oasisProducts[ $item->id ] ) ) {
-					update_post_meta( $oasisProducts[ $item->id ], '_stock', $item->stock );
+					update_post_meta( $oasisProducts[ $item->id ], '_stock', intval( $item->stock ) + intval( $item->{"stock-remote"} ) );
 				}
 			}
 			unset( $item );

@@ -166,7 +166,7 @@ class Api {
 	 * @return array
 	 */
 	public static function getStockOasis(): array {
-		return self::curlQuery( 'stock', [ 'fields' => 'article,stock,id' ] );
+		return self::curlQuery( 'stock', [ 'fields' => 'article,stock,id,stock-remote' ] );
 	}
 
 	/**
