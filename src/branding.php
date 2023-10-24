@@ -36,7 +36,7 @@ function init_branding() {
 	 * @return void
 	 */
 	function up_ajax_data_oasis_branding() {
-		wp_localize_script( 'open-shop-custom-js', 'uptotalprice',
+		wp_localize_script( 'jquery', 'uptotalprice',
 			[
 				'url' => admin_url( 'admin-ajax.php' )
 			]
