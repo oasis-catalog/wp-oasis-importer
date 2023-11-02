@@ -545,7 +545,7 @@ class Main {
 
 				if ( ! empty( $dataColor ) ) {
 					sort( $dataColor );
-					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Цвет', $dataColor ), $dataColor, true, count( $models ) > 1 );
+					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Цвет', $dataColor, 'tsvet' ), $dataColor, true, count( $models ) > 1 );
 					unset( $dataColor );
 				}
 			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000008' ) {
