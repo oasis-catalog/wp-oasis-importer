@@ -18,6 +18,7 @@ class Cli extends Main {
 			$options = get_option( 'oasis_options' );
 			$limit   = isset( $options['oasis_limit'] ) ? (int) $options['oasis_limit'] : null;
 			$step    = (int) get_option( 'oasis_step' );
+			parent::prepareAttributeData();
 
 			if ( $limit > 0 ) {
 				$args['limit']  = $limit;

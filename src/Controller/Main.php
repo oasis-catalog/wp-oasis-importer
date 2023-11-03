@@ -13,6 +13,34 @@ use WP_Post;
 use WP_Query;
 
 class Main {
+	public static $attrVariation = [];
+
+	/**
+	 * Prepare attributes for variations
+	 *
+	 * @return void
+	 */
+	public static function prepareAttributeData() {
+		$attr_names       = [
+			'color' => 'Цвет',
+			'size'  => 'Размер'
+		];
+		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
+
+		foreach ( $attr_names as $key => $name ) {
+			$attribute_name = array_search( $name, $attribute_labels, true );
+
+			if ( $attribute_name === false ) {
+				$attribute_taxonomy = self::createAttribute( $name, [] );
+				$attribute_name     = str_replace( 'pa_', '', $attribute_taxonomy['attribute_taxonomy'] );
+			}
+
+			self::$attrVariation[ $key ] = [
+				'name' => $name,
+				'slug' => $attribute_name,
+			];
+		}
+	}
 
 	/**
 	 * Check product in table oasis_products
@@ -308,6 +336,12 @@ class Main {
 			$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
 			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcVariation->set_date_modified( time() );
+
+			$attributes = self::getVariationAttributes( $oasisProduct );
+			if ( $attributes ) {
+				$wcVariation->set_attributes( $attributes );
+			}
+
 			$wcVariation->save();
 
 			self::cliMsg( 'Обновлен вариант id ' . $oasisProduct->id );
@@ -519,7 +553,7 @@ class Main {
 		$dataSize     = self::getProductAttributeSize( $models );
 
 		if ( ! empty( $dataSize ) ) {
-			$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Размер', $dataSize ), $dataSize, true, count( $models ) > 1 );
+			$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( self::$attrVariation['size']['name'], $dataSize, self::$attrVariation['size']['slug'] ), $dataSize, true, count( $models ) > 1 );
 			unset( $dataSize );
 		}
 
@@ -545,7 +579,7 @@ class Main {
 
 				if ( ! empty( $dataColor ) ) {
 					sort( $dataColor );
-					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Цвет', $dataColor, 'tsvet' ), $dataColor, true, count( $models ) > 1 );
+					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( self::$attrVariation['color']['name'], $dataColor, self::$attrVariation['color']['slug'] ), $dataColor, true, count( $models ) > 1 );
 					unset( $dataColor );
 				}
 			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000008' ) {
@@ -601,14 +635,14 @@ class Main {
 			foreach ( $model as $product ) {
 				if ( ! empty( $product->size ) ) {
 					if ( $product->id == $productId ) {
-						$result[ sanitize_title( 'pa_' . self::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Размер' ) ) ) ) ] = sanitize_title( trim( $product->size ) );
+						$result[ sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] ) ] = sanitize_title( trim( $product->size ) );
 					}
 				}
 
 				foreach ( $product->attributes as $attribute ) {
 					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
 						if ( $product->id == $productId ) {
-							$result[ sanitize_title( 'pa_' . self::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Цвет' ) ) ) ) ] = sanitize_title( trim( $attribute->value ) );
+							$result[ sanitize_title( 'pa_' . self::$attrVariation['color']['slug'] ) ] = sanitize_title( trim( $attribute->value ) );
 						}
 						break;
 					}
@@ -794,12 +828,12 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 */
 	public static function getVariationAttributes( $variation ): array {
 		if ( ! empty( $variation->size ) ) {
-			$result[ sanitize_title( 'pa_' . self::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Размер' ) ) ) ) ] = sanitize_title( trim( $variation->size ) );
+			$result[ sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] ) ] = sanitize_title( trim( $variation->size ) );
 		}
 
 		foreach ( $variation->attributes as $attribute ) {
 			if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-				$result[ sanitize_title( 'pa_' . self::transliteration( wc_sanitize_taxonomy_name( stripslashes( 'Цвет' ) ) ) ) ] = sanitize_title( trim( $attribute->value ) );
+				$result[ sanitize_title( 'pa_' . self::$attrVariation['color']['slug'] ) ] = sanitize_title( trim( $attribute->value ) );
 			}
 		}
 
