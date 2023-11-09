@@ -229,7 +229,7 @@ class Main {
 				$wcProduct->set_price( $dataPrice['_price'] );
 				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
 				$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
-				$wcProduct->set_stock_quantity( (int) $oasisProduct->total_stock );
+				$wcProduct->set_stock_quantity( (int) $totalStock );
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 				$wcProduct->set_category_ids( $categories );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
