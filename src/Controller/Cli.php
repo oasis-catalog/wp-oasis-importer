@@ -79,7 +79,7 @@ class Cli extends Main {
 
 						$tmpBar = parent::upProgressBar( $tmpBar );
 					} elseif ( count( $model ) > 1 ) {
-						$firstProduct = parent::getFirstProduct( $model, $dbProduct );
+						$firstProduct = parent::getFirstProduct( $model );
 						$categories   = parent::getProductCategories( $firstProduct->full_categories, $oasisCategories );
 
 						if ( $dbProduct ) {

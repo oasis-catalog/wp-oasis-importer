@@ -120,18 +120,13 @@ class Main {
 	 * Get first product
 	 *
 	 * @param $model
-	 * @param $dbProduct
 	 *
 	 * @return false|mixed
 	 */
-	public static function getFirstProduct( $model, $dbProduct ) {
-		foreach ( $model as $item ) {
-			if ( $dbProduct ) {
-				if ( $dbProduct['product_id_oasis'] == $item->id ) {
-					return $item;
-				}
-			} elseif ( $item->group_id == $item->id ) {
-				return $item;
+	public static function getFirstProduct( $model ) {
+		foreach ( $model as $product ) {
+			if ( $product->rating === 5 || self::getProductStatus( $product, $product->total_stock ) == 'publish' ) {
+				return $product;
 			}
 		}
 
@@ -211,7 +206,7 @@ class Main {
 	 * @return bool|void
 	 */
 	public static function upWcProduct( $productId, $model, $categories, $totalStock, $options ) {
-		$oasisProduct = reset( $model );
+		$oasisProduct = self::getFirstProduct( $model );
 		$dataPrice    = self::getDataPrice( $oasisProduct, $options );
 
 		try {
