@@ -1616,6 +1616,27 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
+	 * Get ids product by group_id
+	 *
+	 * @param string $groupId
+	 *
+	 * @return void
+	 */
+	public static function getIdsByGroupId( string $groupId ) {
+		$products = Api::getOasisProducts( [], Api::getCategoriesOasis() );
+		$result   = [];
+
+		foreach ( $products as $product ) {
+			if ( $product->group_id == $groupId ) {
+				$result[] = $product->id;
+			}
+		}
+
+		print_r( '$args[\'ids\'] = \'' . implode( ',', $result ) . '\';' );
+		exit();
+	}
+
+	/**
 	 * Print message in console
 	 *
 	 * @param $str
