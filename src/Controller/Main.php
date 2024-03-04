@@ -1122,7 +1122,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	public static function getProductStatus( $product, $stock, bool $variation = false ): string {
 		if ( $product->is_deleted === true ) {
 			$result = 'trash';
-		} elseif ( intval( $stock ) === 0 ) {
+		} elseif ( intval( $stock ) === 0 || $product->is_stopped === true ) {
 			$result = $variation ? 'private' : 'draft';
 		} else {
 			$result = 'publish';
