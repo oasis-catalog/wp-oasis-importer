@@ -327,6 +327,18 @@ function oasis_settings_init() {
 				'description' => __( 'Enable branding widget on checkout page', 'wp-oasis-importer' ),
 			]
 		);
+
+		add_settings_field(
+			'oasis_up_photo',
+			__( 'Up photo', 'wp-oasis-importer' ),
+			'oasis_checbox_cb',
+			'oasis',
+			'oasis_section_additionally',
+			[
+				'label_for'   => 'oasis_up_photo',
+				'description' => __( 'Enable update of outdated photos', 'wp-oasis-importer' ),
+			]
+		);
 	}
 }
 

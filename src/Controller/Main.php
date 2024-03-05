@@ -236,6 +236,15 @@ class Main {
 					$wcProduct->set_default_attributes( $defaultAttr );
 				}
 
+				if ( ! empty( $options['oasis_up_photo'] ) ) {
+					if ( self::checkImages( $oasisProduct->images, $wcProduct ) === false ) {
+						self::deleteImgInProduct( $wcProduct );
+						$images = self::processingPhoto( $oasisProduct->images, $productId );
+						$wcProduct->set_image_id( array_shift( $images ) );
+						$wcProduct->set_gallery_image_ids( $images );
+					}
+				}
+
 				$wcProduct->save();
 				self::cliMsg( 'Обновлен товар id ' . $oasisProduct->id );
 
@@ -286,7 +295,7 @@ class Main {
 			$wcVariationId = $wcVariation->save();
 
 			if ( $oasisProduct->images ) {
-				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId, self::getVariationParentSizeId( $oasisProduct ) );
+				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId );
 				$wcVariation->set_image_id( array_shift( $images ) );
 				$wcVariation->save();
 			}
@@ -335,6 +344,14 @@ class Main {
 			$attributes = self::getVariationAttributes( $oasisProduct );
 			if ( $attributes ) {
 				$wcVariation->set_attributes( $attributes );
+			}
+
+			if ( ! empty( $options['oasis_up_photo'] ) ) {
+				if ( self::checkImages( $oasisProduct->images, $wcVariation ) === false ) {
+					self::deleteImgInProduct( $wcVariation );
+					$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
+					$wcVariation->set_image_id( array_shift( $images ) );
+				}
 			}
 
 			$wcVariation->save();
@@ -1488,7 +1505,13 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 					continue;
 				}
 
-				if ( ! $parentSizeId ) {
+				if ( $parentSizeId ) {
+					$thumbnail_id = get_post_thumbnail_id( $parentSizeId );
+				} else {
+					$thumbnail_id = null;
+				}
+
+				if ( empty( $thumbnail_id ) ) {
 					$filename     = basename( $image->superbig );
 					$existImageId = self::getAttachmentIdByTitle( $filename );
 
@@ -1523,12 +1546,96 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 						$attachIds[] = $attach_id;
 					}
 				} else {
-					$attachIds[] = get_post_thumbnail_id( $parentSizeId );
+					$attachIds[] = $thumbnail_id;
 				}
 			}
 		}
 
 		return $attachIds;
+	}
+
+	/**
+	 * Checking product images for relevance
+	 *
+	 * Usage:
+	 *
+	 * Check is good - true
+	 *
+	 * Check is bad - false
+	 *
+	 * @param $images
+	 * @param $wcProduct
+	 *
+	 * @return bool
+	 */
+	public static function checkImages( $images, $wcProduct ): bool {
+		$db_images = get_post_meta( $wcProduct->get_id(), '_thumbnail_id' );
+
+		if ( empty( intval( reset( $db_images ) ) ) ) {
+			return false;
+		}
+
+		if ( $wcProduct->get_type() == 'variation' ) {
+			$images = [ reset( $images ) ];
+		} else {
+			$db_images = array_merge( $db_images, $wcProduct->get_gallery_image_ids() );
+		}
+
+		if ( count( $images ) !== count( $db_images ) ) {
+			return false;
+		}
+
+		$posts = get_posts( [
+			'numberposts' => - 1,
+			'post_type'   => 'attachment',
+			'include'     => implode( ',', $db_images )
+		] );
+
+		if ( empty( $posts ) ) {
+			return false;
+		}
+
+		$attachments = [];
+
+		foreach ( $posts as $post ) {
+			$attachments[] = (array) $post;
+		}
+		unset( $posts, $post );
+
+		foreach ( $images as $image ) {
+			if ( empty( $image->superbig ) ) {
+				return false;
+			}
+
+			$keyNeeded = array_search( basename( $image->superbig ), array_column( $attachments, 'post_title' ) );
+
+			if ( $keyNeeded === false || $image->updated_at > strtotime( $attachments[ $keyNeeded ]['post_date_gmt'] ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Delete images in product
+	 *
+	 * @param $wcProduct
+	 *
+	 * @return void
+	 */
+	private static function deleteImgInProduct( $wcProduct ): void {
+		$images = get_post_meta( $wcProduct->get_id(), '_thumbnail_id' );
+
+		if ( empty( intval( reset( $images ) ) ) ) {
+			$images = [];
+		}
+
+		$images = array_merge( $images, $wcProduct->get_gallery_image_ids() );
+
+		foreach ( $images as $imgID ) {
+			wp_delete_attachment( $imgID, true );
+		}
 	}
 
 	/**
