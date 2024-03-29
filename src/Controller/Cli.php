@@ -26,7 +26,7 @@ class Cli extends Main {
 			}
 
 			$oasisCategories = Api::getCategoriesOasis();
-			$products        = Api::getOasisProducts( $args, $oasisCategories );
+			$products        = Api::getOasisProducts( $oasisCategories, $args );
 			$stats           = Api::getStatProducts( $oasisCategories );
 
 			$pBar              = get_option( 'oasis_progress' );

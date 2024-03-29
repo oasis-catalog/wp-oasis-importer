@@ -1730,7 +1730,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @return void
 	 */
 	public static function getIdsByGroupId( string $groupId ) {
-		$products = Api::getOasisProducts( [], Api::getCategoriesOasis() );
+		$products = Api::getOasisProducts( Api::getCategoriesOasis(), [] );
 		$result   = [];
 
 		foreach ( $products as $product ) {

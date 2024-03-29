@@ -9,12 +9,12 @@ class Api {
 	/**
 	 * Get products oasis
 	 *
-	 * @param array $args
 	 * @param $categories
+	 * @param array $args
 	 *
 	 * @return array
 	 */
-	public static function getOasisProducts( array $args = [], $categories ): array {
+	public static function getOasisProducts( $categories, array $args = [] ): array {
 		$options = get_option( 'oasis_options' );
 
 		$args += [
