@@ -39,7 +39,12 @@ class Cli extends Main {
 			$countProducts = 0;
 			foreach ( $products as $product ) {
 				if ( $product->is_deleted === false ) {
-					$group_ids[ $product->group_id ][ $product->id ] = $product;
+					if ( $product->size || $product->colors ) {
+						$group_ids[ $product->group_id ][ $product->id ] = $product;
+					} else {
+						$group_ids[ $product->id ][ $product->id ] = $product;
+					}
+
 					$countProducts ++;
 				} else {
 					parent::checkDeleteProduct( $product->id );

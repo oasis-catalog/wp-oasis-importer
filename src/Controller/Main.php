@@ -179,7 +179,7 @@ class Main {
 			$wcProduct->set_gallery_image_ids( $images );
 			$wcProduct->save();
 
-			self::addProductOasisTable( $wcProductId, $oasisProduct->id, $oasisProduct->group_id, 'product' );
+			self::addProductOasisTable( $wcProductId, $oasisProduct->id, count( $model ) > 1 ? $oasisProduct->group_id : $oasisProduct->id, 'product' );
 			self::cliMsg( 'Добавлен товар id ' . $oasisProduct->id );
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
