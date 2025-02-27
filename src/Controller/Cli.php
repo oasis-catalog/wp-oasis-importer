@@ -28,6 +28,7 @@ class Cli extends Main {
 			$oasisCategories = Api::getCategoriesOasis();
 			$products        = Api::getOasisProducts( $oasisCategories, $args );
 			$stats           = Api::getStatProducts( $oasisCategories );
+			$relCategories 	 = parent::getRelationCategories($options['oasis_cat_relation'] ?? []);
 
 			$pBar              = get_option( 'oasis_progress' );
 			$pBar['total']     = $stats->products;
@@ -74,7 +75,7 @@ class Cli extends Main {
 
 					if ( count( $model ) === 1 ) {
 						$product    = reset( $model );
-						$categories = parent::getProductCategories( $product->full_categories, $oasisCategories );
+						$categories = ($dbProduct && empty($options['oasis_not_up_cat'])) ? [] : parent::getProductCategories($product, $oasisCategories, $relCategories);
 
 						if ( $dbProduct ) {
 							parent::upWcProduct( $dbProduct['post_id'], $model, $categories, $totalStock, $options );
@@ -85,7 +86,7 @@ class Cli extends Main {
 						$tmpBar = parent::upProgressBar( $tmpBar );
 					} elseif ( count( $model ) > 1 ) {
 						$firstProduct = parent::getFirstProduct( $model );
-						$categories   = parent::getProductCategories( $firstProduct->full_categories, $oasisCategories );
+						$categories   = ($dbProduct && empty($options['oasis_not_up_cat'])) ? [] : parent::getProductCategories( $firstProduct, $oasisCategories, $relCategories );
 
 						if ( $dbProduct ) {
 							$wcProductId = $dbProduct['post_id'];
@@ -145,28 +146,30 @@ class Cli extends Main {
 	public static function upStock() {
 		global $wpdb;
 
-		set_time_limit( 0 );
-		ini_set( 'memory_limit', '2G' );
+		set_time_limit(0);
+		ini_set('memory_limit', '2G');
 
 		try {
+			parent::cliMsg('Начало обновления остатков');
+
 			$stock         = Api::getStockOasis();
-			$dbResults     = $wpdb->get_results( "SELECT `post_id`, `product_id_oasis`, `type`  FROM {$wpdb->prefix}oasis_products", ARRAY_A );
+			$dbResults     = $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A);
 			$oasisProducts = [];
 
-			foreach ( $dbResults as $dbResult ) {
-				if ( empty( $oasisProducts[ $dbResult['product_id_oasis'] ] ) || $dbResult['type'] == 'product_variation' ) {
-					$oasisProducts[ $dbResult['product_id_oasis'] ] = $dbResult['post_id'];
+			foreach ($dbResults as $dbResult) {
+				if (empty($oasisProducts[$dbResult['product_id_oasis']]) || $dbResult['type'] == 'product_variation') {
+					$oasisProducts[$dbResult['product_id_oasis']] = $dbResult['post_id'];
 				}
 			}
-			unset( $dbResult );
 
-			foreach ( $stock as $item ) {
-				if ( ! empty( $oasisProducts[ $item->id ] ) ) {
-					update_post_meta( $oasisProducts[ $item->id ], '_stock', intval( $item->stock ) + intval( $item->{"stock-remote"} ) );
+			foreach ($stock as $item) {
+				if (!empty($oasisProducts[$item->id])) {
+					wc_update_product_stock($oasisProducts[$item->id], intval($item->stock) + intval($item->{"stock-remote"}));
 				}
 			}
-			unset( $item );
-		} catch ( Exception $exception ) {
+
+			parent::cliMsg('Окончание обновления остатков');
+		} catch (Exception $exception) {
 			die();
 		}
 	}

@@ -7,7 +7,9 @@ add_action( 'init', 'init_order' );
 
 function init_order() {
 	if ( current_user_can( 'manage_options' ) || current_user_can( 'shop_manager' ) ) {
-		add_filter( 'manage_shop_order_posts_columns', function ( $defaults ) {
+		$IS_HPOS = get_option('woocommerce_custom_orders_table_enabled') === 'yes';
+
+		add_filter($IS_HPOS ? 'manage_woocommerce_page_wc-orders_columns' : 'manage_shop_order_posts_columns', function ( $defaults ) {
 			$columns = [];
 			foreach ( $defaults as $field => $value ) {
 				if ( $field == 'order_total' ) {
@@ -19,7 +21,7 @@ function init_order() {
 			return $columns;
 		}, 100 );
 
-		add_action( 'manage_shop_order_posts_custom_column', function ( $column_name, $post_ID ) {
+		add_action($IS_HPOS ? 'manage_woocommerce_page_wc-orders_custom_column' : 'manage_shop_order_posts_custom_column', function ( $column_name, $post_ID ) {
 			if ( $column_name === 'oa_export' ) {
 				$order          = wc_get_order( $post_ID );
 				$oasisProductId = null;
@@ -51,7 +53,7 @@ function init_order() {
 						}
 					}
 				} else {
-					$htmlExport = '<input type="submit" name="send_order" class="button send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
+					$htmlExport = '<input type="button" name="send_order" class="button oasis-send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
 				}
 
 				echo $htmlExport;
@@ -60,8 +62,10 @@ function init_order() {
 
 		add_action( 'admin_enqueue_scripts', 'oasis_order_script_init' );
 		function oasis_order_script_init( $hook ) {
+			$IS_HPOS = get_option('woocommerce_custom_orders_table_enabled') === 'yes';
+
 			$screen = get_current_screen();
-			if ( 'edit-shop_order' != $screen->id ) {
+			if (($IS_HPOS ? 'woocommerce_page_wc-orders' : 'edit-shop_order') != $screen->id ) {
 				return;
 			}
 

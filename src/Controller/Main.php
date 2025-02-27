@@ -156,9 +156,9 @@ class Main {
 			$wcProduct->set_slug( self::getUniquePostName( $oasisProduct->name, 'product' ) );
 			$wcProduct->set_manage_stock( true );
 			$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
-			$wcProduct->set_price( $dataPrice['_price'] );
-			$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
-			$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
+			$wcProduct->set_price( $dataPrice['price'] );
+			$wcProduct->set_regular_price( $dataPrice['regular_price'] );
+			$wcProduct->set_sale_price( $dataPrice['sale_price'] );
 			$wcProduct->set_stock_quantity( $totalStock );
 			$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
@@ -221,15 +221,18 @@ class Main {
 				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
 				$wcProduct->set_manage_stock( true );
 				$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
-				$wcProduct->set_price( $dataPrice['_price'] );
-				$wcProduct->set_regular_price( $dataPrice['_regular_price'] );
-				$wcProduct->set_sale_price( $dataPrice['_sale_price'] );
+				$wcProduct->set_price( $dataPrice['price'] );
+				$wcProduct->set_regular_price( $dataPrice['regular_price'] );
+				$wcProduct->set_sale_price( $dataPrice['sale_price'] );
 				$wcProduct->set_stock_quantity( (int) $totalStock );
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-				$wcProduct->set_category_ids( $categories );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
 				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
 				$wcProduct->set_date_modified( time() );
+
+				if($categories){
+					$wcProduct->set_category_ids( $categories );
+				}
 
 				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 				if ( $defaultAttr ) {
@@ -281,9 +284,9 @@ class Main {
 			$wcVariation->set_parent_id( $productId );
 			$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
 			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-			$wcVariation->set_price( $dataPrice['_price'] );
-			$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
-			$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
+			$wcVariation->set_price( $dataPrice['price'] );
+			$wcVariation->set_regular_price( $dataPrice['regular_price'] );
+			$wcVariation->set_sale_price( $dataPrice['sale_price'] );
 			$wcVariation->set_stock_quantity( intval( $oasisProduct->total_stock ) );
 			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 
@@ -334,9 +337,9 @@ class Main {
 			$wcVariation->set_name( $oasisProduct->full_name );
 			$wcVariation->set_manage_stock( true );
 			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-			$wcVariation->set_price( $dataPrice['_price'] );
-			$wcVariation->set_regular_price( $dataPrice['_regular_price'] );
-			$wcVariation->set_sale_price( $dataPrice['_sale_price'] );
+			$wcVariation->set_price( $dataPrice['price'] );
+			$wcVariation->set_regular_price( $dataPrice['regular_price'] );
+			$wcVariation->set_sale_price( $dataPrice['sale_price'] );
 			$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
 			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcVariation->set_date_modified( time() );
@@ -475,16 +478,17 @@ class Main {
 			}
 		}
 
-		$data['_price'] = $price;
+		$data = [
+			'price' => $price
+		];
 
 		if ( empty( $options['oasis_disable_sales'] ) && ! empty( $old_price ) && $price < $old_price ) {
-			$data['_regular_price'] = $old_price;
-			$data['_sale_price']    = $price;
+			$data['regular_price'] = $old_price;
+			$data['sale_price']    = $price;
 		} else {
-			$data['_regular_price'] = $price;
-			$data['_sale_price']    = '';
+			$data['regular_price'] = $price;
+			$data['sale_price']    = '';
 		}
-		unset( $product, $options, $price, $old_price );
 
 		return $data;
 	}
@@ -492,19 +496,28 @@ class Main {
 	/**
 	 * Get array IDs WooCommerce categories
 	 *
-	 * @param $categories
+	 * @param $product
 	 * @param $oasisCategories
+	 * @param $relCategories
 	 *
 	 * @return array
 	 */
-	public static function getProductCategories( $categories, $oasisCategories ): array {
+	public static function getProductCategories($product, $oasisCategories, $relCategories): array {
 		$result = [];
+		
+		foreach ($product->categories as $oasis_cat_id) {
+			if(isset($relCategories[$oasis_cat_id])){
+				$parents = self::getTermParents($relCategories[$oasis_cat_id]['id']);
+				$result = array_map(fn($x) => $x->term_id, $parents);
+			}
+			else{
+				$full_categories = self::getOasisParentsCategoriesId($oasis_cat_id, $oasisCategories);
 
-		foreach ( $categories as $category ) {
-			$result[] = self::getCategoryId( $oasisCategories, $category );
+				foreach ($full_categories as $categoryId) {
+					$result[] = self::getCategoryId( $oasisCategories, $categoryId );
+				}
+			}
 		}
-		unset( $categories, $category );
-
 		return $result;
 	}
 
@@ -708,8 +721,10 @@ class Main {
 			$result = [];
 
 			foreach ( $models as $product ) {
-				if ( ! empty( trim( $product->size ) ) ) {
-					$result[] = trim( $product->size );
+				$size = trim($product->size ?? '');
+
+				if ( ! empty( $size ) ) {
+					$result[] = $size;
 				}
 			}
 
@@ -744,9 +759,9 @@ class Main {
 			'5XL',
 		];
 
-		usort( $data, function ( $key1, $key2 ) use ( $etalonSizes ) {
-			return ( array_search( $key1, $etalonSizes ) > array_search( $key2, $etalonSizes ) );
-		} );
+		usort($data, function ( $key1, $key2 ) use ( $etalonSizes ) {
+			return array_search( $key1, $etalonSizes ) <=> array_search( $key2, $etalonSizes );
+		});
 
 		return array_values( array_unique( $data ) );
 	}
@@ -1074,9 +1089,38 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 			'taxonomy'             => 'product_cat',
 		];
 
-		$result = wp_insert_category( $data );
-		update_term_meta( $result, 'oasis_cat_id', $category->id );
+		$cat_id = wp_insert_category( $data );
+		update_term_meta( $cat_id, 'oasis_cat_id', $category->id );
 		unset( $category, $parentTermsId, $data );
+
+		return $cat_id;
+	}
+
+	/**
+	 * Get categories for relation options
+	 *
+	 * @param $oasis_cat_relation
+	 *
+	 * @return array
+	 */
+	public static function getRelationCategories( $oasis_cat_relation = []  ): array {
+		$result = [];
+		if($oasis_cat_relation){
+			foreach ( $oasis_cat_relation as $relation ) {
+				$relation = 	explode('_', $relation);
+				$oasis_cat_id = (int)$relation[0];
+				$cat_id =       (int)$relation[1];
+
+				$term = get_term_by( 'id', $cat_id, 'product_cat' );
+
+				if($term){
+					$result[$oasis_cat_id] = [
+						'id' => $term->term_id,
+						'rel_label' => self::getTermParentsLabel($term->term_id)
+					];
+				}
+			}
+		}
 
 		return $result;
 	}
@@ -1105,6 +1149,46 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 
 		return $terms ? reset( $terms ) : [];
 	}
+
+
+
+	/**
+	 * Get array parents for term_id
+	 *
+	 * @param $term_id
+	 *
+	 * @return array
+	 */
+	public static function getTermParents($term_id): array {
+		$term = get_term($term_id, 'product_cat');
+		if (!$term) {
+			return [];
+		}
+		$list = [];
+
+		$parents = get_ancestors($term_id, 'product_cat', 'taxonomy');
+		array_unshift( $parents, $term_id );
+
+		foreach (array_reverse( $parents ) as $term_id) {
+			$parent = get_term($term_id, 'product_cat');
+			$list []= $parent;
+		}
+
+		return $list;
+	}
+
+	/**
+	 * Get string parents for term_id
+	 *
+	 * @param $term_id
+	 *
+	 * @return string
+	 */
+	public static function getTermParentsLabel($term_id): string {
+		$list = array_map(fn($x) => $x->name, self::getTermParents($term_id));
+		return implode(' / ', $list);
+	}
+
 
 	/**
 	 * Search object by id
@@ -1191,34 +1275,129 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
+	 * Get oasis parents id categories
+	 *
+	 * @param null $cat_id
+	 * @param null $oasisCategories
+	 *
+	 * @return array
+	 */
+	public static function getOasisParentsCategoriesId($cat_id, $oasisCategories): array {
+		$result = [$cat_id];
+		$parent_id = $cat_id;
+
+		while($parent_id){
+			foreach ($oasisCategories as $category) {
+				if ($parent_id == $category->id) {
+					array_unshift($result, $category->id);
+					$parent_id = $category->parent_id;
+					continue 2;
+				}
+			}
+			break;
+		}
+		return $result;
+	}
+
+	/**
 	 * Build tree categories
 	 *
 	 * @param $data
 	 * @param array $checkedArr
-	 * @param string $treeCats
+	 * @param array $relCategories
 	 * @param int $parent_id
-	 * @param bool $sw
 	 *
 	 * @return string
 	 */
-	public static function buildTreeCats( $data, array $checkedArr = [], string $treeCats = '', int $parent_id = 0, bool $sw = false ): string {
+	public static function buildTreeCats( $data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0 ): string {
+		$treeItem = '';
 		if ( ! empty( $data[ $parent_id ] ) ) {
-			$treeCats .= $sw ? '<ul>' . PHP_EOL : '';
+			foreach($data[ $parent_id ] as $item){
+				$checked = in_array( $item['id'], $checkedArr ) ? ' checked' : '';
 
-			for ( $i = 0; $i < count( $data[ $parent_id ] ); $i ++ ) {
-				if ( empty( $checkedArr ) ) {
-					$checked = $data[ $parent_id ][ $i ]['level'] == 1 ? ' checked' : '';
-				} else {
-					$checked = in_array( $data[ $parent_id ][ $i ]['id'], $checkedArr ) ? ' checked' : '';
+				$rel_cat = $relCategories[$item['id']] ?? null;
+				$rel_label = '';
+				$rel_value = '';
+				if($rel_cat){
+					$rel_value = $item['id'].'_'.$rel_cat['id'];
+					$rel_label = $rel_cat['rel_label'];
 				}
 
-				$treeCats .= '<li><label><input id="categories" type="checkbox" name="oasis_options[oasis_categories][]" value="' . $data[ $parent_id ][ $i ]['id'] . '"' . $checked . '/> ' . $data[ $parent_id ][ $i ]['name'] . '</label>' . PHP_EOL;
-				$treeCats = self::buildTreeCats( $data, $checkedArr, $treeCats, $data[ $parent_id ][ $i ]['id'], true ) . '</li>' . PHP_EOL;
+				$treeItemChilds = self::buildTreeCats( $data, $checkedArr, $relCategories, $item['id'] );
+
+				if(empty($treeItemChilds)){
+					$treeItem .= '<div class="oasis-tree-leaf">
+						<div class="oasis-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
+							<input type="hidden" name="oasis_options[oasis_cat_relation][]" value="' . $rel_value . '" />
+							<label>
+								<input type="checkbox" name="oasis_options[oasis_categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<div class="oasis-tree-btn-relation"></div>' . $item['name'] . '
+							</label>
+							<div class="oasis-tree-dashed"></div>
+							<div class="oasis-tree-relation">' . $rel_label . '</div>
+						</div>
+					</div>';
+				}
+				else{
+					$treeItem .= '<div class="oasis-tree-node oasis-tree-collapsed">
+						<div class="oasis-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
+							<input type="hidden" name="oasis_options[oasis_cat_relation][]" value="' . $rel_value . '" />
+							<span class="oasis-tree-handle-p">+</span>
+							<span class="oasis-tree-handle-m">-</span>
+							<label>
+								<input type="checkbox" name="oasis_options[oasis_categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<div class="oasis-tree-btn-relation"></div>' . $item['name'] . '
+							</label>
+							<div class="oasis-tree-dashed"></div>
+							<div class="oasis-tree-relation">' . $rel_label . '</div>
+						</div>
+						<div class="oasis-tree-childs">' . $treeItemChilds . '</div>
+					</div>';
+				}
 			}
-			$treeCats .= $sw ? '</ul>' . PHP_EOL : '';
 		}
 
-		return $treeCats;
+		return $treeItem ?? '';
+	}
+
+	/**
+	 * Build tree categories
+	 *
+	 * @param $data
+	 * @param int $checked_id
+	 * @param int $parent_id
+	 *
+	 * @return string
+	 */
+	public static function buildTreeRadioCats( $data, array $checked_id = null, int $parent_id = 0 ): string {
+		$treeItem = '';
+		if ( ! empty( $data[ $parent_id ] ) ) {
+			foreach($data[ $parent_id ] as $item){
+				$checked = $checked_id === $item['id'];
+
+				$treeItemChilds = self::buildTreeRadioCats( $data, $checkedArr, $item['id'] );
+
+				if(empty($treeItemChilds)){
+					$treeItem .= '<div class="oasis-tree-leaf">
+						<div class="oasis-tree-label">
+							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
+						</div>
+					</div>';
+				}
+				else{
+					$treeItem .= '<div class="oasis-tree-node oasis-tree-collapsed">
+						<div class="oasis-tree-label">
+							<span class="oasis-tree-handle-p">+</span>
+							<span class="oasis-tree-handle-m">-</span>
+							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
+						</div>
+						<div class="oasis-tree-childs">' . $treeItemChilds . '</div>
+					</div>';
+				}
+			}
+		}
+
+		return $treeItem ?? '';
 	}
 
 	/**

@@ -1,5 +1,5 @@
 jQuery(function ($) {
-    $('.send_order').click(function () {
+    $('.oasis-send_order').click(function () {
         var data = {
             action: 'send_order',
             order_id: this.getAttribute('data-order-id')

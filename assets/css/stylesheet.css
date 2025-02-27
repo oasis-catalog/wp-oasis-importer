@@ -2,161 +2,312 @@
 Progress bar
  */
 .oa-notice {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
-    margin: 15px 15px 0;
-    padding: 15px;
-    border-left-width: 4px;
-    border-left-color: #c3c4c7;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
+	margin: 15px 15px 0;
+	padding: 15px;
+	border-left-width: 4px;
+	border-left-color: #c3c4c7;
 }
 
 .oa-notice-success {
-    border-left-color: #00a32a;
+	border-left-color: #00a32a;
 }
 
 .oa-notice-info {
-    border-left-color: #2e78ff;
+	border-left-color: #2e78ff;
 }
 
 .oa-notice-warning {
-    border-left-color: #dba617;
+	border-left-color: #dba617;
 }
 
 .oa-notice-danger {
-    border-left-color: #d63638;
+	border-left-color: #d63638;
 }
 
 .ispan {
-    float: right;
-    margin-right: 6px;
-    margin-top: -30px;
-    position: relative;
-    z-index: 2;
-    color: #32a1ce;
-    border: 1px dotted #32a1ce;
-    padding-right: 5px;
-    padding-left: 5px;
+	float: right;
+	margin-right: 6px;
+	margin-top: -30px;
+	position: relative;
+	z-index: 2;
+	color: #32a1ce;
+	border: 1px dotted #32a1ce;
+	padding-right: 5px;
+	padding-left: 5px;
 }
 
 input.input-cron-task {
-    padding-right: 40px;
-    font-size: 12px;
+	padding-right: 40px;
+	font-size: 12px;
+	line-height: initial;
 }
 
 .input-cron-task {
-    width: 100%;
+	width: 100%;
 }
 
 /*
 Orders
  */
 .oasis-order .dashicons {
-    margin-right: 3px;
+	margin-right: 3px;
 }
 
 .oasis-order .badge .dashicons {
-    margin-right: 3px;
+	margin-right: 3px;
 }
 
 .oasis-order .badge {
-    margin-top: 5px;
-    margin-bottom: 5px;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }
 
 /**
 Form
  */
 form.oasis-form table.form-table th {
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
+	padding-top: 7px !important;
+	padding-bottom: 7px !important;
 }
 
 form.oasis-form table.form-table td {
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
+	padding-top: 7px !important;
+	padding-bottom: 7px !important;
 }
 
+
+
+.oasis-icon-copy{
+	width: 16px;
+	height: 16px;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z'/></svg>");
+	background-repeat: no-repeat;
+	background-position: center;
+	display: inline-block;
+	vertical-align: middle;
+}
+.oasis-icon-run{
+	width: 20px;
+	height: 20px;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgb(12 122 10)' viewBox='0 0 16 16'><path d='M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z'/></svg>");
+	background-repeat: no-repeat;
+	background-position: center;
+	display: inline-block;
+	vertical-align: middle;
+	background-size: contain;
+	animation: animate-oasis-icon-ru 2s linear infinite;
+}
+.oasis-icon-pause{
+	width: 20px;
+	height: 20px;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgb(233 121 6)' viewBox='0 0 16 16'> <path d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16'/><path d='M5 6.25a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0zm3.5 0a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0z'/></svg>");
+	background-repeat: no-repeat;
+	background-position: center;
+	display: inline-block;
+	vertical-align: middle;
+	background-size: contain;
+}
+
+@keyframes animate-oasis-icon-ru {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
 /**
 Tree categories
  */
-.jquery-tree {
-    list-style: none;
+.oasis-tree {
+	list-style: none;
+	padding: 0;
+	font-size: 14px;
+}
+.oasis-tree-ctrl {
+	margin: 0 0 10px 0;
 }
 
-.jquery-tree ul {
-    list-style: none;
+.oasis-tree-handle-p,
+.oasis-tree-handle-m{
+	flex: 0 0 auto;
+	cursor: pointer;
+	width: 15px;
+	overflow: hidden;
+	vertical-align: top;
+	padding: 0;
+	margin: 0;
+	text-align: center;
+	line-height: 1;
+	font-size: 1.2em;
+	align-items: center;
+	user-select: none;
 }
 
-.jquery-tree-handle {
-    cursor: pointer;
-    width: 10px;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: top;
-    padding: 0;
-    margin: 0;
+.oasis-tree-leaf {
+	padding: 0 0 0 15px;
+	margin: 5px 0 0 0;
+	display: flex;
 }
 
-.jquery-tree-collapsed ul {
-    display: none;
+.oasis-tree-node {
+	padding: 0;
+	margin: 5px 0 0 0;
+	display: flex;
+	flex-direction: column;
 }
 
-.jquery-tree-collapseall,
-.jquery-tree-expandall {
-    cursor: pointer;
+.oasis-tree-label{
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	height: 20px;
+}
+.oasis-tree-label label{
+	display: flex;
+	align-items: center;
+	line-height: 1;
 }
 
-.jquery-tree-collapseall {
-    margin-right: 1em;
+.oasis-tree-childs{
+	padding: 0 0 0 15px;
 }
 
-.jquery-tree input {
-    position: absolute;
-    left: -1000px;
+.oasis-tree-dashed{
+	flex: 1 1 auto;
+	height: 1px;
+	border-style: dashed;
+	border-width: 0 0 1px 0;
+	border-color: #b7b2b2;
+	margin: 2px 0.5em 0 0.5em;
 }
 
-.jquery-tree-leaf {
-    padding-left: 20px;
+.oasis-tree-btn-relation{
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	font-size: 1.2em;
+	cursor: pointer;
+	margin: 0 5px;
+	opacity: 0.4;
+	transition: 0.1s;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path d='m11.798 8.271-3.182 1.97c-.27.166-.616-.036-.616-.372V9.1s-2.571-.3-4 2.4c.571-4.8 3.143-4.8 4-4.8v-.769c0-.336.346-.538.616-.371l3.182 1.969c.27.166.27.576 0 .742'/><path d='m.5 3 .04.87a2 2 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14h10.348a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2m.694 2.09A1 1 0 0 1 2.19 4h11.62a1 1 0 0 1 .996 1.09l-.636 7a1 1 0 0 1-.996.91H2.826a1 1 0 0 1-.995-.91zM6.172 2a1 1 0 0 1 .707.293L7.586 3H2.19q-.362.002-.683.12L1.5 2.98a1 1 0 0 1 1-.98z'/></svg>");
+	background-repeat: no-repeat;
+	background-position: center;
+}
+.oasis-tree-btn-relation:hover{
+	opacity: 1;
 }
 
-.jquery-tree-node {
-    padding-left: 10px;
+.oasis-tree-label.relation-active > label > .oasis-tree-btn-relation{
+	opacity: 1;
+}
+.oasis-tree-label:not(.relation-active) > .oasis-tree-dashed,
+.oasis-tree-label:not(.relation-active) > .oasis-tree-relation{
+	display: none;
 }
 
-.jquery-tree-title {
-    display: inline-block;
+
+
+.oasis-tree-relation{
+	align-items: center;
+	margin: 0 0 0 0.5em;
+	width: calc(35vw - 150px);
+	flex: 0 0 auto;
+	min-width: 50px;
 }
 
-.jquery-tree-checked-partial,
-.jquery-tree-checked,
-.jquery-tree-unchecked {
-    background-position: 5px 50%;
-    background-repeat: no-repeat;
-    cursor: default;
-    padding-left: 25px;
-    margin: 0;
+.oasis-tree-collapsed > .oasis-tree-childs{
+	display: none;
 }
 
-.jquery-tree-checked-partial {
-    background-image: url('../img/checkbox-partial.png');
+.oasis-tree-handle-p{
+	display: none;
 }
 
-.jquery-tree-checked {
-    background-image: url('../img/checkbox-checked.png');
+.oasis-tree-collapsed > .oasis-tree-label > .oasis-tree-handle-p{
+	display: initial;
+}
+.oasis-tree-collapsed > .oasis-tree-label > .oasis-tree-handle-m{
+	display: none;
 }
 
-.jquery-tree-unchecked {
-    background-image: url('../img/checkbox-unchecked.png');
+
+.oasis-tree input[type=radio] {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 8px 0 5px;
+	border-radius: 50%;
+	background: #fff;
+	color: #50575e;
+	clear: none;
+	cursor: pointer;
+	line-height: 0;
+	height: 1rem;
+	outline: 0;
+	padding: 0 !important;
+	text-align: center;
+	vertical-align: middle;
+	width: 1rem;
+	min-width: 1rem;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1);
+	transition: .05s border-colorease-in-out;
 }
 
-.jquery-tree-node label,
-.jquery-tree-handle {
-    -moz-user-select: none;
+.oasis-tree input[type=radio]:checked::before{
+	content: "";
+	border-radius: 50%;
+	width: .5rem;
+	height: .5rem;
+	background-color: #3582c4;
+	line-height: 1.14285714;
+}
+
+
+
+.oasis-tree input[type=checkbox] {
+	margin: 0 0 0 5px;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	background: #fff;
+	color: #50575e;
+	clear: none;
+	cursor: pointer;
+	display: inline-block;
+	line-height: 0;
+	height: 1rem;
+	outline: 0;
+	padding: 0 !important;
+	text-align: center;
+	vertical-align: middle;
+	width: 1rem;
+	min-width: 1rem;
+	-webkit-appearance: none;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, .1);
+	transition: .05s border-colorease-in-out;
+}
+
+.oasis-tree input[type=checkbox]:checked::before {
+	content: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%233582c4%27%2F%3E%3C%2Fsvg%3E");
+	margin: -.1875rem 0 0 -.25rem;
+	height: 1.3125rem;
+	width: 1.3125rem
+}
+
+.oasis-tree input[type=checkbox]:indeterminate::before {
+	content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='%233582c4' stroke-linecap='round' stroke-linejoin='round' stroke-width='4' d='M5 10h10'/></svg>");
+	height: 1.3125rem;
+	width: 1.3125rem;
 }
 
 @media (max-width: 1260px) {
-    .oa-container {
-        width: 100%;
-    }
+	.oa-container {
+		width: 100%;
+	}
 }

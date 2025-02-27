@@ -68,7 +68,7 @@ Errors: ' . $errors . PHP_EOL;
 			if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
 				throw new Exception( 'Already running' );
 			}
-			
+
 			while (ob_get_level()) {
 				ob_end_flush();
 			}
