@@ -122,17 +122,17 @@ form.oasis-form table.form-table td {
 /**
 Tree categories
  */
-.oasis-tree {
+.oa-tree {
 	list-style: none;
 	padding: 0;
 	font-size: 14px;
 }
-.oasis-tree-ctrl {
+.oa-tree-ctrl {
 	margin: 0 0 10px 0;
 }
 
-.oasis-tree-handle-p,
-.oasis-tree-handle-m{
+.oa-tree-handle-p,
+.oa-tree-handle-m{
 	flex: 0 0 auto;
 	cursor: pointer;
 	width: 15px;
@@ -147,36 +147,36 @@ Tree categories
 	user-select: none;
 }
 
-.oasis-tree-leaf {
+.oa-tree-leaf {
 	padding: 0 0 0 15px;
 	margin: 5px 0 0 0;
 	display: flex;
 }
 
-.oasis-tree-node {
+.oa-tree-node {
 	padding: 0;
 	margin: 5px 0 0 0;
 	display: flex;
 	flex-direction: column;
 }
 
-.oasis-tree-label{
+.oa-tree-label{
 	display: flex;
 	flex: 1 1 auto;
 	align-items: center;
 	height: 20px;
 }
-.oasis-tree-label label{
+.oa-tree-label label{
 	display: flex;
 	align-items: center;
 	line-height: 1;
 }
 
-.oasis-tree-childs{
+.oa-tree-childs{
 	padding: 0 0 0 15px;
 }
 
-.oasis-tree-dashed{
+.oa-tree-dashed{
 	flex: 1 1 auto;
 	height: 1px;
 	border-style: dashed;
@@ -185,7 +185,7 @@ Tree categories
 	margin: 2px 0.5em 0 0.5em;
 }
 
-.oasis-tree-btn-relation{
+.oa-tree-btn-relation{
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -200,21 +200,21 @@ Tree categories
 	background-repeat: no-repeat;
 	background-position: center;
 }
-.oasis-tree-btn-relation:hover{
+.oa-tree-btn-relation:hover{
 	opacity: 1;
 }
 
-.oasis-tree-label.relation-active > label > .oasis-tree-btn-relation{
+.oa-tree-label.relation-active > label > .oa-tree-btn-relation{
 	opacity: 1;
 }
-.oasis-tree-label:not(.relation-active) > .oasis-tree-dashed,
-.oasis-tree-label:not(.relation-active) > .oasis-tree-relation{
+.oa-tree-label:not(.relation-active) > .oa-tree-dashed,
+.oa-tree-label:not(.relation-active) > .oa-tree-relation{
 	display: none;
 }
 
 
 
-.oasis-tree-relation{
+.oa-tree-relation{
 	align-items: center;
 	margin: 0 0 0 0.5em;
 	width: calc(35vw - 150px);
@@ -222,23 +222,23 @@ Tree categories
 	min-width: 50px;
 }
 
-.oasis-tree-collapsed > .oasis-tree-childs{
+.oa-tree-collapsed > .oa-tree-childs{
 	display: none;
 }
 
-.oasis-tree-handle-p{
+.oa-tree-handle-p{
 	display: none;
 }
 
-.oasis-tree-collapsed > .oasis-tree-label > .oasis-tree-handle-p{
+.oa-tree-collapsed > .oa-tree-label > .oa-tree-handle-p{
 	display: initial;
 }
-.oasis-tree-collapsed > .oasis-tree-label > .oasis-tree-handle-m{
+.oa-tree-collapsed > .oa-tree-label > .oa-tree-handle-m{
 	display: none;
 }
 
 
-.oasis-tree input[type=radio] {
+.oa-tree input[type=radio] {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -260,7 +260,7 @@ Tree categories
 	transition: .05s border-colorease-in-out;
 }
 
-.oasis-tree input[type=radio]:checked::before{
+.oa-tree input[type=radio]:checked::before{
 	content: "";
 	border-radius: 50%;
 	width: .5rem;
@@ -271,7 +271,7 @@ Tree categories
 
 
 
-.oasis-tree input[type=checkbox] {
+.oa-tree input[type=checkbox] {
 	margin: 0 0 0 5px;
 	border: 1px solid #8c8f94;
 	border-radius: 4px;
@@ -293,14 +293,14 @@ Tree categories
 	transition: .05s border-colorease-in-out;
 }
 
-.oasis-tree input[type=checkbox]:checked::before {
+.oa-tree input[type=checkbox]:checked::before {
 	content: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%233582c4%27%2F%3E%3C%2Fsvg%3E");
 	margin: -.1875rem 0 0 -.25rem;
 	height: 1.3125rem;
 	width: 1.3125rem
 }
 
-.oasis-tree input[type=checkbox]:indeterminate::before {
+.oa-tree input[type=checkbox]:indeterminate::before {
 	content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='%233582c4' stroke-linecap='round' stroke-linejoin='round' stroke-width='4' d='M5 10h10'/></svg>");
 	height: 1.3125rem;
 	width: 1.3125rem;

@@ -124,7 +124,7 @@ jQuery(function ($) {
 				let btn_ok = content.find('.js-ok'),
 					btn_clear = content.find('.js-clear'),
 					modal = null,
-					tree = new OasisHelper.RadioTree(content.find('.oasis-tree'), {
+					tree = new OasisHelper.RadioTree(content.find('.oa-tree'), {
 							onChange: item => {
 								btn_ok.toggleClass('disabled', !item);
 							}

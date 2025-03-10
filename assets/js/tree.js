@@ -3,24 +3,24 @@ if(!OasisHelper){
 }
 
 (function ($) {
-	let CLASS_HANDLE_P = 'oasis-tree-handle-p',
-		CLASS_HANDLE_M = 'oasis-tree-handle-m',
-		CLASS_TREE_NODE = 'oasis-tree-node',
-		CLASS_TREE_LEAF = 'oasis-tree-leaf',
-		CLASS_TREE_CHILDS = 'oasis-tree-childs',
-		CLASS_COLLAPSED = 'oasis-tree-collapsed',
+	let CLASS_HANDLE_P = 'oa-tree-handle-p',
+		CLASS_HANDLE_M = 'oa-tree-handle-m',
+		CLASS_TREE_NODE = 'oa-tree-node',
+		CLASS_TREE_LEAF = 'oa-tree-leaf',
+		CLASS_TREE_CHILDS = 'oa-tree-childs',
+		CLASS_COLLAPSED = 'oa-tree-collapsed',
 
-		CLASS_LABEL = 'oasis-tree-label',
+		CLASS_LABEL = 'oa-tree-label',
 		CLASS_LABEL_RELATION_ACTIVE = 'relation-active',
 
-		CLASS_CTRL_M = 'oasis-tree-ctrl-m',
-		CLASS_CTRL_P = 'oasis-tree-ctrl-p',
+		CLASS_CTRL_M = 'oa-tree-ctrl-m',
+		CLASS_CTRL_P = 'oa-tree-ctrl-p',
 
-		CLASS_RELATION = 'oasis-tree-relation',
-		CLASS_BTN_RELATION = 'oasis-tree-btn-relation',
+		CLASS_RELATION = 'oa-tree-relation',
+		CLASS_BTN_RELATION = 'oa-tree-btn-relation',
 
-		NAME_CAT = 'oasis_options[oasis_categories][]';
-		NAME_RELATION = 'oasis_options[oasis_cat_relation][]';
+		CLASS_INP_CAT = 'oa-tree-cb-cat',
+		CLASS_INP_REL = 'oa-tree-inp-rel';
 
 
 	OasisHelper.Tree = class {
@@ -32,16 +32,20 @@ if(!OasisHelper){
 
 			el_root.find('.' + CLASS_HANDLE_P).on('click', evt => {
 				$(evt.target).closest('.' + CLASS_TREE_NODE).toggleClass(CLASS_COLLAPSED, false);
+				p.onSize && p.onSize.call(this);
 			});
 			el_root.find('.' + CLASS_HANDLE_M).on('click', evt => {
 				$(evt.target).closest('.' + CLASS_TREE_NODE).toggleClass(CLASS_COLLAPSED, true);
+				p.onSize && p.onSize.call(this);
 			});
 
 			el_root.find('.' + CLASS_CTRL_M).on('click', () => {
 				el_root.find('.' + CLASS_TREE_NODE).addClass(CLASS_COLLAPSED);
+				p.onSize && p.onSize.call(this);
 			});
 			el_root.find('.' + CLASS_CTRL_P).on('click', () => {
 				el_root.find('.' + CLASS_TREE_NODE).removeClass(CLASS_COLLAPSED);
+				p.onSize && p.onSize.call(this);
 			});
 
 			el_root.find('input[type="checkbox"]').on('change', (evt) => {
@@ -50,7 +54,11 @@ if(!OasisHelper){
 			});
 
 			el_root.find('.' + CLASS_TREE_LEAF).each((i, node) =>{
-				this.checkStatusNode(el_root, $(node));
+				let el = $(node),
+					inp_rel = el.find(`.${CLASS_LABEL}:first .${CLASS_INP_REL}`);
+
+				inp_rel.prop('disabled', !inp_rel.val());
+				this.checkStatusNode(el_root, el);
 			});
 
 			el_root.find('.' + CLASS_BTN_RELATION).on('click', (evt) => {
@@ -58,8 +66,8 @@ if(!OasisHelper){
 				evt.stopPropagation();
 
 				let tree_node = $(evt.target).closest(`.${CLASS_TREE_NODE}, .${CLASS_TREE_LEAF}`),
-					cat_id = tree_node.find('[name="' + NAME_CAT + '"]').val(),
-					val_rel = tree_node.find('[name="' + NAME_RELATION + '"]').val().split('_');
+					cat_id = tree_node.find('.' + CLASS_INP_CAT).val(),
+					val_rel = tree_node.find('.' + CLASS_INP_REL).val().split('_');
 
 				let cat_rel_id = val_rel.length == 2 ? parseInt(val_rel[1]) : null;
 
@@ -85,12 +93,15 @@ if(!OasisHelper){
 				}
 				if(parent_el.hasClass(CLASS_TREE_NODE)){
 					let state = this.checkChildsStatus(parent_el),
-						cb = parent_el.find(`.${CLASS_LABEL}:first input[type="checkbox"]`);
+						cb = parent_el.find(`.${CLASS_LABEL}:first input[type="checkbox"]`),
+						inp_rel = parent_el.find(`.${CLASS_LABEL}:first .${CLASS_INP_REL}`);
+
+					inp_rel.prop('disabled', !inp_rel.val());
 
 					switch(state){
 						case 'indeterminate':
 							cb.prop({
-								checked: true,
+								checked: false,
 								indeterminate: true
 							});
 							break;
@@ -131,15 +142,18 @@ if(!OasisHelper){
 		}
 
 		setRelationItem (cat_id, item) {
-			this.el_root.find('[name="' + NAME_CAT + '"]').each((i, inp_node) => {
+			this.el_root.find('.' + CLASS_INP_CAT).each((i, inp_node) => {
 				if(inp_node.value == cat_id){
 					let tree_node = $(inp_node).closest(`.${CLASS_TREE_NODE}, .${CLASS_TREE_LEAF}`),
-						el_label = tree_node.find('.' + CLASS_LABEL + ':first');
+						el_label = tree_node.find('.' + CLASS_LABEL + ':first'),
+						inp_rel = el_label.find('.' + CLASS_INP_REL),
+						lebel_rel = el_label.find('.' + CLASS_RELATION);
 
-					el_label.find('[name="' + NAME_RELATION + '"]').val(cat_id + '_' + (item ? item.value : ''));
-					el_label.find('.' + CLASS_RELATION).text(item ? item.lebelPath : '');
+					inp_rel.val(item ? (cat_id + '_' + item.value) : '');
+					inp_rel.prop('disabled', !item);
+					lebel_rel.text(item ? item.lebelPath : '');
 
-					tree_node.find('.' + CLASS_LABEL + ':first').toggleClass(CLASS_LABEL_RELATION_ACTIVE, !!item);
+					el_label.toggleClass(CLASS_LABEL_RELATION_ACTIVE, !!item);
 
 					return false;
 				}
@@ -157,16 +171,20 @@ if(!OasisHelper){
 
 			el_root.find('.' + CLASS_HANDLE_P).on('click', (evt) => {
 				$(evt.target).closest('.' + CLASS_TREE_NODE).toggleClass(CLASS_COLLAPSED, false);
+				p.onSize && p.onSize.call(this);
 			});
 			el_root.find('.' + CLASS_HANDLE_M).on('click', (evt) => {
 				$(evt.target).closest('.' + CLASS_TREE_NODE).toggleClass(CLASS_COLLAPSED, true);
+				p.onSize && p.onSize.call(this);
 			});
 
 			el_root.find('.' + CLASS_CTRL_M).on('click', () => {
 				el_root.find('.' + CLASS_TREE_NODE).addClass(CLASS_COLLAPSED);
+				p.onSize && p.onSize.call(this);
 			});
 			el_root.find('.' + CLASS_CTRL_P).on('click', () => {
 				el_root.find('.' + CLASS_TREE_NODE).removeClass(CLASS_COLLAPSED);
+				p.onSize && p.onSize.call(this);
 			});
 
 			el_root.find('input[type="radio"]').on('change', (evt) => {
