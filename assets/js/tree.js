@@ -1,5 +1,5 @@
-if(!OasisHelper){
-	var OasisHelper = {};
+if(!OaHelper){
+	var OaHelper = {};
 }
 
 (function ($) {
@@ -23,7 +23,7 @@ if(!OasisHelper){
 		CLASS_INP_REL = 'oa-tree-inp-rel';
 
 
-	OasisHelper.Tree = class {
+	OaHelper.Tree = class {
 		el_root = null;
 
 		constructor (el_root, p) {
@@ -162,7 +162,7 @@ if(!OasisHelper){
 	};
 
 
-	OasisHelper.RadioTree = class {
+	OaHelper.RadioTree = class {
 		el_root = null;
 
 		constructor (el_root, p){

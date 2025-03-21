@@ -1,7 +1,7 @@
 <?php
 
-use OasisImport\Controller\Oasis\Api;
-use OasisImport\Controller\Oasis\Main;
+use OasisImport\Api;
+use OasisImport\Main;
 
 add_action( 'init', 'init_order' );
 
@@ -71,7 +71,7 @@ function init_order() {
 
 			$options = get_option( 'oasis_options' );
 
-			if ( ! empty( $options['oasis_api_key'] ) && ! empty( $options['oasis_api_user_id'] ) ) {
+			if ( ! empty( $options['api_key'] ) && ! empty( $options['api_user_id'] ) ) {
 				wp_enqueue_script( 'oasis-order', plugins_url( '/assets/js/order.js', dirname( __FILE__ ) ), [ 'jquery' ] );
 			}
 		}
@@ -84,7 +84,7 @@ function init_order() {
 
 			if ( ! empty( $order_id ) ) {
 				$data = [
-					'userId' => $options['oasis_api_user_id'],
+					'userId' => $options['api_user_id'],
 				];
 
 				if ( ! empty( $data['userId'] ) ) {

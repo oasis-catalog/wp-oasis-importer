@@ -1,14 +1,14 @@
 <?php
 
-use OasisImport\Controller\Oasis\Api;
-use OasisImport\Controller\Oasis\Main;
+use OasisImport\Api;
+use OasisImport\Main;
 
 add_action( 'init', 'init_branding' );
 
 function init_branding() {
 	$options = get_option( 'oasis_options' );
 
-	if ( empty( $options['oasis_branding'] ) ) {
+	if ( empty( $options['is_branding'] ) ) {
 		return;
 	}
 
@@ -189,7 +189,7 @@ function init_branding() {
 function get_product_id_oasis_by_cart_item( $cart_item ) {
 	$options = get_option( 'oasis_options' );
 
-	if ( empty( $options['oasis_branding'] ) ) {
+	if ( empty( $options['is_branding'] ) ) {
 		return;
 	}
 

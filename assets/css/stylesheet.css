@@ -112,13 +112,14 @@ form.oasis-form table.form-table td {
 }
 
 @keyframes animate-oasis-icon-ru {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }
+
 /**
 Tree categories
  */
@@ -212,8 +213,6 @@ Tree categories
 	display: none;
 }
 
-
-
 .oa-tree-relation{
 	align-items: center;
 	margin: 0 0 0 0.5em;
@@ -294,17 +293,44 @@ Tree categories
 }
 
 .oa-tree input[type=checkbox]:checked::before {
-	content: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%233582c4%27%2F%3E%3C%2Fsvg%3E");
-	margin: -.1875rem 0 0 -.25rem;
-	height: 1.3125rem;
-	width: 1.3125rem
+	content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='4 3 14 12'><path d='M14.83 4.89l1.34.94-5.81 8.38H9.02L5.78 9.67l1.34-1.25 2.57 2.4z' fill='%233582c4'/></svg>");
+	display: block;
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	width: 100%;
 }
 
 .oa-tree input[type=checkbox]:indeterminate::before {
 	content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='%233582c4' stroke-linecap='round' stroke-linejoin='round' stroke-width='4' d='M5 10h10'/></svg>");
-	height: 1.3125rem;
-	width: 1.3125rem;
+	display: block;
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	width: 100%;
 }
+
+.oa-category-rel {
+	display: inline-block;
+	background: #f0f0f0;
+	border: 1px solid;
+	border-color: #87919c #959ea9 #9ea7b1 #959ea9;
+	border-radius: 4px;
+	box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.3), inset 0 2px 2px -1px rgba(180, 188, 191, 0.7);
+	height: 30px;
+	line-height: 30px;
+	margin: 0;
+	min-width: 120px;
+	max-width: 50vw;
+	vertical-align: middle;
+	align-items: center;
+	cursor: pointer;
+	padding: 0 1em;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
 
 @media (max-width: 1260px) {
 	.oa-container {

@@ -1,7 +1,8 @@
 <?php
 
-namespace OasisImport\Controller\Oasis;
+namespace OasisImport;
 
+use OasisImport\Config as OasisConfig;
 use Exception;
 use WC_Cache_Helper;
 use WC_Product;
@@ -13,6 +14,7 @@ use WP_Post;
 use WP_Query;
 
 class Main {
+	public static OasisConfig $cf;
 	public static $attrVariation = [];
 
 	/**
@@ -140,14 +142,13 @@ class Main {
 	 * @param $model
 	 * @param $categories
 	 * @param $totalStock
-	 * @param $options
 	 * @param string $type
 	 *
 	 * @return int|void
 	 */
-	public static function addWcProduct( $oasisProduct, $model, $categories, $totalStock, $options, string $type ) {
+	public static function addWcProduct( $oasisProduct, $model, $categories, $totalStock, string $type ) {
 		try {
-			$dataPrice = self::getDataPrice( $oasisProduct, $options );
+			$dataPrice = self::getDataPrice($oasisProduct);
 
 			$wcProduct = self::getWcProductObjectType( $type );
 			$wcProduct->set_name( $oasisProduct->name );
@@ -162,7 +163,7 @@ class Main {
 			$wcProduct->set_stock_quantity( $totalStock );
 			$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
-			$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
+			$wcProduct->set_reviews_allowed(self::$cf->is_comments);
 
 			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
 			if ( $defaultAttr ) {
@@ -180,7 +181,7 @@ class Main {
 			$wcProduct->save();
 
 			self::addProductOasisTable( $wcProductId, $oasisProduct->id, count( $model ) > 1 ? $oasisProduct->group_id : $oasisProduct->id, 'product' );
-			self::cliMsg( 'Добавлен товар id ' . $oasisProduct->id );
+			self::$cf->log('Добавлен товар id '.$oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
@@ -201,13 +202,12 @@ class Main {
 	 * @param $model
 	 * @param $categories
 	 * @param $totalStock
-	 * @param $options
 	 *
 	 * @return bool|void
 	 */
-	public static function upWcProduct( $productId, $model, $categories, $totalStock, $options ) {
+	public static function upWcProduct($productId, $model, $categories, $totalStock) {
 		$oasisProduct = self::getFirstProduct( $model );
-		$dataPrice    = self::getDataPrice( $oasisProduct, $options );
+		$dataPrice    = self::getDataPrice($oasisProduct);
 
 		try {
 			$wcProduct = wc_get_product( $productId );
@@ -227,7 +227,7 @@ class Main {
 				$wcProduct->set_stock_quantity( (int) $totalStock );
 				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
-				$wcProduct->set_reviews_allowed( ! empty( $options['oasis_comments'] ) );
+				$wcProduct->set_reviews_allowed(self::$cf->is_comments);
 				$wcProduct->set_date_modified( time() );
 
 				if($categories){
@@ -239,7 +239,7 @@ class Main {
 					$wcProduct->set_default_attributes( $defaultAttr );
 				}
 
-				if ( ! empty( $options['oasis_up_photo'] ) ) {
+				if (self::$cf->is_up_photo) {
 					if ( self::checkImages( $oasisProduct->images, $wcProduct ) === false ) {
 						self::deleteImgInProduct( $wcProduct );
 						$images = self::processingPhoto( $oasisProduct->images, $productId );
@@ -249,12 +249,12 @@ class Main {
 				}
 
 				$wcProduct->save();
-				self::cliMsg( 'Обновлен товар id ' . $oasisProduct->id );
+				self::$cf->log('Обновлен товар id ' . $oasisProduct->id);
 
 				return true;
 			} else {
 				self::deleteWcProduct( $wcProduct );
-				self::cliMsg( 'Некорректный тип, товар удален id ' . $oasisProduct->id );
+				self::$cf->log('Некорректный тип, товар удален id ' . $oasisProduct->id);
 
 				return false;
 			}
@@ -269,13 +269,12 @@ class Main {
 	 *
 	 * @param $productId
 	 * @param $oasisProduct
-	 * @param $options
 	 *
 	 * @return int|void|null
 	 */
-	public static function addWcVariation( $productId, $oasisProduct, $options ) {
+	public static function addWcVariation($productId, $oasisProduct) {
 		try {
-			$dataPrice = self::getDataPrice( $oasisProduct, $options );
+			$dataPrice = self::getDataPrice($oasisProduct);
 
 			$wcVariation = new WC_Product_Variation();
 			$wcVariation->set_name( $oasisProduct->full_name );
@@ -304,7 +303,7 @@ class Main {
 			}
 
 			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
-			self::cliMsg( 'Добавлен вариант id ' . $oasisProduct->id );
+			self::$cf->log('Добавлен вариант id ' . $oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
@@ -323,11 +322,10 @@ class Main {
 	 *
 	 * @param $dbVariation
 	 * @param $oasisProduct
-	 * @param $options
 	 */
-	public static function upWcVariation( $dbVariation, $oasisProduct, $options ) {
+	public static function upWcVariation($dbVariation, $oasisProduct) {
 		try {
-			$dataPrice   = self::getDataPrice( $oasisProduct, $options );
+			$dataPrice   = self::getDataPrice($oasisProduct);
 			$wcVariation = wc_get_product( $dbVariation['post_id'] );
 
 			if ( $wcVariation === false ) {
@@ -349,7 +347,7 @@ class Main {
 				$wcVariation->set_attributes( $attributes );
 			}
 
-			if ( ! empty( $options['oasis_up_photo'] ) ) {
+			if (self::$cf->is_up_photo) {
 				if ( self::checkImages( $oasisProduct->images, $wcVariation ) === false ) {
 					self::deleteImgInProduct( $wcVariation );
 					$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
@@ -359,7 +357,7 @@ class Main {
 
 			$wcVariation->save();
 
-			self::cliMsg( 'Обновлен вариант id ' . $oasisProduct->id );
+			self::$cf->log('Обновлен вариант id ' . $oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();
@@ -412,7 +410,7 @@ class Main {
 		if ( $wcProductID ) {
 			$wcProduct = wc_get_product( $wcProductID );
 			self::deleteWcProduct( $wcProduct );
-			self::cliMsg( 'Есть артикул! Oasis Id: ' . $product->id );
+			self::$cf->log('Есть артикул! Oasis Id: ' . $product->id);
 		}
 	}
 
@@ -454,27 +452,26 @@ class Main {
 	 * Calculation price
 	 *
 	 * @param $product
-	 * @param $options
 	 *
 	 * @return array
 	 */
-	public static function getDataPrice( $product, $options ): array {
-		$price     = ! empty( $options['oasis_dealer'] ) ? $product->discount_price : $product->price;
-		$old_price = ! empty( $product->old_price ) ? $product->old_price : null;
+	public static function getDataPrice($product): array {
+		$price     = self::$cf->is_price_dealer ? $product->discount_price : $product->price;
+		$old_price = !empty( $product->old_price ) ? $product->old_price : null;
 
-		if ( ! empty( $options['oasis_price_factor'] ) ) {
-			$price = $price * (float) $options['oasis_price_factor'];
+		if (!empty(self::$cf->price_factor)) {
+			$price = $price * self::$cf->price_factor;
 
-			if ( empty( $options['oasis_dealer'] ) ) {
-				$old_price = $old_price * (float) $options['oasis_price_factor'];
+			if (!self::$cf->is_price_dealer) {
+				$old_price = $old_price * self::$cf->price_factor;
 			}
 		}
 
-		if ( ! empty( $options['oasis_increase'] ) ) {
-			$price = $price + (float) $options['oasis_increase'];
+		if (!empty(self::$cf->price_increase)) {
+			$price = $price + self::$cf->price_increase;
 
-			if ( empty( $options['oasis_dealer'] ) ) {
-				$old_price = $old_price + (float) $options['oasis_increase'];
+			if (!self::$cf->is_price_dealer) {
+				$old_price = $old_price + self::$cf->price_increase;
 			}
 		}
 
@@ -482,7 +479,7 @@ class Main {
 			'price' => $price
 		];
 
-		if ( empty( $options['oasis_disable_sales'] ) && ! empty( $old_price ) && $price < $old_price ) {
+		if (!self::$cf->is_disable_sales && !empty($old_price) && $price < $old_price) {
 			$data['regular_price'] = $old_price;
 			$data['sale_price']    = $price;
 		} else {
@@ -502,13 +499,15 @@ class Main {
 	 *
 	 * @return array
 	 */
-	public static function getProductCategories($product, $oasisCategories, $relCategories): array {
+	public static function getProductCategories($product, $oasisCategories): array {
 		$result = [];
 		
 		foreach ($product->categories as $oasis_cat_id) {
-			if(isset($relCategories[$oasis_cat_id])){
-				$parents = self::getTermParents($relCategories[$oasis_cat_id]['id']);
-				$result = array_map(fn($x) => $x->term_id, $parents);
+			$rel_id = self::$cf->getRelCategoryId($oasis_cat_id);
+
+			if(isset($rel_id)){
+				$parents = self::getTermParents($rel_id);
+				$result = array_merge($result, array_map(fn($x) => $x->term_id, $parents));
 			}
 			else{
 				$full_categories = self::getOasisParentsCategoriesId($oasis_cat_id, $oasisCategories);
@@ -1150,8 +1149,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		return $terms ? reset( $terms ) : [];
 	}
 
-
-
 	/**
 	 * Get array parents for term_id
 	 *
@@ -1233,22 +1230,22 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		return $result;
 	}
 
-	/**
-	 * Update progress bar
-	 *
-	 * @param $bar
-	 *
-	 * @return mixed
-	 */
-	public static function upProgressBar( $bar ) {
-		$bar['item'] ++;
+	// /**
+	//  * Update progress bar
+	//  *
+	//  * @param $bar
+	//  *
+	//  * @return mixed
+	//  */
+	// public static function upProgressBar( $bar ) {
+	// 	$bar['item'] ++;
 
-		if ( isset( $bar['step_total'] ) ) {
-			$bar['step_item'] ++;
-		}
+	// 	if ( isset( $bar['step_total'] ) ) {
+	// 		$bar['step_item'] ++;
+	// 	}
 
-		return $bar;
-	}
+	// 	return $bar;
+	// }
 
 	/**
 	 * Get categories level 1
@@ -1283,7 +1280,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @return array
 	 */
 	public static function getOasisParentsCategoriesId($cat_id, $oasisCategories): array {
-		$result = [$cat_id];
+		$result = [];
 		$parent_id = $cat_id;
 
 		while($parent_id){
@@ -1326,32 +1323,32 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				$treeItemChilds = self::buildTreeCats( $data, $checkedArr, $relCategories, $item['id'] );
 
 				if(empty($treeItemChilds)){
-					$treeItem .= '<div class="oasis-tree-leaf">
-						<div class="oasis-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
-							<input type="hidden" name="oasis_options[oasis_cat_relation][]" value="' . $rel_value . '" />
+					$treeItem .= '<div class="oa-tree-leaf">
+						<div class="oa-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
+							<input type="hidden" class="oa-tree-inp-rel" name="oasis_options[cat_relation][]" value="' . $rel_value . '" />
 							<label>
-								<input type="checkbox" name="oasis_options[oasis_categories][]" value="' . $item['id'] . '"' . $checked . '/>
-								<div class="oasis-tree-btn-relation"></div>' . $item['name'] . '
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
 							</label>
-							<div class="oasis-tree-dashed"></div>
-							<div class="oasis-tree-relation">' . $rel_label . '</div>
+							<div class="oa-tree-dashed"></div>
+							<div class="oa-tree-relation">' . $rel_label . '</div>
 						</div>
 					</div>';
 				}
 				else{
-					$treeItem .= '<div class="oasis-tree-node oasis-tree-collapsed">
-						<div class="oasis-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
-							<input type="hidden" name="oasis_options[oasis_cat_relation][]" value="' . $rel_value . '" />
-							<span class="oasis-tree-handle-p">+</span>
-							<span class="oasis-tree-handle-m">-</span>
+					$treeItem .= '<div class="oa-tree-node oa-tree-collapsed">
+						<div class="oa-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
+							<input type="hidden" class="oa-tree-inp-rel"  name="oasis_options[cat_relation][]" value="' . $rel_value . '" />
+							<span class="oa-tree-handle-p">+</span>
+							<span class="oa-tree-handle-m">-</span>
 							<label>
-								<input type="checkbox" name="oasis_options[oasis_categories][]" value="' . $item['id'] . '"' . $checked . '/>
-								<div class="oasis-tree-btn-relation"></div>' . $item['name'] . '
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
 							</label>
-							<div class="oasis-tree-dashed"></div>
-							<div class="oasis-tree-relation">' . $rel_label . '</div>
+							<div class="oa-tree-dashed"></div>
+							<div class="oa-tree-relation">' . $rel_label . '</div>
 						</div>
-						<div class="oasis-tree-childs">' . $treeItemChilds . '</div>
+						<div class="oa-tree-childs">' . $treeItemChilds . '</div>
 					</div>';
 				}
 			}
@@ -1378,82 +1375,26 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				$treeItemChilds = self::buildTreeRadioCats( $data, $checkedArr, $item['id'] );
 
 				if(empty($treeItemChilds)){
-					$treeItem .= '<div class="oasis-tree-leaf">
-						<div class="oasis-tree-label">
+					$treeItem .= '<div class="oa-tree-leaf">
+						<div class="oa-tree-label">
 							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
 						</div>
 					</div>';
 				}
 				else{
-					$treeItem .= '<div class="oasis-tree-node oasis-tree-collapsed">
-						<div class="oasis-tree-label">
-							<span class="oasis-tree-handle-p">+</span>
-							<span class="oasis-tree-handle-m">-</span>
+					$treeItem .= '<div class="oa-tree-node oa-tree-collapsed">
+						<div class="oa-tree-label">
+							<span class="oa-tree-handle-p">+</span>
+							<span class="oa-tree-handle-m">-</span>
 							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
 						</div>
-						<div class="oasis-tree-childs">' . $treeItemChilds . '</div>
+						<div class="oa-tree-childs">' . $treeItemChilds . '</div>
 					</div>';
 				}
 			}
 		}
 
 		return $treeItem ?? '';
-	}
-
-	/**
-	 * Update category and currency settings on plugin activation
-	 */
-	public static function activatePluginUpOptions() {
-		self::upOptionsCurrency( [
-			[
-				'code' => 'kzt',
-				'name' => 'Тенге'
-			],
-			[
-				'code' => 'kgs',
-				'name' => 'Киргизский Сом'
-			],
-			[
-				'code' => 'rub',
-				'name' => 'Российский рубль'
-			],
-			[
-				'code' => 'usd',
-				'name' => 'Доллар США'
-			],
-			[
-				'code' => 'byn',
-				'name' => 'Белорусский рубль'
-			],
-			[
-				'code' => 'eur',
-				'name' => 'Евро'
-			],
-			[
-				'code' => 'uah',
-				'name' => 'Гривна'
-			]
-		] );
-	}
-
-	/**
-	 * Update currency options
-	 *
-	 * @param array $data
-	 */
-	public static function upOptionsCurrency( array $data = [] ) {
-		if ( empty( $data ) ) {
-			$currencies = Api::getCurrenciesOasis();
-
-			foreach ( $currencies as $currency ) {
-				$data[] = [
-					'code' => $currency->code,
-					'name' => $currency->full_name
-				];
-			}
-		}
-
-		update_option( 'oasis_currencies', $data );
 	}
 
 	/**
@@ -1847,40 +1788,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
-	 * Check lock php process
-	 *
-	 * @return bool
-	 */
-	public static function checkLockProcess(): bool {
-		$lock = fopen( self::getFileNameLock(), 'w' );
-		if ( ! ( $lock && flock( $lock, LOCK_EX | LOCK_NB ) ) ) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * Get filename to lock
-	 * @return string|void
-	 */
-	public static function getFileNameLock() {
-		try {
-			$upload_dir = wp_upload_dir();
-			$dir_lock   = $upload_dir['basedir'] . '/oasis_lock';
-
-			if ( ! wp_mkdir_p( $dir_lock ) ) {
-				throw new Exception( 'Failed to create directory ' . $dir_lock );
-			}
-
-			return $dir_lock . '/lock_start.lock';
-		} catch ( Exception $e ) {
-			echo $e->getMessage() . PHP_EOL;
-			exit();
-		}
-	}
-
-	/**
 	 * Finding an array within an array.
 	 *
 	 * @param array $needle The array to be found
@@ -1899,81 +1806,5 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		}
 
 		return null;
-	}
-
-	/**
-	 * Get ids product by group_id
-	 *
-	 * @param string $groupId
-	 *
-	 * @return void
-	 */
-	public static function getIdsByGroupId( string $groupId ) {
-		$products = Api::getOasisProducts( Api::getCategoriesOasis(), [] );
-		$result   = [];
-
-		foreach ( $products as $product ) {
-			if ( $product->group_id == $groupId ) {
-				$result[] = $product->id;
-			}
-		}
-
-		print_r( '$args[\'ids\'] = \'' . implode( ',', $result ) . '\';' );
-		exit();
-	}
-
-	/**
-	 * Print message in console
-	 *
-	 * @param $str
-	 */
-	public static function cliMsg( $str ) {
-		echo '[' . date( 'Y-m-d H:i:s' ) . '] ' . $str . PHP_EOL;
-	}
-
-	/**
-	 * Debug function
-	 *
-	 * @param $data
-	 * @param bool $saveToLog
-	 */
-	public static function d( $data, bool $saveToLog = false ) {
-		if ( $saveToLog ) {
-			self::saveToLog( $data );
-		} else {
-			echo '<pre>' . print_r( $data, true ) . '</pre>';
-		}
-	}
-
-	/**
-	 * Debug function save to log
-	 *
-	 * @param  $data
-	 *
-	 * @return void
-	 */
-	protected static function saveToLog( $data ) {
-		try {
-			$upload_dir = wp_upload_dir();
-			$dir_lock   = $upload_dir['basedir'] . '/oasis_log/';
-
-			if ( ! wp_mkdir_p( $dir_lock ) ) {
-				throw new Exception( 'Failed to create directory ' . $dir_lock );
-			}
-
-			$filename = $dir_lock . date( 'Ymd_His' ) . '.txt';
-			$str      = print_r( $data, true ) . PHP_EOL;
-
-			if ( ! file_exists( $filename ) ) {
-				$fp = fopen( $filename, 'wb' );
-				fwrite( $fp, $str );
-				fclose( $fp );
-			} else {
-				file_put_contents( $filename, $str, FILE_APPEND | LOCK_EX );
-			}
-		} catch ( Exception $e ) {
-			echo $e->getMessage() . PHP_EOL;
-			exit();
-		}
 	}
 }

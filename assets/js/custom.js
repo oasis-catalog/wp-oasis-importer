@@ -1,10 +1,9 @@
 jQuery(function ($) {
-	let tree = new OasisHelper.Tree('#tree', {
+	let tree = new OaHelper.Tree('#tree', {
 		onBtnRelation (cat_id, cat_rel_id){
 			ModalRelation(cat_rel_id).then(item => tree.setRelationItem(cat_id, item));
 		}
 	});
-
 
 	// Initialize tooltips
 	$('[data-bs-toggle="tooltip"]').each(function () {
@@ -21,6 +20,18 @@ jQuery(function ($) {
 		document.execCommand("copy");
 	});
 
+	$('#cf_opt_category_rel').on('click', function(){
+		let el_value = $(this).find('input[type="hidden"]'),
+			el_label = $(this).find('.oa-category-rel'),
+			cat_rel_id = el_value.val();
+
+		cat_rel_id = cat_rel_id ? parseInt(cat_rel_id) : null;
+
+		ModalRelation(cat_rel_id).then(item => {
+			el_value.val(item ? item.value : '');
+			el_label.text(item ? item.lebelPath : '');
+		});
+	});
 
 
 	function addAnimatedBar(classStr) {
@@ -63,50 +74,38 @@ jQuery(function ($) {
 
 	// Up progress bar
 	function upAjaxProgressBar() {
-		jQuery(function ($) {
-			$.ajax({
-				url: ajaxurl,
-				type: 'POST',
-				data: {action: 'oasis_get_progress_bar'},
-				dataType: 'json',
-				success: function (response) {
-					if (response) {
-						if ('step_item' in response) {
-							document.getElementById('upAjaxStep').style.width = response.step_item + '%';
-							$('#upAjaxStep').html(response.step_item + '%');
-						}
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {action: 'oasis_get_progress_bar'},
+			dataType: 'json',
+			success: function (data) {
+				if (data) {
+					document.getElementById('upAjaxStep').style.width = data.p_step + '%';
+					$('#upAjaxStep').html(data.p_step + '%');
 
-						if ('total_item' in response) {
-							document.getElementById('upAjaxTotal').style.width = response.total_item + '%';
-							$('#upAjaxTotal').html(response.total_item + '%');
-						}
+					document.getElementById('upAjaxTotal').style.width = data.p_total + '%';
+					$('#upAjaxTotal').html(data.p_total + '%');
 
-						if ('progress_icon' in response) {
-							document.querySelector(".oasis-process-icon").innerHTML = response.progress_icon;
-						}
+					document.querySelector(".oasis-process-icon").innerHTML = data.progress_icon;
 
-						if ('progress_step_text' in response) {
-							document.querySelector('.oasis-process-text').innerHTML = response.progress_step_text;
-						}
+					document.querySelector('.oasis-process-text').innerHTML = data.step_text;
 
-						if ('status_progress' in response) {
-							if (response.status_progress == true) {
-								addAnimatedBar('progress-bar-striped progress-bar-animated');
-								setTimeout(upAjaxProgressBar, 5000);
-							} else {
-								removeAnimatedBar('progress-bar-striped progress-bar-animated');
-								setTimeout(upAjaxProgressBar, 60000);
-							}
-						}
+					if (data.is_process) {
+						addAnimatedBar('progress-bar-striped progress-bar-animated');
+						setTimeout(upAjaxProgressBar, 5000);
 					} else {
 						removeAnimatedBar('progress-bar-striped progress-bar-animated');
-						setTimeout(upAjaxProgressBar, 600000);
+						setTimeout(upAjaxProgressBar, 60000);
 					}
-				},
-				error: function (error) {
-					setTimeout(upAjaxProgressBar, 60000);
+				} else {
+					removeAnimatedBar('progress-bar-striped progress-bar-animated');
+					setTimeout(upAjaxProgressBar, 600000);
 				}
-			});
+			},
+			error: function (error) {
+				setTimeout(upAjaxProgressBar, 60000);
+			}
 		});
 	}
 
@@ -118,13 +117,13 @@ jQuery(function ($) {
 			$.post(ajaxurl, {
 				action: 'oasis_get_all_categories',
 			}, tree_content => {
-				let content = $('#oasis-relation');
+				let content = $('#oasis-relation').clone();
 				content.find('.modal-body').html(tree_content);
 
 				let btn_ok = content.find('.js-ok'),
 					btn_clear = content.find('.js-clear'),
 					modal = null,
-					tree = new OasisHelper.RadioTree(content.find('.oa-tree'), {
+					tree = new OaHelper.RadioTree(content.find('.oa-tree'), {
 							onChange: item => {
 								btn_ok.toggleClass('disabled', !item);
 							}
@@ -153,10 +152,3 @@ jQuery(function ($) {
 		});
 	}
 });
-
-
-function test(){
-	jQuery.post(ajaxurl, {
-		action: 'oasis_save_options',
-	});
-}

@@ -1,10 +1,12 @@
 <?php
 
-namespace OasisImport\Controller\Oasis;
+namespace OasisImport;
 
+use OasisImport\Config as OasisConfig;
 use Exception;
 
 class Api {
+	public static OasisConfig $cf;
 
 	/**
 	 * Get products oasis
@@ -15,42 +17,28 @@ class Api {
 	 * @return array
 	 */
 	public static function getOasisProducts( $categories, array $args = [] ): array {
-		$options = get_option( 'oasis_options' );
-
 		$args += [
-			'fieldset'    => 'full',
-			'extend'      => 'is_visible',
-			'showDeleted' => '1',
+			'fieldset'		=> 'full',
+			'extend'		=> 'is_visible',
+			'showDeleted'	=> '1',
+
+			'currency'		=> self::$cf->currency,
+			'no_vat'		=> self::$cf->is_no_vat,
+			'not_on_order'	=> self::$cf->is_not_on_order,
+			'price_from'	=> self::$cf->price_from,
+			'price_to'		=> self::$cf->price_to,
+			'rating'		=> self::$cf->rating,
+			'moscow'		=> self::$cf->is_wh_moscow,
+			'europe'		=> self::$cf->is_wh_europe,
+			'remote'		=> self::$cf->is_wh_remote,
+			'category'		=> implode(',', empty(self::$cf->categories) ? Main::getOasisMainCategories( $categories ) : self::$cf->categories)
 		];
 
-		$data = [
-			'currency'     => $options['oasis_currency'] ?? 'rub',
-			'no_vat'       => $options['oasis_no_vat'] ?? 0,
-			'not_on_order' => $options['oasis_not_on_order'] ?? null,
-			'price_from'   => $options['oasis_price_from'] ?? null,
-			'price_to'     => $options['oasis_price_to'] ?? null,
-			'rating'       => $options['oasis_rating'] ?? null,
-			'moscow'       => $options['oasis_warehouse_moscow'] ?? null,
-			'europe'       => $options['oasis_warehouse_europe'] ?? null,
-			'remote'       => $options['oasis_remote_warehouse'] ?? null,
-		];
-
-		if ( empty( $options['oasis_categories'] ) ) {
-			$categoryIds = Main::getOasisMainCategories( $categories );
-		} else {
-			$categoryIds = $options['oasis_categories'];
-		}
-
-		$args += [
-			'category' => implode( ',', $categoryIds ),
-		];
-
-		foreach ( $data as $key => $value ) {
-			if ( $value ) {
-				$args[ $key ] = $value;
+		foreach ($args as $key => $value) {
+			if (empty($value)) {
+				unset($args[$key]);
 			}
 		}
-		unset( $categoryIds, $category, $data, $key, $value );
 
 		$products = self::curlQuery( 'products', $args );
 
@@ -84,37 +72,25 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function getStatProducts( $categories ) {
-		$options = get_option( 'oasis_options' );
-		$args    = [
-			'showDeleted' => 1
+		$args = [
+			'showDeleted'	=> 1,
+			'not_on_order'	=> self::$cf->is_not_on_order,
+			'price_from'	=> self::$cf->price_from,
+			'price_to'		=> self::$cf->price_to,
+			'rating'		=> self::$cf->rating,
+			'moscow'		=> self::$cf->is_wh_moscow,
+			'europe'		=> self::$cf->is_wh_europe,
+			'remote'		=> self::$cf->is_wh_remote,
+			'category'		=> implode(',', empty(self::$cf->categories) ? Main::getOasisMainCategories( $categories ) : self::$cf->categories)
 		];
-
-		$data = [
-			'not_on_order' => $options['oasis_not_on_order'] ?? null,
-			'price_from'   => $options['oasis_price_from'] ?? null,
-			'price_to'     => $options['oasis_price_to'] ?? null,
-			'rating'       => ! empty( $options['oasis_rating'] ) ? $options['oasis_rating'] : '0,1,2,3,4,5',
-			'moscow'       => $options['oasis_warehouse_moscow'] ?? null,
-			'europe'       => $options['oasis_warehouse_europe'] ?? null,
-			'remote'       => $options['oasis_remote_warehouse'] ?? null,
-		];
-
-		if ( empty( $options['oasis_categories'] ) ) {
-			$data['category'] = implode( ',', Main::getOasisMainCategories( $categories ) );
-		} else {
-			$data['category'] = implode( ',', $options['oasis_categories'] );
-		}
-
-		foreach ( $data as $key => $value ) {
-			if ( $value ) {
-				$args[ $key ] = $value;
+		foreach ($args as $key => $value) {
+			if (empty($value)) {
+				unset($args[$key]);
 			}
 		}
-		unset( $data, $key, $value );
 
 		try {
 			$result = self::curlQuery( 'stat', $args );
-
 			if ( empty( $result ) ) {
 				throw new Exception( 'API error. No stat data.' );
 			}
@@ -204,14 +180,12 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function curlSend( string $type, array $data ) {
-		$options = get_option( 'oasis_options' );
-
-		if ( empty( $options['oasis_api_key'] ) ) {
+		if (empty(self::$cf->api_key)){
 			return [];
 		}
 
 		$args_pref = [
-			'key'    => $options['oasis_api_key'],
+			'key'    => self::$cf->api_key,
 			'format' => 'json',
 		];
 
@@ -257,17 +231,16 @@ class Api {
 	 * @return array|mixed
 	 */
 	public static function curlQuery( $type, array $args = [], bool $sleep = true ) {
-		$options = get_option( 'oasis_options' );
-
-		if ( empty( $options['oasis_api_key'] ) ) {
+		if (empty(self::$cf->api_key)){
 			return [];
 		}
 
 		$args_pref = [
-			'key'    => $options['oasis_api_key'],
+			'key'    => self::$cf->api_key,
 			'format' => 'json',
 		];
-		$args      = array_merge( $args_pref, $args );
+		$args = array_merge($args_pref, $args);
+
 
 		try {
 			$ch = curl_init();
@@ -293,11 +266,8 @@ class Api {
 			} elseif ( $http_code != 200 ) {
 				throw new Exception( 'Error. Code: ' . $http_code );
 			}
-
-			unset( $content, $options, $args_pref, $args, $type, $ch, $http_code );
 		} catch ( Exception $e ) {
 			echo $e->getMessage() . PHP_EOL;
-
 			return [];
 		}
 
