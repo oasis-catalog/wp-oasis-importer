@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce. Выгрузка заказов из Woocommerce в oasiscatalog. Виджет редактирования нанесения.
-Version: 2.4.6
+Version: 2.4.7
 Text Domain: wp-oasis-importer
 License: GPL2
 
@@ -47,7 +47,7 @@ function oasis_activate() {
 		wp_die( 'Плагин Oasiscatalog - Product Importer не может работать без Woocommerce <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Вернуться на страницу плагинов</a>' );
 	}
 
-	$cf = new OasisConfig();
+	$cf = OasisConfig::instance();
 	$cf->activate();
 
 	global $wpdb;
@@ -74,7 +74,7 @@ function oasis_activate() {
 register_deactivation_hook( __FILE__, 'oasis_deactivate' );
 
 function oasis_deactivate() {
-	$cf = new OasisConfig();
+	$cf = OasisConfig::instance();
 	$cf->deactivate();
 }
 
@@ -92,7 +92,7 @@ function oasis_admin_validations() {
  * custom option and settings
  */
 function oasis_settings_init() {
-	$cf = new OasisConfig([
+	$cf = OasisConfig::instance([
 		'init' => true
 	]);
 
@@ -355,6 +355,14 @@ function oasis_settings_init() {
 			'oasis',
 			'oasis_section_additionally'
 		);
+
+		add_settings_field(
+			'is_cdn_photo',
+			__( 'Use CDN image server', 'wp-oasis-importer' ),
+			fn() => oasis_sf_checbox('is_cdn_photo', $cf->is_cdn_photo, __( 'Display product photos without uploading, saves space on hosting', 'wp-oasis-importer' )),
+			'oasis',
+			'oasis_section_additionally'
+		);
 	}
 }
 
@@ -383,7 +391,7 @@ function oasis_sanitize_data( $options ) {
 		return get_option('oasis_options');
 	}
 
-	$cf = new OasisConfig([
+	$cf = OasisConfig::instance([
 		'init' => true
 	]);
 
@@ -461,7 +469,7 @@ if ( is_admin() ) {
 
 		settings_errors( 'oasis_messages' );
 
-		$cf = new OasisConfig([
+		$cf = OasisConfig::instance([
 			'init' => true
 		]);
 		$optBar = $cf->getOptBar();
@@ -644,7 +652,7 @@ add_filter( 'plugin_action_links', function ( $links, $file ) {
 add_action( 'wp_ajax_oasis_get_progress_bar', 'oasis_get_progress_bar' );
 
 function oasis_get_progress_bar() {
-	$cf = new OasisConfig([
+	$cf = OasisConfig::instance([
 		'init' => true
 	]);
 	$optBar = $cf->getOptBar();
@@ -694,3 +702,66 @@ function oasis_get_all_categories() {
 	wp_die();
 }
 add_action( 'wp_ajax_oasis_get_all_categories', 'oasis_get_all_categories' );
+
+
+add_action( 'init', 'oasis_init_filter' );
+
+function oasis_init_filter() {
+	$cf = OasisConfig::instance([
+		'init' => true
+	]);
+
+	if($cf->is_cdn_photo){
+		add_filter( 'image_downsize', 'oasis_filter_image_downsize', 10, 3);
+
+		function oasis_filter_image_downsize($downsize, $id, $size = 'medium') {
+			if($downsize){
+				return $downsize;
+			}
+
+			$post = get_post( $id );
+			if (!$post || 'attachment' !== $post->post_type) {
+				return false;
+			}
+
+			$oasis_id = Main::getOasisProductIdByPostId($post->post_parent);
+			if(!$oasis_id){
+				return false;
+			}
+
+			$imagedata = wp_get_attachment_metadata($id);
+			if (!is_array($imagedata) || empty($imagedata['sizes'])) {
+				return false;
+			}
+
+			if (is_array($size)) {
+				$size_data = $imagedata['sizes']['medium'] ?? [];
+			}
+			else {
+				$size_data = $imagedata['sizes'][$size] ?? $imagedata['sizes']['medium'] ?? [];
+			}
+			
+			if(empty($size_data['cdn'])){
+				return false;
+			}
+
+			if($size_data){
+				return [
+					$size_data['cdn'],
+					$size_data['width'],
+					$size_data['height'],
+					0
+				];
+			}
+			else {
+				return [
+					$imagedata['cdn'],
+					$imagedata['width'],
+					$imagedata['height'],
+					0
+				];
+			}
+			return false;
+		}
+	}
+}

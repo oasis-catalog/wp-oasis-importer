@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Oasiscatalog - Product Importer 2.4.6\n"
+"Project-Id-Version: Oasiscatalog - Product Importer 2.4.7\n"
 "Report-Msgid-Bugs-To: https://www.oasiscatalog.com\n"
 "Last-Translator: Nikolay Visheratin\n"
 "Language-Team: https://www.oasiscatalog.com\n"
-"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-27T09:02:46+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Language: ru\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
 #: wp-oasis-importer.php:103
@@ -25,7 +25,7 @@ msgid "API User ID"
 msgstr "ID пользователя"
 
 #: wp-oasis-importer.php:131
-#: wp-oasis-importer.php:379
+#: wp-oasis-importer.php:387
 msgid "Specify the API key!"
 msgstr "Укажите API ключ!"
 
@@ -38,7 +38,7 @@ msgid "Currency"
 msgstr "Валюта"
 
 #: wp-oasis-importer.php:153
-#: wp-oasis-importer.php:591
+#: wp-oasis-importer.php:599
 msgid "Categories"
 msgstr "Категории"
 
@@ -146,6 +146,14 @@ msgstr "Обновление фото"
 msgid "Enable update of outdated photos"
 msgstr "Включить обновление устаревших фото"
 
+#: wp-oasis-importer.php:361
+msgid "Use CDN image server"
+msgstr "Использовать CDN сервер изображений"
+
+#: wp-oasis-importer.php:362
+msgid "Display product photos without uploading, saves space on hosting"
+msgstr "Отображать фото товаров без загрузки, экономит место на хостинге"
+
 #: wp-oasis-importer.php:113
 msgid "After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website"
 msgstr "После указания ключа можно будет настроить импорт товаров в Woocommerce с сайта Oasis"
@@ -170,42 +178,42 @@ msgstr "Только хиты"
 msgid "Discount only"
 msgstr "Только со скидкой"
 
-#: wp-oasis-importer.php:411
-#: wp-oasis-importer.php:412
+#: wp-oasis-importer.php:419
+#: wp-oasis-importer.php:420
 msgid "Oasis Import"
 msgstr "Оазис импорт"
 
-#: wp-oasis-importer.php:459
+#: wp-oasis-importer.php:467
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: wp-oasis-importer.php:482
-#: wp-oasis-importer.php:663
+#: wp-oasis-importer.php:490
+#: wp-oasis-importer.php:671
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: wp-oasis-importer.php:491
+#: wp-oasis-importer.php:499
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: wp-oasis-importer.php:507
-#: wp-oasis-importer.php:655
+#: wp-oasis-importer.php:515
+#: wp-oasis-importer.php:663
 #, php-format
 msgid "%s step in progress out of %s. Current step status"
 msgstr "Выполняется %s шаг из %s. Статус текущего шага"
 
-#: wp-oasis-importer.php:509
-#: wp-oasis-importer.php:657
+#: wp-oasis-importer.php:517
+#: wp-oasis-importer.php:665
 #, php-format
 msgid "Next step %s of %s."
 msgstr "Следующий шаг %s из %s."
 
-#: wp-oasis-importer.php:528
+#: wp-oasis-importer.php:536
 #, php-format
 msgid "Last import completed: %s"
 msgstr "Последний импорт завершен: %s"
 
-#: wp-oasis-importer.php:538
+#: wp-oasis-importer.php:546
 msgid ""
 "To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>\n"
 "<strong>Do not disclose this information!</strong>"
@@ -213,32 +221,32 @@ msgstr ""
 "Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи: <br/>\n"
 "<strong>Не разглашайте эти данные!</strong>"
 
-#: wp-oasis-importer.php:544
+#: wp-oasis-importer.php:552
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: wp-oasis-importer.php:549
-#: wp-oasis-importer.php:562
+#: wp-oasis-importer.php:557
+#: wp-oasis-importer.php:570
 msgid "Copy"
 msgstr "Копировать"
 
-#: wp-oasis-importer.php:557
+#: wp-oasis-importer.php:565
 msgid "Renewal of balances 1 time in 30 minutes"
 msgstr "Обновление остатков 1 раз в 30 минут"
 
-#: wp-oasis-importer.php:581
+#: wp-oasis-importer.php:589
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: wp-oasis-importer.php:596
+#: wp-oasis-importer.php:604
 msgid "Clear"
 msgstr "Очистить"
 
-#: wp-oasis-importer.php:597
+#: wp-oasis-importer.php:605
 msgid "Select"
 msgstr "Выбрать"
 
-#: wp-oasis-importer.php:638
+#: wp-oasis-importer.php:646
 msgid "Settings"
 msgstr "Настройки"
 

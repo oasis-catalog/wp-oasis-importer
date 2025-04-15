@@ -71,7 +71,7 @@ class Api {
 	 *
 	 * @return array|mixed
 	 */
-	public static function getStatProducts( $categories ) {
+	public static function getStatProducts($categories) {
 		$args = [
 			'showDeleted'	=> 1,
 			'not_on_order'	=> self::$cf->is_not_on_order,

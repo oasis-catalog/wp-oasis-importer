@@ -239,17 +239,15 @@ class Main {
 					$wcProduct->set_default_attributes( $defaultAttr );
 				}
 
-				if (self::$cf->is_up_photo) {
-					if ( self::checkImages( $oasisProduct->images, $wcProduct ) === false ) {
-						self::deleteImgInProduct( $wcProduct );
-						$images = self::processingPhoto( $oasisProduct->images, $productId );
-						$wcProduct->set_image_id( array_shift( $images ) );
-						$wcProduct->set_gallery_image_ids( $images );
-					}
+				if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcProduct ) === false) {
+					self::deleteImgInProduct( $wcProduct );
+					$images = self::processingPhoto( $oasisProduct->images, $productId );
+					$wcProduct->set_image_id( array_shift( $images ) );
+					$wcProduct->set_gallery_image_ids( $images );
 				}
 
 				$wcProduct->save();
-				self::$cf->log('Обновлен товар id ' . $oasisProduct->id);
+				self::$cf->log('Обновлен товар OAId='.$oasisProduct->id.' add WPId=' . $productId);
 
 				return true;
 			} else {
@@ -347,17 +345,15 @@ class Main {
 				$wcVariation->set_attributes( $attributes );
 			}
 
-			if (self::$cf->is_up_photo) {
-				if ( self::checkImages( $oasisProduct->images, $wcVariation ) === false ) {
-					self::deleteImgInProduct( $wcVariation );
-					$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
-					$wcVariation->set_image_id( array_shift( $images ) );
-				}
+			if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcVariation ) === false) {
+				self::deleteImgInProduct( $wcVariation );
+				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
+				$wcVariation->set_image_id( array_shift( $images ) );
 			}
 
 			$wcVariation->save();
 
-			self::$cf->log('Обновлен вариант id ' . $oasisProduct->id);
+			self::$cf->log('Обновлен вариант OAId='.$oasisProduct->id.' add WPId=' . $dbVariation['post_id']);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();
@@ -495,7 +491,6 @@ class Main {
 	 *
 	 * @param $product
 	 * @param $oasisCategories
-	 * @param $relCategories
 	 *
 	 * @return array
 	 */
@@ -1096,35 +1091,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
-	 * Get categories for relation options
-	 *
-	 * @param $oasis_cat_relation
-	 *
-	 * @return array
-	 */
-	public static function getRelationCategories( $oasis_cat_relation = []  ): array {
-		$result = [];
-		if($oasis_cat_relation){
-			foreach ( $oasis_cat_relation as $relation ) {
-				$relation = 	explode('_', $relation);
-				$oasis_cat_id = (int)$relation[0];
-				$cat_id =       (int)$relation[1];
-
-				$term = get_term_by( 'id', $cat_id, 'product_cat' );
-
-				if($term){
-					$result[$oasis_cat_id] = [
-						'id' => $term->term_id,
-						'rel_label' => self::getTermParentsLabel($term->term_id)
-					];
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	/**
 	 * Get terms by oasis id category
 	 *
 	 * @param $categoryId
@@ -1175,19 +1141,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
-	 * Get string parents for term_id
-	 *
-	 * @param $term_id
-	 *
-	 * @return string
-	 */
-	public static function getTermParentsLabel($term_id): string {
-		$list = array_map(fn($x) => $x->name, self::getTermParents($term_id));
-		return implode(' / ', $list);
-	}
-
-
-	/**
 	 * Search object by id
 	 *
 	 * @param $data
@@ -1229,23 +1182,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 
 		return $result;
 	}
-
-	// /**
-	//  * Update progress bar
-	//  *
-	//  * @param $bar
-	//  *
-	//  * @return mixed
-	//  */
-	// public static function upProgressBar( $bar ) {
-	// 	$bar['item'] ++;
-
-	// 	if ( isset( $bar['step_total'] ) ) {
-	// 		$bar['step_item'] ++;
-	// 	}
-
-	// 	return $bar;
-	// }
 
 	/**
 	 * Get categories level 1
@@ -1366,13 +1302,13 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 *
 	 * @return string
 	 */
-	public static function buildTreeRadioCats( $data, array $checked_id = null, int $parent_id = 0 ): string {
+	public static function buildTreeRadioCats( $data, ?array $checked_id = null, int $parent_id = 0 ): string {
 		$treeItem = '';
 		if ( ! empty( $data[ $parent_id ] ) ) {
 			foreach($data[ $parent_id ] as $item){
 				$checked = $checked_id === $item['id'];
 
-				$treeItemChilds = self::buildTreeRadioCats( $data, $checkedArr, $item['id'] );
+				$treeItemChilds = self::buildTreeRadioCats( $data, $checked_id, $item['id'] );
 
 				if(empty($treeItemChilds)){
 					$treeItem .= '<div class="oa-tree-leaf">
@@ -1609,64 +1545,119 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 *
 	 * @param $images
 	 * @param $product_id
-	 * @param null $parentSizeId
 	 *
 	 * @return array
 	 */
-	public static function processingPhoto( $images, $product_id, $parentSizeId = null ): array {
-		$upload_dir = wp_upload_dir();
-
-		require_once( ABSPATH . 'wp-admin/includes/image.php' );
-
+	public static function processingPhoto($images, $product_id): array {
 		$attachIds = [];
-		if ( $images ) {
-			foreach ( $images as $image ) {
-				if ( ! isset( $image->superbig ) ) {
+		if ($images) {
+			$image_subsizes = wp_get_registered_image_subsizes();
+			$upload_dir = wp_upload_dir();
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+
+			foreach ($images as $image) {
+				if (!isset($image->superbig)) {
 					continue;
 				}
 
-				if ( $parentSizeId ) {
-					$thumbnail_id = get_post_thumbnail_id( $parentSizeId );
-				} else {
-					$thumbnail_id = null;
+				$filename     = basename($image->superbig);
+				$existImageId = self::getAttachmentIdByTitle($filename);
+
+				if ($existImageId) {
+					$attachIds[] = $existImageId;
+					continue;
 				}
 
-				if ( empty( $thumbnail_id ) ) {
-					$filename     = basename( $image->superbig );
-					$existImageId = self::getAttachmentIdByTitle( $filename );
+				$wp_filetype = wp_check_filetype($filename);
 
-					if ( $existImageId ) {
-						$attachIds[] = $existImageId;
-						continue;
+				if(self::$cf->is_cdn_photo){
+					$attach_sizes = [];
+
+					foreach($image_subsizes as $size => $size_data){
+						if($size_data['width'] <= OasisConfig::IMG_SIZE_THUMBNAIL[0]){
+							$attach_sizes[$size] = [
+								'file' => '',
+								'cdn' => $image->thumbnail,
+								'width' => OasisConfig::IMG_SIZE_THUMBNAI[0],
+								'height' => OasisConfig::IMG_SIZE_THUMBNAI[1],
+								'mime-type' => $wp_filetype['type']
+							];
+							continue;
+						}
+						else if($size_data['width'] <= OasisConfig::IMG_SIZE_SMALL[0]) {
+							$attach_sizes[$size] = [
+								'file' => '',
+								'cdn' => $image->small,
+								'width' => OasisConfig::IMG_SIZE_SMALL[0],
+								'height' => OasisConfig::IMG_SIZE_SMALL[1],
+								'mime-type' => $wp_filetype['type']
+							];
+							continue;
+						}
+						else if($size_data['width'] <= OasisConfig::IMG_SIZE_BIG[0]) {
+							$attach_sizes[$size] = [
+								'file' => '',
+								'cdn' => $image->big,
+								'width' => OasisConfig::IMG_SIZE_BIG[0],
+								'height' => OasisConfig::IMG_SIZE_BIG[1],
+								'mime-type' => $wp_filetype['type']
+							];
+							continue;
+						}
+						else {
+							$attach_sizes[$size] = [
+								'file' => '',
+								'cdn' => $image->superbig,
+								'width' => OasisConfig::IMG_SIZE_SUPERBIG[0],
+								'height' => OasisConfig::IMG_SIZE_SUPERBIG[1],
+								'mime-type' => $wp_filetype['type']
+							];
+						}
 					}
 
-					$image_data = file_get_contents( $image->superbig );
+					$attachment = [
+						'post_mime_type' => $wp_filetype['type'],
+						'post_title'     => sanitize_file_name( $filename ),
+						'post_content'   => '',
+						'post_status'    => 'inherit',
+						'post_parent'    => $product_id,
+					];
+					$attach_id   = wp_insert_attachment($attachment);
+					$attach_data = array(
+						'width'    => OasisConfig::IMG_SIZE_SUPERBIG[0],
+						'height'   => OasisConfig::IMG_SIZE_SUPERBIG[1],
+						'file'     => '1',
+						'sizes'    => $attach_sizes,
+					);
 
-					if ( $image_data ) {
-						if ( wp_mkdir_p( $upload_dir['path'] ) ) {
+					wp_update_attachment_metadata($attach_id, $attach_data);
+					$attachIds[] = $attach_id;
+				}
+				else {
+					$image_data = file_get_contents($image->superbig);
+
+					if ($image_data) {
+						if (wp_mkdir_p( $upload_dir['path'])) {
 							$file = $upload_dir['path'] . '/' . $filename;
 						} else {
 							$file = $upload_dir['basedir'] . '/' . $filename;
 						}
 
-						file_put_contents( $file, $image_data );
-						$wp_filetype = wp_check_filetype( $filename );
+						file_put_contents($file, $image_data);
 
 						$attachment = [
 							'post_mime_type' => $wp_filetype['type'],
-							'post_title'     => sanitize_file_name( $filename ),
+							'post_title'     => sanitize_file_name($filename),
 							'post_content'   => '',
 							'post_status'    => 'inherit',
 							'post_parent'    => $product_id,
 						];
 
-						$attach_id   = wp_insert_attachment( $attachment, $file );
-						$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
-						wp_update_attachment_metadata( $attach_id, $attach_data );
+						$attach_id   = wp_insert_attachment($attachment, $file);
+						$attach_data = wp_generate_attachment_metadata($attach_id, $file);
+						wp_update_attachment_metadata($attach_id, $attach_data);
 						$attachIds[] = $attach_id;
 					}
-				} else {
-					$attachIds[] = $thumbnail_id;
 				}
 			}
 		}

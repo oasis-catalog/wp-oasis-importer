@@ -2,6 +2,7 @@
 
 /** Set up WordPress environment */
 require_once( __DIR__ . '/../../../wp-load.php' );
+require_once( __DIR__ . '/src/lib/Api.php' );
 require_once( __DIR__ . '/src/lib/Main.php' );
 require_once( __DIR__ . '/src/lib/Config.php' );
 require_once( __DIR__ . '/src/lib/Cli.php' );

@@ -7,6 +7,11 @@ use OasisImport\Api;
 
 
 class Config {
+	public const IMG_SIZE_THUMBNAIL = 	[80, 60];
+	public const IMG_SIZE_SMALL = 		[220, 165];
+	public const IMG_SIZE_BIG = 		[640, 480];
+	public const IMG_SIZE_SUPERBIG =	[1000, 750];
+
 	public bool $is_debug = false;
 	public bool $is_debug_log = false;
 	public string $upload_path;
@@ -50,9 +55,30 @@ class Config {
 	public bool $is_disable_sales;
 	public bool $is_branding;
 	public bool $is_up_photo;
+	public bool $is_cdn_photo;
 
+	private bool $is_init = false;
 	private bool $is_init_rel = false;
 
+	private static $instance;
+
+	public static function instance($opt = []) {
+		if (!isset(self::$instance)) {
+			self::$instance = new self($opt);
+		} else {
+			if(!empty($opt['init'])){
+				self::$instance->init();
+			}
+			if(!empty($opt['init_rel'])){
+				self::$instance->initRelation();
+			}
+			if(!empty($opt['load_currencies'])){
+				self::$instance->loadCurrencies();
+			}
+		}
+
+		return self::$instance;
+	}
 
 	public function __construct($opt = []) {
 		$upload_dir = wp_upload_dir();
@@ -77,6 +103,10 @@ class Config {
 	}
 
 	public function init() {
+		if($this->is_init) {
+			return;
+		}
+
 		$this->progress = get_option('oasis_progress', [
 			'item' => 0,			// count updated products
 			'total' => 0,			// count all products
@@ -136,7 +166,9 @@ class Config {
 		$this->is_disable_sales =		!empty($opt['is_disable_sales']);
 		$this->is_branding =			!empty($opt['is_branding']);
 		$this->is_up_photo =			!empty($opt['is_up_photo']);
+		$this->is_cdn_photo =			!empty($opt['is_cdn_photo']);
 
+		$this->is_init = true;
 	}
 
 	public function initRelation() {
@@ -237,7 +269,7 @@ class Config {
 			'p_step' =>		$p_step,
 			'step' =>		$opt['step'] ?? 0,
 			'steps' =>		($this->limit > 0 && !empty($opt['total'])) ? (ceil($opt['total'] / $this->limit)) : 0,
-			'date' =>		$opt['date_step']
+			'date' =>		$opt['date_step'] ?? ''
 		];
 	}
 
