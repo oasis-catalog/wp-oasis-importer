@@ -132,7 +132,7 @@ class Api {
 	 *
 	 * @return array
 	 */
-	public static function getCurrenciesOasis( bool $sleep = true ): array {
+	public static function getCurrenciesOasis(bool $sleep = true): array {
 		return self::curlQuery( 'currencies', [], $sleep );
 	}
 
@@ -143,6 +143,18 @@ class Api {
 	 */
 	public static function getStockOasis(): array {
 		return self::curlQuery( 'stock', [ 'fields' => 'article,stock,id,stock-remote' ] );
+	}
+
+	/**
+	 * Get brands
+	 *
+	 * @param bool $sleep
+	 * 
+	 * @return array
+	 */
+	public static function getBrands(bool $sleep = true): array
+	{
+		return self::curlQuery('brands', [], $sleep, 'v3');
 	}
 
 	/**
@@ -227,10 +239,11 @@ class Api {
 	 * @param $type
 	 * @param array $args
 	 * @param bool $sleep
+	 * @param string $version
 	 *
 	 * @return array|mixed
 	 */
-	public static function curlQuery( $type, array $args = [], bool $sleep = true ) {
+	public static function curlQuery($type, array $args = [], bool $sleep = true, string $version = 'v4') {
 		if (empty(self::$cf->api_key)){
 			return [];
 		}
@@ -244,29 +257,29 @@ class Api {
 
 		try {
 			$ch = curl_init();
-			curl_setopt( $ch, CURLOPT_URL, 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args ) );
-			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-			$content = curl_exec( $ch );
+			curl_setopt($ch, CURLOPT_URL, 'https://api.oasiscatalog.com/'.$version.'/'.$type.'?'. http_build_query($args));
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			$content = curl_exec($ch);
 
 			if ( $content === false ) {
-				throw new Exception( 'Error: ' . curl_error( $ch ) );
+				throw new Exception('Error: ' . curl_error($ch));
 			} else {
-				$result = json_decode( $content );
+				$result = json_decode($content);
 			}
 
-			$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-			curl_close( $ch );
+			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
 
-			if ( $sleep ) {
-				sleep( 1 );
+			if ($sleep) {
+				sleep(1);
 			}
 
-			if ( $http_code === 401 ) {
-				throw new Exception( 'Error Unauthorized. Invalid API key!' );
-			} elseif ( $http_code != 200 ) {
-				throw new Exception( 'Error. Code: ' . $http_code );
+			if ($http_code === 401) {
+				throw new Exception('Error Unauthorized. Invalid API key!');
+			} elseif ($http_code != 200) {
+				throw new Exception('Error. Code: ' . $http_code);
 			}
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			echo $e->getMessage() . PHP_EOL;
 			return [];
 		}

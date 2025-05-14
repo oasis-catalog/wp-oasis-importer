@@ -331,6 +331,13 @@ function oasis_settings_init() {
 			'oasis',
 			'oasis_section_additionally'
 		);
+		add_settings_field(
+			'is_brands',
+			__( 'Enable brands', 'wp-oasis-importer' ),
+			fn() => oasis_sf_checbox('is_brands', $cf->is_brands, __( 'Enable brands on imported products', 'wp-oasis-importer' )),
+			'oasis',
+			'oasis_section_additionally'
+		);
 
 		add_settings_field(
 			'is_disable_sales',
@@ -351,7 +358,7 @@ function oasis_settings_init() {
 		add_settings_field(
 			'is_up_photo',
 			__( 'Up photo', 'wp-oasis-importer' ),
-			fn() => oasis_sf_checbox('is_up_photo', $cf->is_up_photo, __( 'Enable update of outdated photos', 'wp-oasis-importer' )),
+			fn() => oasis_sf_checbox('is_up_photo', $cf->is_up_photo, __( 'Enable update photos', 'wp-oasis-importer' )),
 			'oasis',
 			'oasis_section_additionally'
 		);
@@ -359,7 +366,14 @@ function oasis_settings_init() {
 		add_settings_field(
 			'is_cdn_photo',
 			__( 'Use CDN image server', 'wp-oasis-importer' ),
-			fn() => oasis_sf_checbox('is_cdn_photo', $cf->is_cdn_photo, __( 'Display product photos without uploading, saves space on hosting', 'wp-oasis-importer' )),
+			fn() => oasis_sf_checbox('is_cdn_photo', $cf->is_cdn_photo, __( 'Display product photos without uploading, saves space on hosting. May not work correctly with some themes and plugins', 'wp-oasis-importer' )),
+			'oasis',
+			'oasis_section_additionally'
+		);
+		add_settings_field(
+			'is_fast_import',
+			__( 'Quick import of products', 'wp-oasis-importer' ),
+			fn() => oasis_sf_checbox('is_fast_import', $cf->is_fast_import, __( 'Import without photos. After a full upload of all products, the option is turned off', 'wp-oasis-importer' )),
 			'oasis',
 			'oasis_section_additionally'
 		);

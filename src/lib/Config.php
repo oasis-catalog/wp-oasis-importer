@@ -52,10 +52,12 @@ class Config {
 	public bool $is_wh_remote;
 
 	public bool $is_comments;
+	public bool $is_brands;
 	public bool $is_disable_sales;
 	public bool $is_branding;
 	public bool $is_up_photo;
 	public bool $is_cdn_photo;
+	public bool $is_fast_import;
 
 	private bool $is_init = false;
 	private bool $is_init_rel = false;
@@ -163,10 +165,12 @@ class Config {
 		$this->is_wh_europe =			!empty($opt['is_wh_europe']);
 		$this->is_wh_remote =			!empty($opt['is_wh_remote']);
 		$this->is_comments =			!empty($opt['is_comments']);
+		$this->is_brands =				!empty($opt['is_brands']);
 		$this->is_disable_sales =		!empty($opt['is_disable_sales']);
 		$this->is_branding =			!empty($opt['is_branding']);
 		$this->is_up_photo =			!empty($opt['is_up_photo']);
 		$this->is_cdn_photo =			!empty($opt['is_cdn_photo']);
+		$this->is_fast_import =			!empty($opt['is_fast_import']);
 
 		$this->is_init = true;
 	}
@@ -214,6 +218,7 @@ class Config {
 		$dt = (new \DateTime())->format('d.m.Y H:i:s');
 		$this->progress['date_step'] = $dt;
 
+		$is_stop_fast_import = false;
 		if($this->limit > 0){
 			$this->progress['item'] += $this->progress['step_item'];
 
@@ -221,14 +226,22 @@ class Config {
 				$this->progress['step'] = 0;
 				$this->progress['item'] = 0;
 				$this->progress['date'] = $dt;
+				$is_stop_fast_import = true;
 			}
 			else{
 				$this->progress['step']++;
 			}
 		}
 		else{
-			$this->progress['date'] = $dt;
 			$this->progress['item'] = 0;
+			$this->progress['date'] = $dt;
+			$is_stop_fast_import = true;
+		}
+
+		if($this->is_fast_import && $is_stop_fast_import){
+			$_opt = get_option('oasis_options', []);
+			$_opt['is_fast_import'] = false;
+			update_option('oasis_options', $_opt);
 		}
 
 		$this->progress['step_item'] = 0;

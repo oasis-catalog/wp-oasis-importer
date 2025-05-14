@@ -25,7 +25,7 @@ msgid "API User ID"
 msgstr "ID пользователя"
 
 #: wp-oasis-importer.php:131
-#: wp-oasis-importer.php:387
+#: wp-oasis-importer.php:401
 msgid "Specify the API key!"
 msgstr "Укажите API ключ!"
 
@@ -38,7 +38,7 @@ msgid "Currency"
 msgstr "Валюта"
 
 #: wp-oasis-importer.php:153
-#: wp-oasis-importer.php:599
+#: wp-oasis-importer.php:613
 msgid "Categories"
 msgstr "Категории"
 
@@ -122,37 +122,37 @@ msgstr "Включить отзывы"
 msgid "Enable commenting on imported products"
 msgstr "Включить комментирование импортируемых товаров"
 
-#: wp-oasis-importer.php:337
+#: wp-oasis-importer.php:344
 msgid "Hide discounts"
 msgstr "Скрыть скидки"
 
-#: wp-oasis-importer.php:338
+#: wp-oasis-importer.php:345
 msgid "Hide \"old\" price in products"
 msgstr "Скрыть \"старую\" цену в товарах"
 
-#: wp-oasis-importer.php:345
+#: wp-oasis-importer.php:352
 msgid "Widget branding"
 msgstr "Виджет нанесения"
 
-#: wp-oasis-importer.php:346
+#: wp-oasis-importer.php:353
 msgid "Enable branding widget on checkout page"
 msgstr "Включить виджет нанесения на странице оформления заказа"
 
-#: wp-oasis-importer.php:353
+#: wp-oasis-importer.php:360
 msgid "Up photo"
 msgstr "Обновление фото"
 
-#: wp-oasis-importer.php:354
-msgid "Enable update of outdated photos"
-msgstr "Включить обновление устаревших фото"
-
 #: wp-oasis-importer.php:361
+msgid "Enable update photos"
+msgstr "Включить обновление фото"
+
+#: wp-oasis-importer.php:368
 msgid "Use CDN image server"
 msgstr "Использовать CDN сервер изображений"
 
-#: wp-oasis-importer.php:362
-msgid "Display product photos without uploading, saves space on hosting"
-msgstr "Отображать фото товаров без загрузки, экономит место на хостинге"
+#: wp-oasis-importer.php:369
+msgid "Display product photos without uploading, saves space on hosting. May not work correctly with some themes and plugins"
+msgstr "Отображать фото товаров без загрузки, экономит место на хостинге. Возможна некорректная работа с некоторыми темами и плагинами"
 
 #: wp-oasis-importer.php:113
 msgid "After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website"
@@ -178,42 +178,42 @@ msgstr "Только хиты"
 msgid "Discount only"
 msgstr "Только со скидкой"
 
-#: wp-oasis-importer.php:419
-#: wp-oasis-importer.php:420
+#: wp-oasis-importer.php:433
+#: wp-oasis-importer.php:434
 msgid "Oasis Import"
 msgstr "Оазис импорт"
 
-#: wp-oasis-importer.php:467
+#: wp-oasis-importer.php:481
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: wp-oasis-importer.php:490
-#: wp-oasis-importer.php:671
+#: wp-oasis-importer.php:504
+#: wp-oasis-importer.php:685
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: wp-oasis-importer.php:499
+#: wp-oasis-importer.php:513
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: wp-oasis-importer.php:515
-#: wp-oasis-importer.php:663
+#: wp-oasis-importer.php:529
+#: wp-oasis-importer.php:677
 #, php-format
 msgid "%s step in progress out of %s. Current step status"
 msgstr "Выполняется %s шаг из %s. Статус текущего шага"
 
-#: wp-oasis-importer.php:517
-#: wp-oasis-importer.php:665
+#: wp-oasis-importer.php:531
+#: wp-oasis-importer.php:679
 #, php-format
 msgid "Next step %s of %s."
 msgstr "Следующий шаг %s из %s."
 
-#: wp-oasis-importer.php:536
+#: wp-oasis-importer.php:550
 #, php-format
 msgid "Last import completed: %s"
 msgstr "Последний импорт завершен: %s"
 
-#: wp-oasis-importer.php:546
+#: wp-oasis-importer.php:560
 msgid ""
 "To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>\n"
 "<strong>Do not disclose this information!</strong>"
@@ -221,32 +221,32 @@ msgstr ""
 "Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи: <br/>\n"
 "<strong>Не разглашайте эти данные!</strong>"
 
-#: wp-oasis-importer.php:552
+#: wp-oasis-importer.php:566
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: wp-oasis-importer.php:557
-#: wp-oasis-importer.php:570
+#: wp-oasis-importer.php:571
+#: wp-oasis-importer.php:584
 msgid "Copy"
 msgstr "Копировать"
 
-#: wp-oasis-importer.php:565
+#: wp-oasis-importer.php:579
 msgid "Renewal of balances 1 time in 30 minutes"
 msgstr "Обновление остатков 1 раз в 30 минут"
 
-#: wp-oasis-importer.php:589
+#: wp-oasis-importer.php:603
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: wp-oasis-importer.php:604
+#: wp-oasis-importer.php:618
 msgid "Clear"
 msgstr "Очистить"
 
-#: wp-oasis-importer.php:605
+#: wp-oasis-importer.php:619
 msgid "Select"
 msgstr "Выбрать"
 
-#: wp-oasis-importer.php:646
+#: wp-oasis-importer.php:660
 msgid "Settings"
 msgstr "Настройки"
 
@@ -283,3 +283,19 @@ msgstr "Не ограничивать обновление"
 #: wp-oasis-importer.php:202
 msgid "Full product update is limited, no more than once a day"
 msgstr "Полное обновление товаров ограничено, не чаще раз в день"
+
+#: wp-oasis-importer.php:336
+msgid "Enable brands"
+msgstr "Включить бренды"
+
+#: wp-oasis-importer.php:337
+msgid "Enable brands on imported products"
+msgstr "Включить бренды импортируемых товаров"
+
+#: wp-oasis-importer.php:375
+msgid "Quick import of products"
+msgstr "Быстрый импорт товаров"
+
+#: wp-oasis-importer.php:376
+msgid "Import without photos. After a full upload of all products, the option is turned off"
+msgstr "Импорт без фотографий. После полновый загрузки всех товаров, опция отключается"

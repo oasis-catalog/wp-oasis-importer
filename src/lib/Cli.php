@@ -3,63 +3,81 @@
 namespace OasisImport;
 
 use OasisImport\Config as OasisConfig;
+use OasisImport\Main;
 use Exception;
 
 
-class Cli extends Main {
+class Cli {
 	public static OasisConfig $cf;
 
-	public static function RunCron($cron_key, $cron_up, $opt = [])
+	public static function RunCron($cron_key, $cron_opt = [], $opt = [])
 	{
 		$cf = new OasisConfig($opt);
-		$cf->lock(function() use ($cf, $cron_key, $cron_up) {
+
+		if($cron_opt['task'] == 'add_image' || $cron_opt['task'] == 'up_image'){
 			$cf->init();
-			$cf->initRelation();
+			self::AddImage([
+				'oid' => $cron_opt['oid'] ?? '',
+				'is_up' => $cron_opt['task'] == 'up_image'
+			]);
+		}
+		else {
+			$cf->lock(function() use ($cf, $cron_key, $cron_opt) {
+				$cf->init();
 
-			if (!$cf->checkCronKey($cron_key)) {
-				$cf->log('Error! Invalid --key');
-				die('Error! Invalid --key');
-			}
+				if (!$cf->checkCronKey($cron_key)) {
+					$cf->log('Error! Invalid --key');
+					die('Error! Invalid --key');
+				}
 
-			if (!$cron_up && !$cf->checkPermissionImport()) {
-				$cf->log('Import once day');
-				die('Import once day');
-			}
+				switch ($cron_opt['task']) {
+					case 'import':
+						$cf->initRelation();
 
-			if ($cron_up) {
-				self::UpStock();
-			} else {
-				self::Import();
-			}
-		}, function() use ($cf) {
-			$cf->log('Already running');
-			die('Already running');
-		});
+						if(!$cf->checkPermissionImport()) {
+							$cf->log('Import once day');
+							die('Import once day');
+						}
+						self::Import();
+						break;
+
+					case 'up':
+						self::UpStock();
+						break;
+				}
+			}, function() use ($cf) {
+				$cf->log('Already running');
+				die('Already running');
+			});
+		}
 	}
 
 	public static function Import() {
-		set_time_limit( 0 );
-		ini_set( 'memory_limit', '4G' );
+		set_time_limit(0);
+		ini_set('memory_limit', '4G');
 
 		try {
 			self::$cf->log( 'Начало обновления товаров' );
 
+			Main::prepareAttributeData();
+			if(self::$cf->is_brands){
+				Main::prepareBrands();
+			}
+
 			$args    = [];
 			$limit   = self::$cf->limit;
 			$step    = self::$cf->progress['step'];
-			parent::prepareAttributeData();
-
 			if ($limit > 0 ) {
 				$args['limit']  = $limit;
 				$args['offset'] = $step * $limit;
 			}
 
-			$cats_oasis		= Api::getCategoriesOasis();
-			$products		= Api::getOasisProducts( $cats_oasis, $args );
-			$stats			= Api::getStatProducts( $cats_oasis );
+			$cats_oasis =		Api::getCategoriesOasis();
+			$products =			Api::getOasisProducts( $cats_oasis, $args );
+			$stats =			Api::getStatProducts( $cats_oasis );
 
-			$group_ids     = [];
-			$countProducts = 0;
+			$group_ids =		[];
+			$countProducts =	0;
 			foreach ( $products as $product ) {
 				if ( $product->is_deleted === false ) {
 					if ( $product->size || $product->colors ) {
@@ -70,7 +88,7 @@ class Cli extends Main {
 
 					$countProducts ++;
 				} else {
-					parent::checkDeleteProduct( $product->id );
+					Main::checkDeleteProduct( $product->id );
 				}
 			}
 
@@ -83,43 +101,43 @@ class Cli extends Main {
 
 				foreach ( $group_ids as $group_id => $model ) {
 					self::$cf->log( 'Начало обработки модели ' . $group_id );
-					$dbProduct  = parent::checkProductOasisTable( [ 'model_id_oasis' => $group_id ], 'product' );
-					$totalStock = parent::getTotalStock( $model );
+					$dbProduct  = Main::checkProductOasisTable( [ 'model_id_oasis' => $group_id ], 'product' );
+					$totalStock = Main::getTotalStock( $model );
 
 					if ( count( $model ) === 1 ) {
 						$product    = reset( $model );
-						$categories = ($dbProduct && self::$cf->is_not_up_cat) ? [] : parent::getProductCategories($product, $cats_oasis);
+						$categories = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories($product, $cats_oasis);
 
 						if ( $dbProduct ) {
-							parent::upWcProduct( $dbProduct['post_id'], $model, $categories, $totalStock );
+							Main::upWcProduct( $dbProduct['post_id'], $model, $categories, $totalStock );
 						} else {
-							parent::addWcProduct( $product, $model, $categories, $totalStock, 'simple' );
+							Main::addWcProduct( $product, $model, $categories, $totalStock, 'simple' );
 						}
 
 						self::$cf->progressUp();
 					} elseif ( count( $model ) > 1 ) {
-						$firstProduct = parent::getFirstProduct( $model );
-						$categories   = ($dbProduct && self::$cf->is_not_up_cat) ? [] : parent::getProductCategories( $firstProduct, $cats_oasis);
+						$firstProduct = Main::getFirstProduct( $model );
+						$categories   = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories( $firstProduct, $cats_oasis);
 
 						if ( $dbProduct ) {
 							$wcProductId = $dbProduct['post_id'];
-							if ( ! parent::upWcProduct( $wcProductId, $model, $categories, $totalStock ) ) {
+							if ( ! Main::upWcProduct( $wcProductId, $model, $categories, $totalStock ) ) {
 								continue;
 							}
 						} else {
-							$wcProductId = parent::addWcProduct( $firstProduct, $model, $categories, $totalStock, 'variable' );
+							$wcProductId = Main::addWcProduct( $firstProduct, $model, $categories, $totalStock, 'variable' );
 							if ( ! $wcProductId ) {
 								continue;
 							}
 						}
 
 						foreach ( $model as $variation ) {
-							$dbVariation = parent::checkProductOasisTable( [ 'product_id_oasis' => $variation->id ], 'product_variation' );
+							$dbVariation = Main::checkProductOasisTable( [ 'product_id_oasis' => $variation->id ], 'product_variation' );
 
 							if ( $dbVariation ) {
-								parent::upWcVariation( $dbVariation, $variation );
+								Main::upWcVariation( $dbVariation, $variation );
 							} else {
-								parent::addWcVariation( $wcProductId, $variation );
+								Main::addWcVariation( $wcProductId, $variation );
 							}
 							self::$cf->progressUp();
 						}
@@ -162,6 +180,80 @@ class Cli extends Main {
 			}
 			self::$cf->log('Окончание обновления остатков');
 		} catch (Exception $exception) {
+			die();
+		}
+	}
+
+	public static function AddImage($opt = []) {
+		set_time_limit(0);
+		ini_set('memory_limit', '4G');
+
+		try {
+			self::$cf->log('Начало обновления картинок товаров');
+
+			$args = [];
+			if(!empty($opt['oid'])){
+				$args['ids'] =  is_array($opt['oid']) ? implode(',', $opt['oid']) : $opt['oid'];
+			}
+
+			$cats_oasis =	Api::getCategoriesOasis();
+			$products =		Api::getOasisProducts($cats_oasis, $args);
+			$group_ids =	[];
+			foreach ( $products as $product ) {
+				if ( $product->is_deleted === false ) {
+					if ( $product->size || $product->colors ) {
+						$group_ids[ $product->group_id ][ $product->id ] = $product;
+					} else {
+						$group_ids[ $product->id ][ $product->id ] = $product;
+					}
+				}
+			}
+
+			if (!empty($group_ids)) {
+				$total = count(array_keys($group_ids));
+				$count = 0;
+
+				$is_up = !empty($opt['is_up']);
+
+				foreach ($group_ids as $group_id => $model) {
+					$count++;
+
+					self::$cf->log('Начало обработки модели ' . $group_id );
+					$dbProduct = Main::checkProductOasisTable([ 'model_id_oasis' => $group_id ], 'product');
+
+					if(empty($dbProduct)){
+						self::$cf->log('Выполнено ' . $count . ' из ' . $total . '. Модель не добавлена');
+						continue;
+					}
+
+					if (count($model) === 1) {
+						$product = reset($model);
+						Main::wcProductAddImage($dbProduct['post_id'], $model, $is_up);
+					}
+					else if (count($model) > 1) {
+						if (!Main::wcProductAddImage($dbProduct['post_id'], $model, $is_up)) {
+							continue;
+						}
+
+						foreach ($model as $variation) {
+							$dbVariation = Main::checkProductOasisTable(['product_id_oasis' => $variation->id], 'product_variation');
+
+							if(empty($dbVariation)){
+								self::$cf->log('Вариант не добавлен');
+								continue;
+							}
+							else {
+								Main::wcVariationAddImage($dbVariation, $variation, $is_up);
+								self::$cf->log(' - обновлен вариант WPId=' . $dbVariation['post_id']);
+							}
+						}
+					}
+					self::$cf->log('Выполнено ' . $count . ' из ' . $total . '. WPId=' . $dbProduct['post_id']);
+				}
+			}
+			self::$cf->log('Окончание обновления картинок товаров');
+		} catch ( Exception $exception ) {
+			echo $exception->getMessage();
 			die();
 		}
 	}

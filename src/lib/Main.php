@@ -16,6 +16,7 @@ use WP_Query;
 class Main {
 	public static OasisConfig $cf;
 	public static $attrVariation = [];
+	public static $brands = [];
 
 	/**
 	 * Prepare attributes for variations
@@ -43,6 +44,26 @@ class Main {
 			];
 		}
 	}
+
+	/**
+	 * Load and prepare brands
+	 *
+	 * @return void
+	 */
+	public static function prepareBrands(): void
+	{
+		$brands	= Api::getBrands() ?? [];
+		self::$brands = [];
+		foreach ($brands as $brand){
+			self::$brands[$brand->id] = [
+				'name' => $brand->name,
+				'slug' => $brand->slug,
+				'logotype' => $brand->logotype,
+				'term_id' => null
+			];
+		}
+	}
+	
 
 	/**
 	 * Check product in table oasis_products
@@ -170,16 +191,19 @@ class Main {
 				$wcProduct->set_default_attributes( $defaultAttr );
 			}
 
-			if ( $type == 'simple' ) {
+			if ($type == 'simple') {
 				$wcProduct->set_sku( $oasisProduct->article );
 			}
 
 			$wcProductId = $wcProduct->save();
-			$images      = self::processingPhoto( $oasisProduct->images, $wcProductId );
-			$wcProduct->set_image_id( array_shift( $images ) );
-			$wcProduct->set_gallery_image_ids( $images );
-			$wcProduct->save();
+			if(!self::$cf->is_fast_import){
+				$images = self::processingPhoto($oasisProduct->images, $wcProductId);
+				$wcProduct->set_image_id(array_shift($images));
+				$wcProduct->set_gallery_image_ids($images);	
+				$wcProduct->save();
+			}
 
+			self::updateWcProductBrand($wcProductId, $oasisProduct);
 			self::addProductOasisTable( $wcProductId, $oasisProduct->id, count( $model ) > 1 ? $oasisProduct->group_id : $oasisProduct->id, 'product' );
 			self::$cf->log('Добавлен товар id '.$oasisProduct->id);
 		} catch ( Exception $exception ) {
@@ -263,6 +287,41 @@ class Main {
 	}
 
 	/**
+	 * Add product image
+	 *
+	 * @param $productId
+	 * @param $model
+	 * @param $is_up
+	 *
+	 * @return bool|void
+	 */
+	public static function wcProductAddImage($productId, $model, $is_up = false) {
+		$oasisProduct = self::getFirstProduct( $model );
+
+		try {
+			$wcProduct = wc_get_product( $productId );
+
+			if (empty($wcProduct)) {
+				throw new Exception( 'Error open product. No product with this ID' );
+			}
+			if(!$is_up && !empty($wcProduct->get_image_id())){
+				return true;
+			}
+
+			self::deleteImgInProduct( $wcProduct );
+			$images = self::processingPhoto( $oasisProduct->images, $productId );
+			$wcProduct->set_image_id( array_shift( $images ) );
+			$wcProduct->set_gallery_image_ids( $images );
+			$wcProduct->set_date_modified(time());
+			$wcProduct->save();
+			return true;
+		} catch ( Exception $exception ) {
+			echo $exception->getMessage() . PHP_EOL;
+			die();
+		}
+	}
+
+	/**
 	 * Add variation
 	 *
 	 * @param $productId
@@ -294,7 +353,7 @@ class Main {
 
 			$wcVariationId = $wcVariation->save();
 
-			if ( $oasisProduct->images ) {
+			if ($oasisProduct->images && !self::$cf->is_fast_import) {
 				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId );
 				$wcVariation->set_image_id( array_shift( $images ) );
 				$wcVariation->save();
@@ -357,6 +416,59 @@ class Main {
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();
+		}
+	}
+
+	/**
+	 * Add variation image
+	 *
+	 * @param $dbVariation
+	 * @param $oasisProduct
+	 * @param $is_up
+	 */
+	public static function wcVariationAddImage($dbVariation, $oasisProduct, $is_up = false) {
+		try {
+			$wcVariation = wc_get_product($dbVariation['post_id']);
+
+			if ($wcVariation === false) {
+				throw new Exception('Error open variation. No variation with this ID');
+			}
+			if(!$is_up && !empty($wcVariation->get_image_id())){
+				return true;
+			}
+
+			self::deleteImgInProduct($wcVariation);
+			$images = self::processingPhoto([reset($oasisProduct->images)], $dbVariation['post_id']);
+			$wcVariation->set_image_id(array_shift($images));
+			$wcVariation->set_date_modified(time());
+			$wcVariation->save();
+		} catch ( Exception $exception ) {
+			echo $exception->getMessage() . PHP_EOL;
+			die();
+		}
+	}
+
+	/**
+	 * Add Brand in WooCommerce product
+	 *
+	 * @param $wcProductId
+	 * @param $oasisProduct
+	 *
+	 * @return void
+	 */
+	public static function updateWcProductBrand($wcProductId, $oasisProduct): void
+	{
+		if(self::$cf->is_brands && !empty($oasisProduct->brand_id)){
+			$brand = self::$brands[$oasisProduct->brand_id] ?? null;
+			if($brand){
+				if(!isset($brand['term_id'])){
+					$term_id = self::getTermIdByOasisBrand($brand);
+					self::$brands[$oasisProduct->brand_id]['term_id'] = $brand['term_id'] = $term_id;
+				}
+				if(!empty($brand['term_id'])){
+					wp_set_object_terms($wcProductId, $brand['term_id'], 'product_brand');
+				}
+			}
 		}
 	}
 
@@ -1116,6 +1228,78 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
+	 * Get terms by oasis id category
+	 *
+	 * @param $brand
+	 *
+	 * @return int|false
+	 */
+	public static function getTermIdByOasisBrand($brand) {
+		$args = [
+			'taxonomy' =>	'product_brand',
+			'number'  =>	1,
+			'fields' =>		'ids',			
+			'hide_empty' => false,
+			'name' =>		$brand['name'],
+			'slug' =>		$brand['slug']
+		];
+
+		$terms = get_terms($args);
+
+		$term_id = $terms ? reset($terms) : false;
+
+		if(empty($term_id)){
+			$new_term = wp_insert_term($brand['name'], 'product_brand', [
+				'slug' => $brand['slug']
+			]);
+
+			if($new_term){
+				$term_id = $new_term['term_id'];
+
+				if(!empty($brand['logotype'])){
+					$filename = basename($brand['logotype']);
+					$attach_id = self::getAttachmentIdByTitle($filename);
+
+					if (!$attach_id) {
+						$image_data = file_get_contents($brand['logotype']);
+						if ($image_data) {
+							$wp_filetype = wp_check_filetype($filename);
+							$upload_dir = wp_upload_dir();
+
+							if (wp_mkdir_p( $upload_dir['path'])) {
+								$file = $upload_dir['path'] . '/' . $filename;
+							} else {
+								$file = $upload_dir['basedir'] . '/' . $filename;
+							}
+
+							file_put_contents($file, $image_data);
+
+							$attachment = [
+								'post_mime_type' => $wp_filetype['type'],
+								'post_title'     => sanitize_file_name($filename),
+								'post_content'   => '',
+								'post_status'    => 'inherit',
+							];
+
+							$attach_id   = wp_insert_attachment($attachment, $file);
+							$attach_data = wp_generate_attachment_metadata($attach_id, $file);
+							wp_update_attachment_metadata($attach_id, $attach_data);
+						}
+					}
+
+					if(!empty($attach_id)){
+						update_term_meta($term_id, 'thumbnail_id', $attach_id);
+					}
+				}
+
+				self::$cf->log('Добавлен бренд '.$brand['name']);
+			}
+		}
+
+		return $term_id;
+	}
+
+	/**
 	 * Get array parents for term_id
 	 *
 	 * @param $term_id
@@ -1578,8 +1762,8 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 							$attach_sizes[$size] = [
 								'file' => '',
 								'cdn' => $image->thumbnail,
-								'width' => OasisConfig::IMG_SIZE_THUMBNAI[0],
-								'height' => OasisConfig::IMG_SIZE_THUMBNAI[1],
+								'width' => OasisConfig::IMG_SIZE_THUMBNAIL[0],
+								'height' => OasisConfig::IMG_SIZE_THUMBNAIL[1],
 								'mime-type' => $wp_filetype['type']
 							];
 							continue;
