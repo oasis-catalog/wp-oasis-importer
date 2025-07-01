@@ -42,7 +42,7 @@ class Api {
 
 		$products = self::curlQuery( 'products', $args );
 
-		if ( ! empty( $products ) && ! empty( $args['limit'] ) ) {
+		if (!empty($products) && (!empty($args['limit']) || !empty($args['ids']))) {
 			unset( $args['limit'], $args['offset'], $args['ids'] );
 
 			$group_id = [ $products[ array_key_first( $products ) ]->group_id ];
@@ -179,8 +179,24 @@ class Api {
 		return self::curlQuery( 'reserves/by-queue/' . $queueId );
 	}
 
-	public static function getBranding( $params ) {
-		return self::curlSend( 'branding/calc', $params );
+	/**
+	 * @param array $data
+	 * @param array $params
+	 * @return array|mixed
+	 */
+	public static function brandingCalc($data, $params) {
+		return self::curlSend( 'branding/calc', $data, $params);
+	}
+
+	/**
+	 * @param $id
+	 * @param $admin
+	 * @return array|mixed
+	 */
+	public static function getBrandingCoef($id, $admin = false) {
+		return self::curlQuery('branding/coef', [
+			'id' => $id 
+		], false, 'v4');
 	}
 
 	/**
@@ -191,7 +207,7 @@ class Api {
 	 *
 	 * @return array|mixed
 	 */
-	public static function curlSend( string $type, array $data ) {
+	public static function curlSend( string $type, array $data, array $params = []) {
 		if (empty(self::$cf->api_key)){
 			return [];
 		}
@@ -202,13 +218,16 @@ class Api {
 		];
 
 		try {
-			$ch = curl_init( 'https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query( $args_pref ) );
-			curl_setopt( $ch, CURLOPT_POST, 1 );
-			curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $data, '', '&' ) );
-			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-			curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-			curl_setopt( $ch, CURLOPT_HEADER, false );
-			$content = curl_exec( $ch );
+			$ch = curl_init('https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query($args_pref));
+			curl_setopt_array($ch, [
+				CURLOPT_POST 			=> 1,
+				CURLOPT_POSTFIELDS 		=> http_build_query($data, '', '&'),
+				CURLOPT_RETURNTRANSFER	=> true,
+				CURLOPT_SSL_VERIFYPEER	=> false,
+				CURLOPT_HEADER			=> false,
+				CURLOPT_TIMEOUT			=> $params['timeout'] ?? 0
+			]);
+			$content = curl_exec($ch);
 
 			if ( $content === false ) {
 				throw new Exception( 'Error: ' . curl_error( $ch ) );
@@ -225,8 +244,9 @@ class Api {
 				throw new Exception( 'Error: ' . ( $result->error ?? '' ) . PHP_EOL . 'Code: ' . $http_code );
 			}
 		} catch ( Exception $e ) {
-			echo $e->getMessage() . PHP_EOL;
-
+			if (PHP_SAPI === 'cli') {
+				echo $e->getMessage() . PHP_EOL;
+			}
 			return [];
 		}
 
@@ -254,7 +274,6 @@ class Api {
 		];
 		$args = array_merge($args_pref, $args);
 
-
 		try {
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, 'https://api.oasiscatalog.com/'.$version.'/'.$type.'?'. http_build_query($args));
@@ -280,7 +299,9 @@ class Api {
 				throw new Exception('Error. Code: ' . $http_code);
 			}
 		} catch (Exception $e) {
-			echo $e->getMessage() . PHP_EOL;
+			if (PHP_SAPI === 'cli') {
+				echo $e->getMessage() . PHP_EOL;
+			}
 			return [];
 		}
 

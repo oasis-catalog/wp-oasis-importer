@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Oasiscatalog - Product Importer 2.4.9\n"
+"Project-Id-Version: Oasiscatalog - Product Importer 2.5.0\n"
 "Report-Msgid-Bugs-To: https://www.oasiscatalog.com\n"
 "Last-Translator: Nikolay Visheratin\n"
 "Language-Team: https://www.oasiscatalog.com\n"
@@ -299,3 +299,14 @@ msgstr "Быстрый импорт товаров"
 #: wp-oasis-importer.php:376
 msgid "Import without photos. After a full upload of all products, the option is turned off"
 msgstr "Импорт без фотографий. После полновый загрузки всех товаров, опция отключается"
+
+#: src/branding.php:102
+#: src/branding.php:137
+#: src/branding.php:146
+msgid "Branding"
+msgstr "Нанесение"
+
+#: src/branding.php:127
+#: src/branding.php:132
+msgid "We are temporarily unable to calculate the Branding, please try again later."
+msgstr "Временно не можем посчитать Нанесение, попробуйте чуть позже"

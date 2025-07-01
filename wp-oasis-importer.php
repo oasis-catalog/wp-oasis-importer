@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce. Выгрузка заказов из Woocommerce в oasiscatalog. Виджет редактирования нанесения.
-Version: 2.4.9
+Version: 2.5.0
 Text Domain: wp-oasis-importer
 License: GPL2
 
@@ -777,5 +777,34 @@ function oasis_init_filter() {
 			}
 			return false;
 		}
+
+		add_filter( 'wp_get_attachment_url', 'oasis_wp_get_attachment_url', 10, 2);
+		function oasis_wp_get_attachment_url($url, $id) {
+			$post = get_post( $id );
+			if (!$post || 'attachment' !== $post->post_type) {
+				return $url;
+			}
+
+			$oasis_id = Main::getOasisProductIdByPostId($post->post_parent);
+			if(!$oasis_id){
+				return $url;
+			}
+
+			$imagedata = wp_get_attachment_metadata($id);
+			if (!is_array($imagedata) || empty($imagedata['sizes'])) {
+				return $url;
+			}
+			$size_data = $imagedata['sizes']['medium'] ?? [];
+			
+			if(empty($size_data['cdn'])){
+				return $url;
+			}
+			return $size_data['cdn'];
+		}
 	}
+}
+
+add_action('delete_post', 'oasis_after_delete_post', 10, 1);
+function oasis_after_delete_post($post_id){
+	Main::deleteOasisProductByPostId($post_id);
 }

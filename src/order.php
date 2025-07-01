@@ -22,7 +22,7 @@ function init_order() {
 		}, 100 );
 
 		add_action($IS_HPOS ? 'manage_woocommerce_page_wc-orders_custom_column' : 'manage_shop_order_posts_custom_column', function ( $column_name, $post_ID ) {
-			if ( $column_name === 'oa_export' ) {
+			if ($column_name === 'oa_export') {
 				$order          = wc_get_order( $post_ID );
 				$oasisProductId = null;
 
@@ -30,7 +30,7 @@ function init_order() {
 					$oasisProductId = Main::getOasisProductIdByOrderItem( $item );
 				}
 
-				if ( is_null( $oasisProductId ) ) {
+				if (is_null($oasisProductId)) {
 					echo __( 'Invalid items in the order', 'wp-oasis-importer' );
 
 					return;
@@ -40,10 +40,10 @@ function init_order() {
 				$queueId    = get_metadata( 'post', $order->get_order_number(), 'oasis_queue_id', true );
 				$htmlExport = '';
 
-				if ( $queueId ) {
-					$dataOrder = Api::getOrderByQueueId( $queueId );
+				if ($queueId) {
+					$dataOrder = Api::getOrderByQueueId($queueId);
 
-					if ( isset( $dataOrder->state ) ) {
+					if (isset($dataOrder->state)) {
 						if ( $dataOrder->state == 'created' ) {
 							$htmlExport = '<div class="order-status status-processing" style="display: flex;justify-content: center;align-items: center;"><span class="dashicons dashicons-yes-alt"></span>' . $dataOrder->order->statusText . '. Заказ №' . $dataOrder->order->number . '</div></div>';
 						} elseif ( $dataOrder->state == 'pending' ) {
@@ -53,14 +53,14 @@ function init_order() {
 						}
 					}
 				} else {
-					$htmlExport = '<input type="button" name="send_order" class="button oasis-send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
+					$htmlExport = '<input type="button" name="send_order" class="button js-oasis-send_order" value="' . __( 'Unload', 'wp-oasis-importer' ) . '" data-order-id="' . $order->get_order_number() . '">';
 				}
 
 				echo $htmlExport;
 			}
-		}, 10, 2 );
+		}, 10, 2);
 
-		add_action( 'admin_enqueue_scripts', 'oasis_order_script_init' );
+		add_action('admin_enqueue_scripts', 'oasis_order_script_init');
 		function oasis_order_script_init( $hook ) {
 			$IS_HPOS = get_option('woocommerce_custom_orders_table_enabled') === 'yes';
 
@@ -69,49 +69,49 @@ function init_order() {
 				return;
 			}
 
-			$options = get_option( 'oasis_options' );
+			$options = get_option('oasis_options');
 
-			if ( ! empty( $options['api_key'] ) && ! empty( $options['api_user_id'] ) ) {
-				wp_enqueue_script( 'oasis-order', plugins_url( '/assets/js/order.js', dirname( __FILE__ ) ), [ 'jquery' ] );
+			if (!empty($options['api_key']) && !empty($options['api_user_id'])) {
+				wp_enqueue_script('oasis-order', plugins_url('/assets/js/order.js', dirname(__FILE__)), ['jquery']);
 			}
 		}
 
-		add_action( 'wp_ajax_send_order', 'send_order_ajax' );
-
-		function send_order_ajax() {
+		add_action('wp_ajax_oasis_send_order', 'oasis_send_order');
+		function oasis_send_order() {
 			$order_id = strval( $_POST['order_id'] );
-			$options  = get_option( 'oasis_options' );
+			$options  = get_option('oasis_options');
 
-			if ( ! empty( $order_id ) ) {
+			if (!empty($order_id)) {
 				$data = [
 					'userId' => $options['api_user_id'],
 				];
 
-				if ( ! empty( $data['userId'] ) ) {
-					$order        = wc_get_order( $order_id );
-					$brandingData = json_decode( $order->get_meta( 'oasis_branding' ), true );
+				if (!empty($data['userId'])) {
+					$order        = wc_get_order($order_id);
+					$brandingData = json_decode($order->get_meta('oasis_branding'), true);
 
-					if ( $brandingData ) {
+					if ($brandingData) {
 						$data += $brandingData;
 					} else {
-						foreach ( $order->get_items() as $item ) {
+						foreach ($order->get_items() as $item) {
 							$data['items'][] = [
-								'productId' => Main::getOasisProductIdByOrderItem( $item ),
+								'productId' => Main::getOasisProductIdByOrderItem($item),
 								'quantity'  => $item->get_quantity(),
 							];
 						}
-						unset( $item );
 					}
+					try {
+						$request = Api::sendOrder($data);
 
-					$request = Api::sendOrder( $data );
+						if (!empty($request->error)) {
+							wp_send_json_error($request->error);
+						}
 
-					if ( ! empty( $request->error ) ) {
-						wp_send_json_error( $request->error );
+						if ($request) {
+							update_metadata('post', $order_id, 'oasis_queue_id', $request->queueId);
+						}
 					}
-
-					if ( $request ) {
-						update_metadata( 'post', $order_id, 'oasis_queue_id', $request->queueId );
-					}
+					catch (\Throwable $e) {}
 				}
 			}
 			wp_die();

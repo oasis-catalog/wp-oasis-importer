@@ -28,6 +28,7 @@ class Config {
 	public string $category_rel_label;
 
 	public array $progress;
+	private bool $is_progress = false;
 
 	public array $currencies;
 
@@ -202,7 +203,15 @@ class Config {
 		return implode(' / ', $list);
 	}
 
+	public function progressOn() {
+		$this->is_progress = true;
+	}
+
 	public function progressStart(int $total, int $step_total) {
+		if (!$this->is_progress) {
+			return;
+		}
+
 		$this->progress['total'] = $total;
 		$this->progress['step_total'] = $step_total;
 		$this->progress['step_item'] = 0;
@@ -210,11 +219,19 @@ class Config {
 	}
 
 	public function progressUp() {
+		if (!$this->is_progress) {
+			return;
+		}
+
 		$this->progress['step_item']++;
 		update_option('oasis_progress', $this->progress);
 	}
 
 	public function progressEnd() {
+		if (!$this->is_progress) {
+			return;
+		}
+
 		$dt = (new \DateTime())->format('d.m.Y H:i:s');
 		$this->progress['date_step'] = $dt;
 
@@ -238,14 +255,15 @@ class Config {
 			$is_stop_fast_import = true;
 		}
 
+		$this->progress['step_item'] = 0;
+		$this->progress['step_total'] = 0;
+
 		if($this->is_fast_import && $is_stop_fast_import){
+			$this->is_fast_import = false;
 			$_opt = get_option('oasis_options', []);
 			$_opt['is_fast_import'] = false;
 			update_option('oasis_options', $_opt);
 		}
-
-		$this->progress['step_item'] = 0;
-		$this->progress['step_total'] = 0;
 
 		update_option('oasis_progress', $this->progress);
 	}
@@ -256,6 +274,8 @@ class Config {
 		$this->progress['item'] = 0;
 		$this->progress['step_item'] = 0;
 		$this->progress['step_total'] = 0;
+		$this->progress['date'] = '';
+		$this->progress['date_step'] = '';
 		update_option('oasis_progress', $this->progress);
 	}
 

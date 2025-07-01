@@ -13,7 +13,7 @@ use OasisImport\Cli;
 try {
 	$params = [
 		'short' => 'k:u',
-		'long'  => ['key:', 'site:', 'oid:', 'up', 'up_image', 'add_image', 'debug', 'debug_log'],
+		'long'  => ['key:', 'site:', 'oid:', 'sku:', 'up', 'up_image', 'add_image', 'debug', 'debug_log'],
 	];
 
 	$errors = '';
@@ -51,27 +51,22 @@ Errors: ' . $errors . PHP_EOL);
 		switch_to_blog($cliOptions['site']);
 	}
 
+	$cron_opt = [
+		'oid' => $cliOptions['oid'] ?? '',
+		'sku' => $cliOptions['sku'] ?? '',
+	];
+
 	if(isset($cliOptions['up']) || isset($cliOptions['u'])){
-		$cron_opt = [
-			'task' => 'up'
-		];
+		$cron_opt['task'] = 'up';
 	}
 	else if(isset($cliOptions['up_image'])){
-		$cron_opt = [
-			'task' => 'up_image',
-			'oid' => $cliOptions['oid'] ?? ''
-		];
+		$cron_opt['task'] = 'up_image';
 	}
 	else if(isset($cliOptions['add_image'])){
-		$cron_opt = [
-			'task' => 'add_image',
-			'oid' => $cliOptions['oid'] ?? ''
-		];
+		$cron_opt['task'] = 'add_image';
 	}
 	else {
-		$cron_opt = [
-			'task' => 'import'
-		];
+		$cron_opt['task'] = 'import';
 	}
 
 	Cli::RunCron($cron_key, $cron_opt, [

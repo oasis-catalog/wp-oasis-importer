@@ -3,38 +3,26 @@
 use OasisImport\Api;
 use OasisImport\Main;
 
-add_action( 'init', 'init_branding' );
+add_action('init', 'init_branding');
 
 function init_branding() {
-	$options = get_option( 'oasis_options' );
+	$options = get_option('oasis_options');
 
-	if ( empty( $options['is_branding'] ) ) {
+	if (empty($options['is_branding'])) {
 		return;
 	}
+	$IS_HPOS = get_option('woocommerce_custom_orders_table_enabled') === 'yes';
 
-	add_action( 'wp_enqueue_scripts', 'init_scripts_branding' );
+
+	add_action('wp_enqueue_scripts', 'init_scripts_branding');
 	function init_scripts_branding() {
-		wp_enqueue_style( 'branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@^1.0.4/client/style.css' );
-		wp_enqueue_script( 'branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@^1.0.4/client/index.iife.js', [], '', true );
+		wp_enqueue_style( 'branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@1.3.0/client/style.css' );
+		wp_enqueue_script( 'branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@1.3.0/client/index.iife.js', [], '', true );
+		wp_enqueue_script( 'oasis-branding', plugins_url( '/assets/js/widget.js', dirname( __FILE__ ) ), ['jquery'], '', true );
 	}
 
-	/**
-	 * Add button up total price in page checkout
-	 *
-	 * @return void
-	 */
-	function add_btn_up_order() {
-		echo '
-<button id="total-price" class="oasis-branding-widget-toggler__btn" type="button">Обновить итог</button>
-<div style="width: 100%;">Пересчитать итоговую стоимость с учетом нанесения</div>';
-		wp_enqueue_script( 'oasis-branding', plugins_url( '/assets/js/widget.js', dirname( __FILE__ ) ), [], '', true );
-	}
 
 	add_action( 'wp_enqueue_scripts', 'up_ajax_data_oasis_branding', 99 );
-
-	/**
-	 * @return void
-	 */
 	function up_ajax_data_oasis_branding() {
 		wp_localize_script( 'jquery', 'uptotalprice',
 			[
@@ -43,139 +31,170 @@ function init_branding() {
 		);
 	}
 
-	if ( wp_doing_ajax() ) {
-		add_action( 'wp_ajax_oasis_action', 'oasis_branding_callback' );
-		add_action( 'wp_ajax_nopriv_oasis_action', 'oasis_branding_callback' );
+
+	// карточка товара
+	add_filter( 'woocommerce_available_variation', 'oasis_prepare_variation', 10, 1);
+	function oasis_prepare_variation ($data) {
+		if ($data['variation_id']) {
+			$data['product_id_oasis'] =  Main::getOasisProductIdByPostId($data['variation_id']) ?? '';
+		}
+		return $data;
+	}
+	
+	add_action('woocommerce_before_add_to_cart_button', 'oasis_branding');
+	function oasis_branding() {
+		global $product;
+
+		$product_id_oasis = Main::getOasisProductIdByPostId($product->get_id());
+		if ($product_id_oasis) {
+			$locale		= str_replace('_', '-', get_locale());
+			$currency	= get_woocommerce_currency();
+			$row		= '<div class="js--oasis-client-branding-widget" data-oasis-locale="'.$locale.'" data-oasis-currency="'.$currency.'"';
+			if ($product->is_type('simple')){
+				$row .= ' data-oasis-product-id="'.$product_id_oasis.'"';
+			}
+			$row .= '></div>';
+			echo $row;
+		}
 	}
 
-	/**
-	 * @return void
-	 */
-	function oasis_branding_callback() {
-		$params = prepare_oasis_branding_params( $_POST['data'] ?? [] );
 
-		$total       = 0;
-		$cart_totals = WC()->cart->get_totals();
-
-		if ( $params ) {
+	// добавление в корзину
+	add_filter('woocommerce_add_cart_item_data', 'oasis_add_cart_item_data', 10, 3);
+	function oasis_add_cart_item_data($cart_item_data, $product_id, $variation_id) {
+		if ($oasis_branding = $_REQUEST['branding']) {
 			try {
-				$brandingData = Api::getBranding( $params );
-			} catch ( Exception $e ) {
-				echo $e->getMessage() . PHP_EOL;
-			}
+				if ($productId = reset($oasis_branding)['productId']) {
+					$data = Api::getBrandingCoef($productId);
+					if ($data) {
+						$labels = [];
 
-			if ( empty( $brandingData->error ) ) {
-				if ( ! empty( $brandingData->branding ) ) {
-					foreach ( $brandingData->branding as $branding ) {
-						$total += floatval( $branding->{0}->price->client->total );
+						foreach ($oasis_branding as $branding) {
+							foreach ($data->methods as $method) {
+								foreach ($method->types as $type) {
+									if ($branding['typeId'] == $type->id) {
+										$labels[] = $type->name;
+										break 2;
+									}
+								}
+							}
+						}
+
+						$cart_item_data['oasis_branding'] = [
+							'data' => $oasis_branding,
+							'label' => implode(', ', $labels),
+						];
 					}
 				}
-			} else {
-				echo '<div class="error-oasis-branding" style="color: #ec0000">Ошибка! Измените параметры нанесений и повторите.</div>' . PHP_EOL;
+			} catch (\Throwable $e) {
 			}
 		}
 
-		echo wc_price( floatval( $cart_totals['subtotal'] ) + $total );
-
-		wp_die();
+		return $cart_item_data;
 	}
 
-	add_action( 'woocommerce_checkout_order_processed', 'save_order_meta_oasis_branding', 10, 3 );
 
-	/**
-	 * @param $order_id
-	 * @param $posted_data
-	 * @param $order
-	 *
-	 * @return void
-	 */
-	function save_order_meta_oasis_branding( $order_id, $posted_data, $order ) {
-		if ( ! empty( $_POST['branding'] && is_array( $_POST['branding'] ) ) ) {
-			$data = [];
-			$i    = 0;
+	// корзина
+	add_filter('woocommerce_get_item_data', 'oasis_get_item_data', 10, 2);
+	function oasis_get_item_data($item_data, $cart_item) {
+		if (isset($cart_item['oasis_branding'])) {
+			$item_data[] = array(
+				'key'   => __('Branding', 'wp-oasis-importer'),
+				'display' => $cart_item['oasis_branding']['label'],
+			);
+		}
+		return $item_data;
+	}
 
-			$products = [];
-			foreach ( $order->get_items() as $item ) {
-				$products[ Main::getOasisProductIdByOrderItem( $item ) ] = $item->get_quantity();
-			}
-			unset( $item );
+	add_action('woocommerce_cart_calculate_fees', 'oasis_cart_calculate_fees', 10, 1);
+	function oasis_cart_calculate_fees($cart) {
+		static $branding_cost;
+		if (!isset($branding_cost)) {
+			try {
+				$data = prepare_oasis_branding_car_items($cart->cart_contents);
 
-			foreach ( $_POST['branding'] as $key => $value ) {
-				if ( $key !== 'items' && ! empty( $value ) ) {
-					$data[ $i ]             = $value;
-					$data[ $i ]['quantity'] = $products[ $value['productId'] ];
-					$i ++;
+				if ($data) {
+					$result = Api::brandingCalc($data, ['timeout' => 10]);
+
+					if (empty($result->error) && !empty($result->branding)) {
+						$branding_cost = 0;
+
+						foreach ($result->branding as $branding) {
+							$branding_cost += floatval($branding->{0}->price->client->total);
+						}
+					}
+					else {
+						wc_add_notice(__('We are temporarily unable to calculate the Branding, please try again later.', 'wp-oasis-importer'), 'error');
+					}
 				}
 			}
-			unset( $key, $value, $products );
+			catch (\Throwable $e) {
+				wc_add_notice(__('We are temporarily unable to calculate the Branding, please try again later.', 'wp-oasis-importer'), 'error');
+			}
+		}
+		
+		if (isset($branding_cost)) {
+			$cart->add_fee(__('Branding', 'wp-oasis-importer'), $branding_cost);
+		}
+	}
 
-			Main::d( $data, true );
-			$params = prepare_oasis_branding_params( $data );
-			Main::d( $params, true );
 
-			if ( $params ) {
-				$order->add_meta_data( 'oasis_branding', json_encode( $params ) );
+	// заказ
+	add_filter('woocommerce_checkout_create_order_line_item', 'oasis_update_order_meta', 10, 3);
+	function oasis_update_order_meta ($item, $cart_item_key, $values) {
+		if (isset($values['oasis_branding'])) {
+			$item->add_meta_data(__('Branding', 'wp-oasis-importer'), $values['oasis_branding']['label']);
+		}
+	}
+
+	if ($IS_HPOS) {
+		add_action('woocommerce_store_api_checkout_order_processed', 'save_order_meta_oasis_branding', 10, 1);
+		function save_order_meta_oasis_branding ($order) {
+			$data = prepare_oasis_branding_car_items(wc()->cart->cart_contents);
+
+			if ($data) {
+				$order->add_meta_data('oasis_branding', json_encode($data));
+				$order->save_meta_data();
+			}
+		}
+	}
+	else {
+		add_action('woocommerce_checkout_order_processed', 'save_order_meta_oasis_branding', 10, 3);
+		function save_order_meta_oasis_branding($order_id, $posted_data, $order) {
+			$data = prepare_oasis_branding_car_items(wc()->cart->cart_contents);
+
+			if ($data) {
+				$order->add_meta_data('oasis_branding', json_encode($data));
 				$order->save_meta_data();
 			}
 		}
 	}
 
-	/**
-	 * Preparing oasis branding parameters
-	 *
-	 * @param array $data
-	 *
-	 * @return array
-	 */
-	function prepare_oasis_branding_params( array $data ): array {
-		$result = [];
-		$i      = 0;
 
-		foreach ( $data as $item ) {
-			$brandingItem = [
-				'placeId' => strval( $item['placeId'] ),
-				'typeId'  => strval( $item['typeId'] ),
-			];
+	function prepare_oasis_branding_car_items($cart_items = []) {
+		$items = [];
+		$brandings = [];
 
-			if ( ! empty( $item['width'] ) ) {
-				$brandingItem['width'] = intval( $item['width'] );
-			}
-
-			if ( ! empty( $item['height'] ) ) {
-				$brandingItem['height'] = intval( $item['height'] );
-			}
-
-			$brandingCheck = Main::checkDiffArray( $brandingItem, $result['branding'] ?? [] );
-			$keyBranding   = is_null( $brandingCheck ) ? $i : $brandingCheck;
-
-			if ( is_null( $brandingCheck ) ) {
-				$result['branding'][ $i ] = $brandingItem;
-			}
-
-			if ( empty( $result['items'] ) ) {
-				$result['items'][] = [
-					'productId' => strval( $item['productId'] ),
-					'quantity'  => intval( $item['quantity'] ),
-					'branding'  => [ $keyBranding ]
+		foreach ($cart_items as $cart_item) {
+			if (isset($cart_item['oasis_branding'])) {
+				$item = [
+					'quantity' => $cart_item['quantity']
 				];
-			} else {
-				$keyItem = array_search( $item['productId'], array_column( $result['items'], 'productId' ) );
 
-				if ( $keyItem === false ) {
-					$result['items'][] = [
-						'productId' => strval( $item['productId'] ),
-						'quantity'  => intval( $item['quantity'] ),
-						'branding'  => [ $keyBranding ]
-					];
-				} else {
-					$result['items'][ $keyItem ]['branding'][] = $keyBranding;
-					$result['items'][ $keyItem ]['branding']   = array_unique( $result['items'][ $keyItem ]['branding'] );
+				foreach ($cart_item['oasis_branding']['data'] as $branding) {
+					if (empty($item['productId'])) {
+						$item['productId'] = $branding['productId'];
+						$item['branding'] = [];
+					}
+
+					$item['branding'][] = count($brandings);
+					$brandings[] = array_intersect_key($branding, array_flip(['placeId', 'typeId', 'width', 'height']));
 				}
+				$items[] = $item;
 			}
-			$i ++;
 		}
 
-		return $result;
+		return $items ? ['items' => $items, 'branding' => $brandings] : null;
 	}
 }
 

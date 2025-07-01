@@ -1,5 +1,5 @@
-if(!OaHelper){
-	var OaHelper = {};
+if(!window.OaHelper){
+	window.OaHelper = {};
 }
 
 (function ($) {
@@ -23,7 +23,7 @@ if(!OaHelper){
 		CLASS_INP_REL = 'oa-tree-inp-rel';
 
 
-	OaHelper.Tree = class {
+	window.OaHelper.Tree = class {
 		el_root = null;
 
 		constructor (el_root, p) {
@@ -162,7 +162,7 @@ if(!OaHelper){
 	};
 
 
-	OaHelper.RadioTree = class {
+	window.OaHelper.RadioTree = class {
 		el_root = null;
 
 		constructor (el_root, p){

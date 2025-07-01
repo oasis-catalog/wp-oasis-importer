@@ -158,7 +158,7 @@ class Main {
 
 	/**
 	 * Add WooCommerce product
-	 *
+	 * @param $group_id
 	 * @param $oasisProduct
 	 * @param $model
 	 * @param $categories
@@ -167,7 +167,7 @@ class Main {
 	 *
 	 * @return int|void
 	 */
-	public static function addWcProduct( $oasisProduct, $model, $categories, $totalStock, string $type ) {
+	public static function addWcProduct($group_id, $oasisProduct, $model, $categories, $totalStock, string $type ) {
 		try {
 			$dataPrice = self::getDataPrice($oasisProduct);
 
@@ -204,7 +204,7 @@ class Main {
 			}
 
 			self::updateWcProductBrand($wcProductId, $oasisProduct);
-			self::addProductOasisTable( $wcProductId, $oasisProduct->id, count( $model ) > 1 ? $oasisProduct->group_id : $oasisProduct->id, 'product' );
+			self::addProductOasisTable($wcProductId, $oasisProduct->id, $group_id, 'product');
 			self::$cf->log('Добавлен товар id '.$oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
@@ -323,13 +323,12 @@ class Main {
 
 	/**
 	 * Add variation
-	 *
+	 * @param $group_id
 	 * @param $productId
 	 * @param $oasisProduct
-	 *
 	 * @return int|void|null
 	 */
-	public static function addWcVariation($productId, $oasisProduct) {
+	public static function addWcVariation($group_id, $productId, $oasisProduct) {
 		try {
 			$dataPrice = self::getDataPrice($oasisProduct);
 
@@ -359,7 +358,7 @@ class Main {
 				$wcVariation->save();
 			}
 
-			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $oasisProduct->group_id, 'product_variation', $oasisProduct->parent_size_id );
+			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $group_id, 'product_variation', $oasisProduct->parent_size_id );
 			self::$cf->log('Добавлен вариант id ' . $oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
@@ -762,18 +761,22 @@ class Main {
 	 * @return array
 	 */
 	public static function getProductDefaultAttributes( $productId, $model ): array {
-		if ( count( $model ) > 1 ) {
-			foreach ( $model as $product ) {
-				if ( ! empty( $product->size ) ) {
-					if ( $product->id == $productId ) {
-						$result[ sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] ) ] = sanitize_title( trim( $product->size ) );
+		if (count($model) > 1 ) {
+			foreach ($model as $product) {
+				if (!empty($product->size)) {
+					if ($product->id == $productId) {
+						$taxonomy = sanitize_title('pa_' . self::$attrVariation['size']['slug']);
+						$term = self::getTermByName($product->size, $taxonomy);
+						$result[$taxonomy] = $term->slug;
 					}
 				}
 
-				foreach ( $product->attributes as $attribute ) {
-					if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-						if ( $product->id == $productId ) {
-							$result[ sanitize_title( 'pa_' . self::$attrVariation['color']['slug'] ) ] = sanitize_title( trim( $attribute->value ) );
+				foreach ($product->attributes as $attribute) {
+					if (isset($attribute->id) && $attribute->id == '1000000001') {
+						if ($product->id == $productId) {
+							$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
+							$term = self::getTermByName($attribute->value, $taxonomy);
+							$result[$taxonomy] = $term->slug;
 						}
 						break;
 					}
@@ -932,45 +935,81 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	}
 
 	/**
+	 * Delete oasis product for post_id
+	 * @param $post_id
+	 * @return void
+	 */
+	public static function deleteOasisProductByPostId($post_id) {
+		global $wpdb;
+		$wpdb->delete($wpdb->prefix . 'oasis_products', [ 'post_id' => $post_id ] );
+	}
+
+	/**
 	 * Get object wc product attribute
-	 *
 	 * @param $attr
-	 * @param $value
+	 * @param $values
 	 * @param bool $visible
-	 * @param $variation
-	 *
+	 * @param bool $variation
 	 * @return WC_Product_Attribute
 	 */
-	public static function getWcObjectProductAttribute( $attr, $value, bool $visible, $variation ): WC_Product_Attribute {
+	public static function getWcObjectProductAttribute($attr, array $values, bool $visible, bool $variation): WC_Product_Attribute {
+		if ($attr['attribute_id']) {
+			$options = [];
+			foreach ($values as $value) {
+				$term = self::getTermByName($value, $attr['attribute_taxonomy']);
+				$options[] = intval($term->term_id);
+			}
+		}
+		else {
+			$options = $values;
+		}
+
 		$attribute = new WC_Product_Attribute();
-		$attribute->set_id( $attr['attribute_id'] );
-		$attribute->set_name( $attr['attribute_taxonomy'] );
-		$attribute->set_visible( $visible );
-		$attribute->set_options( $value );
-		$attribute->set_variation( $variation );
+		$attribute->set_id($attr['attribute_id']);
+		$attribute->set_name($attr['attribute_taxonomy']);
+		$attribute->set_visible($visible);
+		$attribute->set_options($options);
+		$attribute->set_variation($variation);
 
 		return $attribute;
 	}
 
 	/**
 	 * Get variation attributes
-	 *
 	 * @param $variation
-	 *
 	 * @return array
 	 */
-	public static function getVariationAttributes( $variation ): array {
-		if ( ! empty( $variation->size ) ) {
-			$result[ sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] ) ] = sanitize_title( trim( $variation->size ) );
+	public static function getVariationAttributes($variation): array {
+		if (!empty( $variation->size)) {
+			$taxonomy = sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] );
+			$term = self::getTermByName($variation->size, $taxonomy);
+			$result[$taxonomy] = $term->slug;
 		}
 
-		foreach ( $variation->attributes as $attribute ) {
-			if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-				$result[ sanitize_title( 'pa_' . self::$attrVariation['color']['slug'] ) ] = sanitize_title( trim( $attribute->value ) );
+		foreach ($variation->attributes as $attribute) {
+			if (isset( $attribute->id ) && $attribute->id == '1000000001') {
+				$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
+				$term = self::getTermByName($attribute->value, $taxonomy);
+				$result[$taxonomy] = $term->slug;
 			}
 		}
-
 		return $result ?? [];
+	}
+
+	/**
+	 * Get term
+	 * @param $name
+	 * @param $taxonomy
+	 * @return term
+	 */
+	public static function getTermByName($name, $taxonomy) {
+		$result = term_exists($name, $taxonomy);
+		if (!$result) {
+			$result = wp_insert_term($name, $taxonomy, [
+				'slug' => self::transliteration($name)
+			]);
+		}
+		return get_term($result['term_id'], $taxonomy);
 	}
 
 	/**
@@ -1044,7 +1083,9 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		foreach ( $terms as $term ) {
 			$result = term_exists( $term, $attribute->slug );
 			if ( ! $result ) {
-				$result = wp_insert_term( $term, $attribute->slug );
+				$result = wp_insert_term($term, $attribute->slug, [
+					'slug' => self::transliteration($term)
+				]);
 			}
 			$return['term_ids'][] = $result['term_id'];
 		}
@@ -1748,6 +1789,10 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				$existImageId = self::getAttachmentIdByTitle($filename);
 
 				if ($existImageId) {
+					wp_update_post([
+						'ID'			=> $existImageId,
+						'post_parent'	=> $product_id,
+					]);
 					$attachIds[] = $existImageId;
 					continue;
 				}

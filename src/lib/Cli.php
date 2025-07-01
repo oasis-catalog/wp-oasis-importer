@@ -16,8 +16,13 @@ class Cli {
 
 		if($cron_opt['task'] == 'add_image' || $cron_opt['task'] == 'up_image'){
 			$cf->init();
+			if (!$cf->checkCronKey($cron_key)) {
+				$cf->log('Error! Invalid --key');
+				die('Error! Invalid --key');
+			}
 			self::AddImage([
 				'oid' => $cron_opt['oid'] ?? '',
+				'sku' => $cron_opt['sku'] ?? '',
 				'is_up' => $cron_opt['task'] == 'up_image'
 			]);
 		}
@@ -38,7 +43,7 @@ class Cli {
 							$cf->log('Import once day');
 							die('Import once day');
 						}
-						self::Import();
+						self::Import($cron_opt);
 						break;
 
 					case 'up':
@@ -52,7 +57,7 @@ class Cli {
 		}
 	}
 
-	public static function Import() {
+	public static function Import($opt = []) {
 		set_time_limit(0);
 		ini_set('memory_limit', '4G');
 
@@ -64,12 +69,35 @@ class Cli {
 				Main::prepareBrands();
 			}
 
-			$args    = [];
-			$limit   = self::$cf->limit;
-			$step    = self::$cf->progress['step'];
-			if ($limit > 0 ) {
-				$args['limit']  = $limit;
-				$args['offset'] = $step * $limit;
+			$args = [];
+			if (!empty($opt['oid'])) {
+				$args['ids'] = is_array($opt['oid']) ? implode(',', $opt['oid']) : $opt['oid'];
+			}
+			elseif (!empty($opt['sku'])) {
+				$args['ids'] = [];
+
+				$sku_arr = is_array($opt['sku']) ? $opt['sku'] : explode(',', $opt['sku']);
+				foreach ($sku_arr as $sku) {
+					$post_id = wc_get_product_id_by_sku($sku);
+					if (empty($post_id))
+						continue;
+
+					$id = Main::getOasisProductIdByPostId($post_id);
+					if (empty($id))
+						continue;
+
+					$args['ids'][] = $id;
+				}
+			}
+			else {
+				$limit   = self::$cf->limit;
+				$step    = self::$cf->progress['step'];
+				if ($limit > 0 ) {
+					$args['limit']  = $limit;
+					$args['offset'] = $step * $limit;
+				}
+
+				self::$cf->progressOn();
 			}
 
 			$cats_oasis =		Api::getCategoriesOasis();
@@ -100,22 +128,25 @@ class Cli {
 				$count = 0;
 
 				foreach ( $group_ids as $group_id => $model ) {
+					$is_simple	= count($model) == 1;
+					$group_id	= $is_simple ? reset($model)->id : $group_id;
+
 					self::$cf->log( 'Начало обработки модели ' . $group_id );
 					$dbProduct  = Main::checkProductOasisTable( [ 'model_id_oasis' => $group_id ], 'product' );
 					$totalStock = Main::getTotalStock( $model );
 
-					if ( count( $model ) === 1 ) {
+					if ($is_simple) {
 						$product    = reset( $model );
 						$categories = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories($product, $cats_oasis);
 
 						if ( $dbProduct ) {
 							Main::upWcProduct( $dbProduct['post_id'], $model, $categories, $totalStock );
 						} else {
-							Main::addWcProduct( $product, $model, $categories, $totalStock, 'simple' );
+							Main::addWcProduct($group_id, $product, $model, $categories, $totalStock, 'simple' );
 						}
-
 						self::$cf->progressUp();
-					} elseif ( count( $model ) > 1 ) {
+					}
+					else {
 						$firstProduct = Main::getFirstProduct( $model );
 						$categories   = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories( $firstProduct, $cats_oasis);
 
@@ -125,7 +156,7 @@ class Cli {
 								continue;
 							}
 						} else {
-							$wcProductId = Main::addWcProduct( $firstProduct, $model, $categories, $totalStock, 'variable' );
+							$wcProductId = Main::addWcProduct($group_id, $firstProduct, $model, $categories, $totalStock, 'variable' );
 							if ( ! $wcProductId ) {
 								continue;
 							}
@@ -137,7 +168,7 @@ class Cli {
 							if ( $dbVariation ) {
 								Main::upWcVariation( $dbVariation, $variation );
 							} else {
-								Main::addWcVariation( $wcProductId, $variation );
+								Main::addWcVariation($group_id, $wcProductId, $variation );
 							}
 							self::$cf->progressUp();
 						}
@@ -192,8 +223,24 @@ class Cli {
 			self::$cf->log('Начало обновления картинок товаров');
 
 			$args = [];
-			if(!empty($opt['oid'])){
-				$args['ids'] =  is_array($opt['oid']) ? implode(',', $opt['oid']) : $opt['oid'];
+			if (!empty($opt['oid'])) {
+				$args['ids'] = is_array($opt['oid']) ? implode(',', $opt['oid']) : $opt['oid'];
+			}
+			if (!empty($opt['sku'])) {
+				$args['ids'] = [];
+
+				$sku_arr = is_array($opt['sku']) ? $opt['sku'] : explode(',', $opt['sku']);
+				foreach ($sku_arr as $sku) {
+					$post_id = wc_get_product_id_by_sku($sku);
+					if (empty($post_id))
+						continue;
+
+					$id = Main::getOasisProductIdByPostId($post_id);
+					if (empty($id))
+						continue;
+
+					$args['ids'][] = $id;
+				}
 			}
 
 			$cats_oasis =	Api::getCategoriesOasis();
@@ -217,10 +264,11 @@ class Cli {
 
 				foreach ($group_ids as $group_id => $model) {
 					$count++;
+					$group_id = count($model) > 1 ? $group_id : reset($model)->id;
 
 					self::$cf->log('Начало обработки модели ' . $group_id );
-					$dbProduct = Main::checkProductOasisTable([ 'model_id_oasis' => $group_id ], 'product');
 
+					$dbProduct = Main::checkProductOasisTable(['model_id_oasis' => $group_id], 'product');
 					if(empty($dbProduct)){
 						self::$cf->log('Выполнено ' . $count . ' из ' . $total . '. Модель не добавлена');
 						continue;

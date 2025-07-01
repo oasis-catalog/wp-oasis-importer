@@ -1,7 +1,7 @@
 jQuery(function ($) {
-    $('.oasis-send_order').click(function () {
+    $('.js-oasis-send_order').click(function () {
         var data = {
-            action: 'send_order',
+            action: 'oasis_send_order',
             order_id: this.getAttribute('data-order-id')
         };
         this.setAttribute("disabled", "disabled");
