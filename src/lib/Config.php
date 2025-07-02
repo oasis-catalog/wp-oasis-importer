@@ -374,10 +374,6 @@ class Config {
 		return null;
 	}
 
-	public function getEasyCategories() {
-		
-	}
-
 	public function activate() {
 		if (!is_dir($this->upload_path)) {
 			if(!wp_mkdir_p($this->upload_path)){

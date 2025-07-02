@@ -81,15 +81,14 @@ jQuery(function ($) {
 			dataType: 'json',
 			success: function (data) {
 				if (data) {
-					document.getElementById('upAjaxStep').style.width = data.p_step + '%';
+					$('#upAjaxStep').css('width', data.p_step + '%');
 					$('#upAjaxStep').html(data.p_step + '%');
 
-					document.getElementById('upAjaxTotal').style.width = data.p_total + '%';
+					$('#upAjaxTotal').css('width',  data.p_total + '%');
 					$('#upAjaxTotal').html(data.p_total + '%');
 
-					document.querySelector(".oasis-process-icon").innerHTML = data.progress_icon;
-
-					document.querySelector('.oasis-process-text').innerHTML = data.step_text;
+					$('.oasis-process-icon').html(data.progress_icon);
+					$('.oasis-process-text').html(data.step_text);
 
 					if (data.is_process) {
 						addAnimatedBar('progress-bar-striped progress-bar-animated');

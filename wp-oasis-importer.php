@@ -417,6 +417,41 @@ function oasis_sanitize_data( $options ) {
 			$val = array_filter($val, fn($x) => !empty($x));
 			$val = array_unique($val);
 		}
+		elseif ($name == 'categories'){
+			$categories = Api::getCategoriesOasis();
+			$arr_cat	= [];
+
+			foreach ($categories as $item) {
+				$l = $item->level;
+				if (empty($arr_cat[$l])) {
+					$arr_cat[$l] = [];
+				}
+				if (empty($arr_cat[$l][$item->id])) {
+					$arr_cat[$l][$item->id] = [];
+				}
+				if ($item->parent_id) {
+					if (empty($arr_cat[$l][$item->parent_id])) {
+						$arr_cat[$l][$item->parent_id] = [];
+					}
+					$arr_cat[$l][$item->parent_id][] = $item->id;
+				}
+			}
+			ksort($arr_cat);
+			while (true) {
+				foreach (array_reverse($arr_cat) as $arr) {
+					foreach ($arr as $id => $childs) {
+						if (count($childs) > 0 && count(array_diff($childs, $val)) == 0){
+							$val = array_diff($val, $childs);
+							$val[] = $id;
+							continue 3;
+						}
+					}
+				}
+				break;
+			}
+
+			$val = array_values(array_unique($val));
+		}
 	}
 
 	$cf->progressClear();

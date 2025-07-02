@@ -1464,14 +1464,15 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @param array $checkedArr
 	 * @param array $relCategories
 	 * @param int $parent_id
+	 * @param bool $parent_checked
 	 *
 	 * @return string
 	 */
-	public static function buildTreeCats( $data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0 ): string {
+	public static function buildTreeCats($data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0, bool $parent_checked = false): string {
 		$treeItem = '';
 		if ( ! empty( $data[ $parent_id ] ) ) {
 			foreach($data[ $parent_id ] as $item){
-				$checked = in_array( $item['id'], $checkedArr ) ? ' checked' : '';
+				$checked = $parent_checked || in_array($item['id'], $checkedArr);
 
 				$rel_cat = $relCategories[$item['id']] ?? null;
 				$rel_label = '';
@@ -1481,14 +1482,14 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 					$rel_label = $rel_cat['rel_label'];
 				}
 
-				$treeItemChilds = self::buildTreeCats( $data, $checkedArr, $relCategories, $item['id'] );
+				$treeItemChilds = self::buildTreeCats($data, $checkedArr, $relCategories, $item['id'], $checked);
 
 				if(empty($treeItemChilds)){
 					$treeItem .= '<div class="oa-tree-leaf">
 						<div class="oa-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
 							<input type="hidden" class="oa-tree-inp-rel" name="oasis_options[cat_relation][]" value="' . $rel_value . '" />
 							<label>
-								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . ($checked ? ' checked' : '' ) . '/>
 								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
 							</label>
 							<div class="oa-tree-dashed"></div>
@@ -1503,7 +1504,7 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 							<span class="oa-tree-handle-p">+</span>
 							<span class="oa-tree-handle-m">-</span>
 							<label>
-								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . $checked . '/>
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . ($checked ? ' checked' : '' ) . '/>
 								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
 							</label>
 							<div class="oa-tree-dashed"></div>
