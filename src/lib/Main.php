@@ -411,7 +411,7 @@ class Main {
 
 			$wcVariation->save();
 
-			self::$cf->log('Обновлен вариант OAId='.$oasisProduct->id.' add WPId=' . $dbVariation['post_id']);
+			self::$cf->log(' - обновлен вариант OAId='.$oasisProduct->id.', WPId=' . $dbVariation['post_id']);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();

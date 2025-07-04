@@ -192,7 +192,7 @@ class Cli {
 
 		try {
 			self::$cf->log('Начало обновления остатков');
-			$stock         = Api::getStockOasis();
+
 			$dbResults     = $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A);
 			$oasisProducts = [];
 
@@ -202,13 +202,26 @@ class Cli {
 				}
 			}
 
-			foreach ($stock as $item) {
-				if (!empty($oasisProducts[$item->id])) {
-					$val = intval($item->stock) + intval($item->{"stock-remote"});
-					update_post_meta($oasisProducts[$item->id], '_stock', $val);
-					update_post_meta($oasisProducts[$item->id], '_stock_status', $val > 0 ? 'instock' : 'outofstock');
+			$stock = [];
+			foreach (Api::getStockOasis() as $item) {
+				$stock[$item->id] = $item;
+			}
+
+			foreach ($oasisProducts as $product_id => $post_id) {
+				
+
+				$stock_item = $stock[$product_id] ?? null;
+				if ($stock_item) {
+					$val = intval($stock_item->stock) + intval($stock_item->{"stock-remote"});
+					update_post_meta($post_id, '_stock', $val);
+					update_post_meta($post_id, '_stock_status', $val > 0 ? 'instock' : 'outofstock');
+				}
+				else {
+					Main::checkDeleteProduct($product_id);
+					self::$cf->log('Удален OAId=' . $product_id);
 				}
 			}
+
 			self::$cf->log('Окончание обновления остатков');
 		} catch (Exception $exception) {
 			die();
