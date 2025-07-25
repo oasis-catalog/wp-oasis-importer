@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Oasiscatalog - Product Importer 2.5.1\n"
+"Project-Id-Version: Oasiscatalog - Product Importer 2.5.2\n"
 "Report-Msgid-Bugs-To: https://www.oasiscatalog.com\n"
 "Last-Translator: Nikolay Visheratin\n"
 "Language-Team: https://www.oasiscatalog.com\n"

@@ -62,7 +62,7 @@ class Cli {
 		ini_set('memory_limit', '4G');
 
 		try {
-			self::$cf->log( 'Начало обновления товаров' );
+			self::$cf->log('Начало обновления товаров');
 
 			Main::prepareAttributeData();
 			if(self::$cf->is_brands){
@@ -101,104 +101,105 @@ class Cli {
 			}
 
 			$cats_oasis =		Api::getCategoriesOasis();
-			$products =			Api::getOasisProducts( $cats_oasis, $args );
-			$stats =			Api::getStatProducts( $cats_oasis );
+			$products =			Api::getOasisProducts($cats_oasis, $args);
+			$stats =			Api::getStatProducts($cats_oasis);
 
 			$group_ids =		[];
 			$countProducts =	0;
-			foreach ( $products as $product ) {
-				if ( $product->is_deleted === false ) {
-					if ( $product->size || $product->colors ) {
-						$group_ids[ $product->group_id ][ $product->id ] = $product;
-					} else {
-						$group_ids[ $product->id ][ $product->id ] = $product;
-					}
-
-					$countProducts ++;
+			foreach ($products as $product) {
+				if ($product->size || $product->colors) {
+					$group_ids[$product->group_id][$product->id] = $product;
 				} else {
-					Main::checkDeleteProduct( $product->id );
+					$group_ids[$product->id][$product->id] = $product;
+				}
+				if ($product->is_deleted) {
+					Main::checkDeleteProduct($product->id);
+				} else {
+					$countProducts ++;
 				}
 			}
 
 			self::$cf->progressStart($stats->products, $countProducts);
 
-			if ( ! empty( $group_ids ) ) {
-				unset( $products, $product, $countProducts );
-				$total = count( array_keys( $group_ids ) );
+			if (!empty($group_ids)) {
+				unset($products, $product, $countProducts);
+				$total = count(array_keys($group_ids));
 				$count = 0;
 
-				foreach ( $group_ids as $group_id => $model ) {
+				foreach ($group_ids as $group_id => $group) {
+					$model = array_filter($group, fn($p) => !$p->is_deleted);
+					if (count($model) == 0) {
+						continue;
+					}
+
 					$is_simple	= count($model) == 1;
 					$group_id	= $is_simple ? reset($model)->id : $group_id;
 
-					self::$cf->log( 'Начало обработки модели ' . $group_id );
-					$dbProduct  = Main::checkProductOasisTable( [ 'model_id_oasis' => $group_id ], 'product' );
-					$totalStock = Main::getTotalStock( $model );
+					self::$cf->log('Начало обработки модели ' . $group_id);
+					$dbProduct  = Main::checkProductOasisTable(['model_id_oasis' => $group_id], 'product');
+					$totalStock = Main::getTotalStock($model);
 
 					if ($is_simple) {
-						$product    = reset( $model );
+						$product    = reset($model);
 						$categories = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories($product, $cats_oasis);
 
-						if ( $dbProduct ) {
-							Main::upWcProduct( $dbProduct['post_id'], $model, $categories, $totalStock );
+						if ($dbProduct) {
+							Main::upWcProduct($dbProduct['post_id'], $model, $categories, $totalStock);
 						} else {
-							Main::addWcProduct($group_id, $product, $model, $categories, $totalStock, 'simple' );
+							Main::addWcProduct($group_id, $product, $model, $categories, $totalStock);
 						}
 						self::$cf->progressUp();
 					}
 					else {
-						$firstProduct = Main::getFirstProduct( $model );
-						$categories   = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories( $firstProduct, $cats_oasis);
+						$firstProduct = Main::getFirstProduct($model);
+						$categories   = ($dbProduct && self::$cf->is_not_up_cat) ? [] : Main::getProductCategories($firstProduct, $cats_oasis);
 
-						if ( $dbProduct ) {
+						if ($dbProduct) {
 							$wcProductId = $dbProduct['post_id'];
-							if ( ! Main::upWcProduct( $wcProductId, $model, $categories, $totalStock ) ) {
+							if (!Main::upWcProduct($wcProductId, $model, $categories, $totalStock, true)) {
 								continue;
 							}
 						} else {
-							$wcProductId = Main::addWcProduct($group_id, $firstProduct, $model, $categories, $totalStock, 'variable' );
-							if ( ! $wcProductId ) {
+							$wcProductId = Main::addWcProduct($group_id, $firstProduct, $model, $categories, $totalStock, true);
+							if (!$wcProductId) {
 								continue;
 							}
 						}
 
-						foreach ( $model as $variation ) {
-							$dbVariation = Main::checkProductOasisTable( [ 'product_id_oasis' => $variation->id ], 'product_variation' );
+						foreach ($model as $variation) {
+							$dbVariation = Main::checkProductOasisTable(['product_id_oasis' => $variation->id ], 'product_variation');
 
-							if ( $dbVariation ) {
-								Main::upWcVariation( $dbVariation, $variation );
+							if ($dbVariation) {
+								Main::upWcVariation($dbVariation, $variation);
 							} else {
-								Main::addWcVariation($group_id, $wcProductId, $variation );
+								Main::addWcVariation($group_id, $wcProductId, $variation);
 							}
 							self::$cf->progressUp();
 						}
 					}
-					self::$cf->log( 'Done ' . ++ $count . ' from ' . $total );
+					self::$cf->log('Done ' . ++ $count . ' from ' . $total);
 				}
 			}
 			self::$cf->progressEnd();
-			self::$cf->log( 'Окончание обновления товаров' );
-		} catch ( Exception $exception ) {
+			self::$cf->log('Окончание обновления товаров');
+		} catch (Exception $exception) {
 			echo $exception->getMessage();
 			die();
 		}
 	}
 
-	public static function UpStock() {
-		global $wpdb;
-
+	public static function UpStock()
+	{
 		set_time_limit(0);
 		ini_set('memory_limit', '2G');
 
 		try {
 			self::$cf->log('Начало обновления остатков');
 
-			$dbResults     = $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A);
 			$oasisProducts = [];
-
-			foreach ($dbResults as $dbResult) {
-				if (empty($oasisProducts[$dbResult['product_id_oasis']]) || $dbResult['type'] == 'product_variation') {
-					$oasisProducts[$dbResult['product_id_oasis']] = $dbResult['post_id'];
+			foreach (Main::getOasisDbRows() as $row) {
+				if (empty($oasisProducts[$row['product_id_oasis']]) || $row['type'] == 'product_variation') {
+					$oasisProducts[$row['product_id_oasis']] = $row['post_id'];
 				}
 			}
 
@@ -208,8 +209,6 @@ class Cli {
 			}
 
 			foreach ($oasisProducts as $product_id => $post_id) {
-				
-
 				$stock_item = $stock[$product_id] ?? null;
 				if ($stock_item) {
 					$val = intval($stock_item->stock) + intval($stock_item->{"stock-remote"});
@@ -217,8 +216,8 @@ class Cli {
 					update_post_meta($post_id, '_stock_status', $val > 0 ? 'instock' : 'outofstock');
 				}
 				else {
+					self::$cf->log('Удаление OAId=' . $product_id);
 					Main::checkDeleteProduct($product_id);
-					self::$cf->log('Удален OAId=' . $product_id);
 				}
 			}
 

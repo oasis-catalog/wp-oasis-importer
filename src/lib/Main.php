@@ -24,21 +24,21 @@ class Main {
 	 * @return void
 	 */
 	public static function prepareAttributeData() {
-		$attr_names       = [
-			'color' => 'Цвет',
-			'size'  => 'Размер'
+		$attr_names = [
+			'color'		=> 'Цвет',
+			'size'		=> 'Размер'
 		];
-		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
+		$attribute_labels = wp_list_pluck(wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name');
 
-		foreach ( $attr_names as $key => $name ) {
-			$attribute_name = array_search( $name, $attribute_labels, true );
+		foreach ($attr_names as $key => $name) {
+			$attribute_name = array_search($name, $attribute_labels, true);
 
-			if ( $attribute_name === false ) {
-				$attribute_taxonomy = self::createAttribute( $name, [] );
-				$attribute_name     = str_replace( 'pa_', '', $attribute_taxonomy['attribute_taxonomy'] );
+			if ($attribute_name === false) {
+				$attribute_taxonomy = self::createAttribute($name, []);
+				$attribute_name     = str_replace('pa_', '', $attribute_taxonomy['attribute_taxonomy']);
 			}
 
-			self::$attrVariation[ $key ] = [
+			self::$attrVariation[$key] = [
 				'name' => $name,
 				'slug' => $attribute_name,
 			];
@@ -163,15 +163,14 @@ class Main {
 	 * @param $model
 	 * @param $categories
 	 * @param $totalStock
-	 * @param string $type
-	 *
+	 * @param bool $is_variable
 	 * @return int|void
 	 */
-	public static function addWcProduct($group_id, $oasisProduct, $model, $categories, $totalStock, string $type ) {
+	public static function addWcProduct($group_id, $oasisProduct, $model, $categories, $totalStock, bool $is_variable = false) {
 		try {
 			$dataPrice = self::getDataPrice($oasisProduct);
 
-			$wcProduct = self::getWcProductObjectType( $type );
+			$wcProduct = $is_variable ? new WC_Product_Variable() : new WC_Product_Simple();
 			$wcProduct->set_name( $oasisProduct->name );
 			$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
 			$wcProduct->set_category_ids( $categories );
@@ -182,8 +181,8 @@ class Main {
 			$wcProduct->set_regular_price( $dataPrice['regular_price'] );
 			$wcProduct->set_sale_price( $dataPrice['sale_price'] );
 			$wcProduct->set_stock_quantity( $totalStock );
-			$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-			$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
+			$wcProduct->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
+			$wcProduct->set_attributes(self::prepareProductAttributes($oasisProduct, $model, $is_variable));
 			$wcProduct->set_reviews_allowed(self::$cf->is_comments);
 
 			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
@@ -191,8 +190,8 @@ class Main {
 				$wcProduct->set_default_attributes( $defaultAttr );
 			}
 
-			if ($type == 'simple') {
-				$wcProduct->set_sku( $oasisProduct->article );
+			if (!$is_variable) {
+				$wcProduct->set_sku($oasisProduct->article);
 			}
 
 			$wcProductId = $wcProduct->save();
@@ -221,15 +220,14 @@ class Main {
 
 	/**
 	 * Up product
-	 *
 	 * @param $productId
 	 * @param $model
 	 * @param $categories
 	 * @param $totalStock
-	 *
+	 * @param bool $is_variable
 	 * @return bool|void
 	 */
-	public static function upWcProduct($productId, $model, $categories, $totalStock) {
+	public static function upWcProduct($productId, $model, $categories, $totalStock, bool $is_variable = false) {
 		$oasisProduct = self::getFirstProduct( $model );
 		$dataPrice    = self::getDataPrice($oasisProduct);
 
@@ -249,8 +247,8 @@ class Main {
 				$wcProduct->set_regular_price( $dataPrice['regular_price'] );
 				$wcProduct->set_sale_price( $dataPrice['sale_price'] );
 				$wcProduct->set_stock_quantity( (int) $totalStock );
-				$wcProduct->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-				$wcProduct->set_attributes( self::prepareProductAttributes( $oasisProduct, $model ) );
+				$wcProduct->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
+				$wcProduct->set_attributes(self::prepareProductAttributes($oasisProduct, $model, $is_variable));
 				$wcProduct->set_reviews_allowed(self::$cf->is_comments);
 				$wcProduct->set_date_modified( time() );
 
@@ -264,7 +262,7 @@ class Main {
 				}
 
 				if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcProduct ) === false) {
-					self::deleteImgInProduct( $wcProduct );
+					self::deleteWcProductImages( $wcProduct );
 					$images = self::processingPhoto( $oasisProduct->images, $productId );
 					$wcProduct->set_image_id( array_shift( $images ) );
 					$wcProduct->set_gallery_image_ids( $images );
@@ -295,27 +293,28 @@ class Main {
 	 *
 	 * @return bool|void
 	 */
-	public static function wcProductAddImage($productId, $model, $is_up = false) {
-		$oasisProduct = self::getFirstProduct( $model );
+	public static function wcProductAddImage($productId, $model, $is_up = false)
+	{
+		$oasisProduct = self::getFirstProduct($model);
 
 		try {
-			$wcProduct = wc_get_product( $productId );
+			$wcProduct = wc_get_product($productId);
 
 			if (empty($wcProduct)) {
-				throw new Exception( 'Error open product. No product with this ID' );
+				throw new Exception('Error open product. No product with this ID');
 			}
 			if(!$is_up && !empty($wcProduct->get_image_id())){
 				return true;
 			}
 
-			self::deleteImgInProduct( $wcProduct );
-			$images = self::processingPhoto( $oasisProduct->images, $productId );
-			$wcProduct->set_image_id( array_shift( $images ) );
-			$wcProduct->set_gallery_image_ids( $images );
+			self::deleteWcProductImages($wcProduct);
+			$images = self::processingPhoto($oasisProduct->images, $productId);
+			$wcProduct->set_image_id(array_shift($images));
+			$wcProduct->set_gallery_image_ids($images);
 			$wcProduct->set_date_modified(time());
 			$wcProduct->save();
 			return true;
-		} catch ( Exception $exception ) {
+		} catch (Exception $exception) {
 			echo $exception->getMessage() . PHP_EOL;
 			die();
 		}
@@ -343,11 +342,15 @@ class Main {
 			$wcVariation->set_regular_price( $dataPrice['regular_price'] );
 			$wcVariation->set_sale_price( $dataPrice['sale_price'] );
 			$wcVariation->set_stock_quantity( intval( $oasisProduct->total_stock ) );
-			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
+			$wcVariation->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
 
-			$attributes = self::getVariationAttributes( $oasisProduct );
-			if ( $attributes ) {
-				$wcVariation->set_attributes( $attributes );
+			if ($attributes = self::getVariationAttributes($oasisProduct)) {
+				$wcVariation->set_attributes($attributes);
+			}
+			if ($meta_data = self::getVariationMetaData($oasisProduct)) {
+				foreach ($meta_data as $key => $value) {
+					$wcVariation->add_meta_data($key, $value);
+				}
 			}
 
 			$wcVariationId = $wcVariation->save();
@@ -359,7 +362,7 @@ class Main {
 			}
 
 			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $group_id, 'product_variation', $oasisProduct->parent_size_id );
-			self::$cf->log('Добавлен вариант id ' . $oasisProduct->id);
+			self::$cf->log(' - добавлен вариант id ' . $oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
@@ -379,7 +382,8 @@ class Main {
 	 * @param $dbVariation
 	 * @param $oasisProduct
 	 */
-	public static function upWcVariation($dbVariation, $oasisProduct) {
+	public static function upWcVariation($dbVariation, $oasisProduct)
+	{
 		try {
 			$dataPrice   = self::getDataPrice($oasisProduct);
 			$wcVariation = wc_get_product( $dbVariation['post_id'] );
@@ -398,13 +402,17 @@ class Main {
 			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
 			$wcVariation->set_date_modified( time() );
 
-			$attributes = self::getVariationAttributes( $oasisProduct );
-			if ( $attributes ) {
-				$wcVariation->set_attributes( $attributes );
+			if ($attributes = self::getVariationAttributes($oasisProduct)) {
+				$wcVariation->set_attributes($attributes);
+			}
+			if ($meta_data = self::getVariationMetaData($oasisProduct)) {
+				foreach ($meta_data as $key => $value) {
+					$wcVariation->update_meta_data($key, $value);
+				}
 			}
 
 			if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcVariation ) === false) {
-				self::deleteImgInProduct( $wcVariation );
+				self::deleteWcProductImages( $wcVariation );
 				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
 				$wcVariation->set_image_id( array_shift( $images ) );
 			}
@@ -436,7 +444,7 @@ class Main {
 				return true;
 			}
 
-			self::deleteImgInProduct($wcVariation);
+			self::deleteWcProductImages($wcVariation);
 			$images = self::processingPhoto([reset($oasisProduct->images)], $dbVariation['post_id']);
 			$wcVariation->set_image_id(array_shift($images));
 			$wcVariation->set_date_modified(time());
@@ -523,22 +531,84 @@ class Main {
 
 	/**
 	 * Delete woocommerce product
-	 *
 	 * @param $wcProduct
 	 */
-	private static function deleteWcProduct( $wcProduct ) {
+	private static function deleteWcProduct($wcProduct)
+	{
 		global $wpdb;
-
-		if ( $wcProduct->is_type( 'variable' ) ) {
-			foreach ( $wcProduct->get_children() as $child_id ) {
-				$child = wc_get_product( $child_id );
-				$child->delete( true );
-				$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $child_id ) ] );
+		if ($wcProduct->is_type('variable')) {
+			foreach ($wcProduct->get_children() as $child_id) {
+				$child = wc_get_product($child_id);
+				self::deleteWcProductImages($child);
+				$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => intval($child_id)]);
+				$child->delete(true);
+				self::$cf->log(' - удален wc_product_variation_id: ' . $child_id);
 			}
 		}
 
-		$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $wcProduct->get_id() ) ] );
-		$wcProduct->delete( true );
+		self::deleteWcProductImages($wcProduct);
+		$id = $wcProduct->get_id();
+		$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => $id]);
+		$wcProduct->delete(true);
+		self::$cf->log(' - удален wc_product_id: ' . $id);
+	}
+
+	/**
+	 * Delete images for woocommerce product
+	 * @param $wcProduct
+	 */
+	private static function deleteWcProductImages($wcProduct) {
+		$images = array_merge(
+			[$wcProduct->get_image_id()], 
+			$wcProduct->get_gallery_image_ids());
+
+		foreach($images as $image_id) {
+			if(!empty($image_id)) {
+				$other = self::checkAttachmentOtherPost($image_id, $wcProduct->get_id());
+				if (empty($other)) {
+					wp_delete_attachment($image_id, true);
+					self::$cf->log(' - удален attachment: ' . $image_id);
+				}
+				else {
+					self::$cf->log(' - не удален attachment, в других: ' . count($other));
+				}
+			}
+		}
+	}
+
+	/**
+	 * Check use attachment in other post
+	 * @param $wcProduct
+	 */
+	private static function checkAttachmentOtherPost($attachment_id, $product_id = 0) {
+		global $wpdb;
+		
+		$as_featured = $wpdb->get_results($wpdb->prepare(
+			"SELECT post_id FROM {$wpdb->postmeta} 
+			 WHERE meta_key = '_thumbnail_id' 
+			 AND meta_value = %d
+			 AND post_id != %d", 
+			$attachment_id, 
+			$product_id
+		), ARRAY_A);
+
+		$in_galleries = $wpdb->get_results($wpdb->prepare(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} 
+			 WHERE meta_key = '_product_image_gallery' 
+			 AND meta_value LIKE %s
+			 AND post_id != %d",
+			'%' . $wpdb->esc_like($attachment_id) . '%',
+			$product_id
+		), ARRAY_A);
+
+		$result = $as_featured;
+		foreach ($in_galleries as $gallery) {
+			$ids = explode(',', $gallery['meta_value']);
+			if (in_array($attachment_id, $ids)) {
+				$result[] = $gallery['post_id'];
+			}
+		}
+		return $result;
 	}
 
 	/**
@@ -627,126 +697,140 @@ class Main {
 	}
 
 	/**
-	 * Get product object
-	 *
-	 * @param string $type
-	 *
-	 * @return void|WC_Product|WC_Product_Simple|WC_Product_Variable
-	 */
-	public static function getWcProductObjectType( string $type = 'simple' ) {
-		try {
-			if ( $type === 'variable' ) {
-				$product = new WC_Product_Variable();
-			} else {
-				$product = new WC_Product_Simple();
-			}
-
-			if ( ! is_a( $product, 'WC_Product' ) ) {
-				throw new Exception( 'Error get product object type' );
-			}
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-			die();
-		}
-
-		return $product;
-	}
-
-	/**
 	 * Get total stock products
 	 *
 	 * @param array $products
 	 *
 	 * @return int
 	 */
-	public static function getTotalStock( array $products ): int {
+	public static function getTotalStock(array $products): int {
 		$result = 0;
-
-		foreach ( $products as $product ) {
-			$result += intval( $product->total_stock );
+		foreach ($products as $product) {
+			if (empty($product->is_stopped)) {
+				$result += intval($product->total_stock);
+			}
 		}
-		unset( $products, $product );
-
 		return $result;
 	}
 
 	/**
 	 * Get product attributes
-	 *
 	 * @param $product
 	 * @param array $models
-	 *
+	 * @param bool $is_variable
 	 * @return array
 	 */
-	public static function prepareProductAttributes( $product, array $models = [] ): array {
-		$wcAttributes = [];
-		$dataSize     = self::getProductAttributeSize( $models );
+	public static function prepareProductAttributes($product, array $models = [], bool $is_variable = false): array
+	{
+		$wcAttributes	= [];
+		$brandings		= [];
+		$dataSize		= self::getProductAttributeSize($models);
 
-		if ( ! empty( $dataSize ) ) {
-			$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( self::$attrVariation['size']['name'], $dataSize, self::$attrVariation['size']['slug'] ), $dataSize, true, count( $models ) > 1 );
-			unset( $dataSize );
+		if (!empty($dataSize)) {
+			$wcAttributes[] = self::getWcObjectProductAttribute(
+				self::createAttribute(self::$attrVariation['size']['name'], $dataSize, self::$attrVariation['size']['slug']),
+				$dataSize,
+				true, $is_variable);
 		}
 
-		foreach ( $product->attributes as $attribute ) {
-			if ( isset( $attribute->id ) && $attribute->id == '1000000001' ) {
-				foreach ( $models as $model ) {
-					if ( ! empty( $model->colors ) ) {
-						foreach ( $model->colors as $color ) {
-							$filterColors[] = $color->parent_id;
+		foreach ($product->attributes as $attr) {
+			switch ($attr->id ?? false) {
+				case 1000000001: // цвет
+					$colorIds = [];
+					$pantones = [];
+					foreach ($models as $model) {
+						if (!empty($model->colors)) {
+							foreach ($model->colors as $color) {
+								$colorIds[] = $color->parent_id;
+								if (!empty($color->pantone)) {
+									$pantones[] = $color->pantone;
+								}
+							}
 						}
-						unset( $color );
 					}
-				}
-				unset( $model );
+					if (!empty($colorIds)) {
+						$filterColors   = self::checkColorsToFilter($colorIds);
+						$wcAttributes[] = self::getWcObjectProductAttribute(
+							self::createAttribute('Фильтр цвет', $filterColors, 'color'),
+							$filterColors,
+							false, false);
+					}
+					if (!empty($pantones)) {
+						$wcAttributes[] = self::getWcObjectProductAttribute(
+							self::createAttribute('Фильтр пантон', $pantones, 'filter-panton'),
+							$pantones,
+							false, false);
+					}
+					$dataColor = self::getProductAttributeColor($attr, $models);
+					if (!empty($dataColor)) {
+						sort($dataColor);
+						$wcAttributes[] = self::getWcObjectProductAttribute(
+							self::createAttribute(self::$attrVariation['color']['name'], $dataColor, self::$attrVariation['color']['slug']),
+							$dataColor,
+							true, $is_variable);
+					}
 
-				if ( ! empty( $filterColors ) ) {
-					$filterColors   = self::checkColorsToFilter( $filterColors );
-					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Фильтр цвет', $filterColors, 'color' ), $filterColors, false, false );
-					unset( $filterColors );
-				}
+					if (!$is_variable) {
+						$pantones = [];
+						foreach (($product->colors ?? []) as $color) {
+							if (!empty($color->pantone)) {
+								$pantones[] = $color->pantone;
+							}
+						}
+						if (!empty($pantones)) {
+							$wcAttributes[] = self::getWcObjectProductAttribute(
+								self::createAttribute('Пантон', $pantones, 'panton'),
+								$pantones,
+								true, false);
+						}
+					}
+					break;
+				
+				case 1000000008: // Метод нанесения
+					$brandings[] = trim($attr->value);
+					break;
 
-				$dataColor = self::getProductAttributeColor( $attribute, $models );
+				case 65: // Гендер (пол)
+					$wcAttributes[] = self::getWcObjectProductAttribute(
+						self::createAttribute('Пол', [$attr->value]),
+						[$attr->value],
+						true, false);
+					break;
 
-				if ( ! empty( $dataColor ) ) {
-					sort( $dataColor );
-					$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( self::$attrVariation['color']['name'], $dataColor, self::$attrVariation['color']['slug'] ), $dataColor, true, count( $models ) > 1 );
-					unset( $dataColor );
-				}
-			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000008' ) {
-				$branding['attr']['attribute_id']       = 0;
-				$branding['attr']['attribute_taxonomy'] = $attribute->name;
-				$branding['value'][]                    = trim( $attribute->value );
-			} elseif ( isset( $attribute->id ) && $attribute->id == '65' ) {
-				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Пол', [ $attribute->value ] ), [ $attribute->value ], true, false );
-			} elseif ( isset( $attribute->id ) && $attribute->id == '1000000002' ) {
-				$materials      = self::getStandardAttributeMaterial( $attribute->value );
-				$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( 'Материал (фильтр)', $materials, 'material' ), $materials, false, false );
-				$wcAttributes[] = self::getWcObjectProductAttribute(
-					[
-						'attribute_id'       => 0,
-						'attribute_taxonomy' => $attribute->name
-					],
-					[ trim( $attribute->value ) ],
-					true,
-					false
-				);
-				unset( $materials );
-			} elseif ( $attribute->name != 'Размер' ) {
-				$wcAttributes[] = self::getWcObjectProductAttribute(
-					[
-						'attribute_id'       => 0,
-						'attribute_taxonomy' => $attribute->name
-					],
-					[ trim( $attribute->value ) . ( ! empty( $attribute->dim ) ? ' ' . $attribute->dim : '' ) ],
-					true,
-					false
-				);
+				case 1000000002: // Материал товара
+					$materials      = self::getStandardAttributeMaterial($attr->value);
+					$wcAttributes[] = self::getWcObjectProductAttribute(
+						self::createAttribute('Материал (фильтр)', $materials, 'material'),
+						$materials,
+						false, false);
+					$wcAttributes[] = self::getWcObjectProductAttribute(
+						[
+							'attribute_id'       => 0,
+							'attribute_taxonomy' => $attr->name
+						],
+						[trim( $attr->value)],
+						true, false);
+					break;
+
+				default:
+					if ($attr->name != 'Размер') {
+						$wcAttributes[] = self::getWcObjectProductAttribute(
+							[
+								'attribute_id'       => 0,
+								'attribute_taxonomy' => $attr->name
+							],
+							[trim($attr->value) . (!empty($attr->dim) ? ' ' . $attr->dim : '' )],
+							true, false);
+					}
+					break;
 			}
 		}
 
-		if ( ! empty( $branding ) ) {
-			$wcAttributes[] = self::getWcObjectProductAttribute( self::createAttribute( $branding['attr']['attribute_taxonomy'], $branding['value'] ), $branding['value'], true, false );
-			unset( $branding );
+		if (!empty($brandings)) {
+			$wcAttributes[] = self::getWcObjectProductAttribute(
+				self::createAttribute('Метод нанесения', $brandings),
+				$brandings,
+				true, false);
 		}
 
 		return $wcAttributes;
@@ -754,14 +838,13 @@ class Main {
 
 	/**
 	 * Get product default attributes
-	 *
 	 * @param $productId
 	 * @param $model
-	 *
 	 * @return array
 	 */
-	public static function getProductDefaultAttributes( $productId, $model ): array {
-		if (count($model) > 1 ) {
+	public static function getProductDefaultAttributes($productId, $model): array {
+		$result = [];
+		if (count($model) > 1) {
 			foreach ($model as $product) {
 				if (!empty($product->size)) {
 					if ($product->id == $productId) {
@@ -770,7 +853,6 @@ class Main {
 						$result[$taxonomy] = $term->slug;
 					}
 				}
-
 				foreach ($product->attributes as $attribute) {
 					if (isset($attribute->id) && $attribute->id == '1000000001') {
 						if ($product->id == $productId) {
@@ -783,74 +865,60 @@ class Main {
 				}
 			}
 		}
-
-		return $result ?? [];
+		return $result;
 	}
 
 	/**
 	 * Get product attribute color
-	 *
 	 * @param $attribute
 	 * @param $models
-	 *
 	 * @return array
 	 */
-	public static function getProductAttributeColor( $attribute, $models ): array {
-		$attrValues = [];
-
-		if ( count( $models ) > 1 ) {
-			foreach ( $models as $model ) {
-				foreach ( $model->attributes as $modelAttribute ) {
-					if ( isset( $modelAttribute->id ) && $modelAttribute->id == '1000000001' ) {
-						$attrValues[] = trim( $modelAttribute->value );
+	public static function getProductAttributeColor($attribute, $models): array {
+		$result = [];
+		if (count($models) > 1) {
+			foreach ($models as $model) {
+				foreach ($model->attributes as $attr) {
+					if (isset($attr->id) && $attr->id == '1000000001') {
+						$result[] = trim($attr->value);
 						break;
 					}
 				}
 			}
-
-			sort( $attrValues );
-
-			$result = array_unique( $attrValues );
-		} elseif ( count( $models ) == 1 ) {
-			$result = [ trim( $attribute->value ) ];
+			sort($result);
+			$result = array_unique($result);
+		} else {
+			$result = [trim($attribute->value)];
 		}
-
-		return $result ?? [];
+		return $result;
 	}
 
 	/**
 	 * Get product attribute size
-	 *
 	 * @param $models
-	 *
 	 * @return array
 	 */
-	public static function getProductAttributeSize( $models ): array {
-		if ( count( $models ) > 1 ) {
-			$result = [];
-
-			foreach ( $models as $product ) {
+	public static function getProductAttributeSize($models): array {
+		$result = [];
+		if (count($models) > 1) {
+			foreach ($models as $product) {
 				$size = trim($product->size ?? '');
-
-				if ( ! empty( $size ) ) {
+				if (!empty($size)) {
 					$result[] = $size;
 				}
 			}
-
-			$result = self::sortSizeByStandard( $result );
+			$result = self::sortSizeByStandard($result);
 		}
 
-		return $result ?? [];
+		return $result;
 	}
 
 	/**
 	 * Sort sizes according to standard. Returns unique values
-	 *
 	 * @param array $data
-	 *
 	 * @return array
 	 */
-	public static function sortSizeByStandard( array $data ): array {
+	public static function sortSizeByStandard(array $data): array {
 		$etalonSizes = [
 			'3XS',
 			'2XS',
@@ -868,11 +936,11 @@ class Main {
 			'5XL',
 		];
 
-		usort($data, function ( $key1, $key2 ) use ( $etalonSizes ) {
-			return array_search( $key1, $etalonSizes ) <=> array_search( $key2, $etalonSizes );
+		usort($data, function ($key1, $key2) use ($etalonSizes) {
+			return array_search($key1, $etalonSizes) <=> array_search($key2, $etalonSizes);
 		});
 
-		return array_values( array_unique( $data ) );
+		return array_values(array_unique($data));
 	}
 
 	/**
@@ -926,12 +994,17 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 */
 	public static function getOasisProductIdByPostId( $postId ): ?string {
 		global $wpdb;
+		$dbResults = $wpdb->get_row("SELECT `product_id_oasis` FROM {$wpdb->prefix}oasis_products WHERE `post_id` = " . intval($postId), ARRAY_A);
+		return !empty($dbResults['product_id_oasis']) ? strval($dbResults['product_id_oasis']) : null;
+	}
 
-		$dbResults = $wpdb->get_row( "
-SELECT `product_id_oasis` FROM {$wpdb->prefix}oasis_products
-WHERE `post_id` = " . intval( $postId ), ARRAY_A );
-
-		return ! empty( $dbResults['product_id_oasis'] ) ? strval( $dbResults['product_id_oasis'] ) : null;
+	/**
+	 * @return array
+	 */
+	public static function getOasisDbRows(): array
+	{
+		global $wpdb;
+		return $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A) ?? [];
 	}
 
 	/**
@@ -949,10 +1022,10 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @param $attr
 	 * @param $values
 	 * @param bool $visible
-	 * @param bool $variation
+	 * @param bool $is_variable
 	 * @return WC_Product_Attribute
 	 */
-	public static function getWcObjectProductAttribute($attr, array $values, bool $visible, bool $variation): WC_Product_Attribute {
+	public static function getWcObjectProductAttribute($attr, array $values, bool $visible, bool $is_variable): WC_Product_Attribute {
 		if ($attr['attribute_id']) {
 			$options = [];
 			foreach ($values as $value) {
@@ -965,11 +1038,11 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		}
 
 		$attribute = new WC_Product_Attribute();
-		$attribute->set_id($attr['attribute_id']);
+		$attribute->set_id($attr['attribute_id'] ?? 0);
 		$attribute->set_name($attr['attribute_taxonomy']);
 		$attribute->set_visible($visible);
 		$attribute->set_options($options);
-		$attribute->set_variation($variation);
+		$attribute->set_variation($is_variable);
 
 		return $attribute;
 	}
@@ -980,21 +1053,44 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 	 * @return array
 	 */
 	public static function getVariationAttributes($variation): array {
-		if (!empty( $variation->size)) {
-			$taxonomy = sanitize_title( 'pa_' . self::$attrVariation['size']['slug'] );
+		$result = [];
+		if (!empty($variation->size)) {
+			$taxonomy = sanitize_title('pa_' . self::$attrVariation['size']['slug']);
 			$term = self::getTermByName($variation->size, $taxonomy);
 			$result[$taxonomy] = $term->slug;
 		}
 
 		foreach ($variation->attributes as $attribute) {
-			if (isset( $attribute->id ) && $attribute->id == '1000000001') {
+			if (isset($attribute->id) && $attribute->id == '1000000001') {
 				$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
 				$term = self::getTermByName($attribute->value, $taxonomy);
 				$result[$taxonomy] = $term->slug;
 			}
 		}
-		return $result ?? [];
+		return $result;
 	}
+
+	/**
+	 * Get variation metadata
+	 * @param $variation
+	 * @return array
+	 */
+	public static function getVariationMetaData($variation): array {
+		$result = [];
+		$pantones = [];
+		foreach ($variation->colors as $color) {
+			if (!empty($color->pantone)) {
+				$pantones[] = $color->pantone;
+			}
+		}
+		if ($pantones) {
+			$result['_pantone'] = $pantones;
+		}
+
+		return $result;
+	}
+
+	
 
 	/**
 	 * Get term
@@ -1095,13 +1191,10 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 
 	/**
 	 * Check colors to filter
-	 *
-	 * @param $data
-	 *
+	 * @param $colorIds
 	 * @return array
 	 */
-	public static function checkColorsToFilter( $data ): array {
-		$data   = array_unique( $data );
+	public static function checkColorsToFilter($colorIds): array {
 		$result = [];
 		$colors = [
 			1480 => 'Голубой',
@@ -1125,12 +1218,11 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 			1477 => 'Желтый'
 		];
 
-		foreach ( $data as $item ) {
-			if ( ! empty( $colors[ $item ] ) ) {
-				$result[] = $colors[ $item ];
+		foreach (array_unique($colorIds) as $id) {
+			if (!empty($colors[$id])) {
+				$result[] = $colors[$id];
 			}
 		}
-
 		return $result;
 	}
 
@@ -1304,6 +1396,8 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 					if (!$attach_id) {
 						$image_data = file_get_contents($brand['logotype']);
 						if ($image_data) {
+							require_once( ABSPATH . 'wp-admin/includes/image.php' );
+
 							$wp_filetype = wp_check_filetype($filename);
 							$upload_dir = wp_upload_dir();
 
@@ -1388,23 +1482,19 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 
 	/**
 	 * Get status product
-	 *
 	 * @param $product
 	 * @param $stock
 	 * @param bool $variation
-	 *
 	 * @return string
 	 */
-	public static function getProductStatus( $product, $stock, bool $variation = false ): string {
-		if ( $product->is_deleted === true ) {
+	public static function getProductStatus($product, $stock, bool $variation = false): string {
+		if ($product->is_deleted === true) {
 			$result = 'trash';
-		} elseif ( intval( $stock ) === 0 || $product->is_stopped === true ) {
+		} elseif (intval($stock) === 0 || !empty($product->is_stopped)) {
 			$result = $variation ? 'private' : 'draft';
 		} else {
 			$result = 'publish';
 		}
-		unset( $product, $stock, $variation );
-
 		return $result;
 	}
 
@@ -1665,12 +1755,10 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 
 	/**
 	 * Get standard attribute material
-	 *
 	 * @param $str
-	 *
 	 * @return array
 	 */
-	static public function getStandardAttributeMaterial( $str ): array {
+	static public function getStandardAttributeMaterial($str): array {
 		$result     = [];
 		$attributes = [
 			'акрил',
@@ -1695,11 +1783,11 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 			'керамика',
 			'хрусталь',
 			'лак',
-			'пластик'            => [
+			'пластик' => [
 				'пластик',
 				'ПВХ'
 			],
-			'металл'             => [
+			'металл' => [
 				'металл',
 				'алюминий',
 				'бронза',
@@ -1710,14 +1798,14 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				'медь',
 				'цинк'
 			],
-			'драгметалл'         => [
+			'драгметалл' => [
 				'серебро',
 				'посеребрение',
 				'золото',
 				'позолота',
 				'позолочение'
 			],
-			'дерево'             => [
+			'дерево' => [
 				'дерево',
 				'МДФ'
 			],
@@ -1725,44 +1813,41 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				'искусственная кожа',
 				'кожзам'
 			],
-			'натуральная кожа'   => [
+			'натуральная кожа' => [
 				'натуральная кожа',
 				'телячья кожа'
 			],
-			'бумага'             => [
+			'бумага' => [
 				'бумага',
 				'картон'
 			],
-			'камень'             => [
+			'камень' => [
 				'камень',
 				'мрамор',
 				'гранит'
 			],
-			'soft-touch'         => [
+			'soft-touch' => [
 				'soft-touch',
 				'софт-тач'
 			],
 		];
-
-		foreach ( $attributes as $key => $attribute ) {
-			if ( is_array( $attribute ) ) {
-				foreach ( $attribute as $subAttribute ) {
-					if ( strpos( $str, $subAttribute ) !== false ) {
+		foreach ($attributes as $key => $attribute) {
+			if (is_array($attribute)) {
+				foreach ($attribute as $subAttribute) {
+					if (strpos($str, $subAttribute) !== false ) {
 						$result[] = $key;
 						break;
 					}
 				}
 			} else {
-				if (
-					strpos( $str, $attribute ) !== false
-					&& strpos( $str, 'стекловолокно' ) === false
-					&& strpos( $str, 'стеклопластик' ) === false
+				if (strpos($str, $attribute) !== false
+					&& strpos($str, 'стекловолокно') === false
+					&& strpos($str, 'стеклопластик') === false
 				) {
 					$result[] = $attribute;
 				}
 			}
 		}
-
 		return $result;
 	}
 
@@ -1790,10 +1875,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 				$existImageId = self::getAttachmentIdByTitle($filename);
 
 				if ($existImageId) {
-					wp_update_post([
-						'ID'			=> $existImageId,
-						'post_parent'	=> $product_id,
-					]);
 					$attachIds[] = $existImageId;
 					continue;
 				}
@@ -1956,27 +2037,6 @@ WHERE `post_id` = " . intval( $postId ), ARRAY_A );
 		}
 
 		return true;
-	}
-
-	/**
-	 * Delete images in product
-	 *
-	 * @param $wcProduct
-	 *
-	 * @return void
-	 */
-	private static function deleteImgInProduct( $wcProduct ): void {
-		$images = get_post_meta( $wcProduct->get_id(), '_thumbnail_id' );
-
-		if ( empty( intval( reset( $images ) ) ) ) {
-			$images = [];
-		}
-
-		$images = array_merge( $images, $wcProduct->get_gallery_image_ids() );
-
-		foreach ( $images as $imgID ) {
-			wp_delete_attachment( $imgID, true );
-		}
 	}
 
 	/**
