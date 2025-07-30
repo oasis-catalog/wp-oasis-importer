@@ -67,44 +67,40 @@ class Main {
 
 	/**
 	 * Check product in table oasis_products
-	 *
 	 * @param array $where
 	 * @param string $type
-	 *
 	 * @return array|WP_Post|null
 	 */
-	public static function checkProductOasisTable( array $where, string $type ) {
+	public static function checkProductOasisTable(array $where, string $type) {
 		global $wpdb;
 
 		$sql    = '';
-		$values = [ $type ];
-
-		foreach ( $where as $key => $value ) {
-			if ( $key == 'post_id' ) {
-				$sql .= " AND op." . $key . " = '%d'";
+		$values = [$type];
+		foreach ($where as $key => $value) {
+			if ($key == 'post_id') {
+				$sql .= " AND op." . $key . " = %d";
 			} else {
-				$sql .= " AND op." . $key . " LIKE '%s'";
+				$sql .= " AND op." . $key . " = %s";
 			}
-
 			$values[] = $value;
 		}
 
 		$dbResults = $wpdb->get_results(
-			$wpdb->prepare( "
-				SELECT op.post_id, op.product_id_oasis, p.ID, p.post_modified 
+			$wpdb->prepare(
+				"SELECT op.post_id, op.product_id_oasis, p.ID, p.post_modified 
 				FROM {$wpdb->prefix}oasis_products op
 				LEFT JOIN {$wpdb->prefix}posts p
 				ON op.post_id = p.ID
-				WHERE op.type LIKE '%s'" . $sql,
+				WHERE op.type = %s" . $sql,
 				$values
 			),
 			ARRAY_A
 		);
-		$dbResult  = reset( $dbResults );
+		$dbResult = reset($dbResults);
 
-		if ( $dbResult ) {
-			if ( is_null( $dbResult['ID'] ) ) {
-				$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => $dbResult['post_id'], 'type' => $type ] );
+		if ($dbResult) {
+			if (is_null($dbResult['ID'])) {
+				$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => $dbResult['post_id'], 'type' => $type]);
 			} else {
 				$result = $dbResult;
 			}
@@ -262,14 +258,14 @@ class Main {
 				}
 
 				if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcProduct ) === false) {
-					self::deleteWcProductImages( $wcProduct );
+					self::deleteWcProductImages($wcProduct);
 					$images = self::processingPhoto( $oasisProduct->images, $productId );
 					$wcProduct->set_image_id( array_shift( $images ) );
 					$wcProduct->set_gallery_image_ids( $images );
 				}
 
 				$wcProduct->save();
-				self::$cf->log('Обновлен товар OAId='.$oasisProduct->id.' add WPId=' . $productId);
+				self::$cf->log('Обновлен товар OAId='.$oasisProduct->id.', WPId=' . $productId);
 
 				return true;
 			} else {
@@ -412,7 +408,7 @@ class Main {
 			}
 
 			if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcVariation ) === false) {
-				self::deleteWcProductImages( $wcVariation );
+				self::deleteWcProductImages($wcVariation);
 				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
 				$wcVariation->set_image_id( array_shift( $images ) );
 			}
@@ -488,12 +484,12 @@ class Main {
 		global $wpdb;
 
 		$dbResults = $wpdb->get_results(
-			$wpdb->prepare( "
-				SELECT op.post_id, p.ID 
+			$wpdb->prepare(
+				"SELECT op.post_id, p.ID 
 				FROM {$wpdb->prefix}oasis_products op
 				LEFT JOIN {$wpdb->prefix}posts p
 				ON op.post_id = p.ID
-				WHERE op.product_id_oasis LIKE '%s'",
+				WHERE op.product_id_oasis = %s",
 				$productId
 			),
 			ARRAY_A
@@ -570,7 +566,7 @@ class Main {
 					self::$cf->log(' - удален attachment: ' . $image_id);
 				}
 				else {
-					self::$cf->log(' - не удален attachment, в других: ' . count($other));
+					self::$cf->log(' - не удален attachment: ' . $image_id . ', в других: ' . implode(', ', $other));
 				}
 			}
 		}
@@ -578,11 +574,11 @@ class Main {
 
 	/**
 	 * Check use attachment in other post
-	 * @param $wcProduct
+	 * @param $attachment_id
+	 * @param $product_id
 	 */
 	private static function checkAttachmentOtherPost($attachment_id, $product_id = 0) {
 		global $wpdb;
-		
 		$as_featured = $wpdb->get_results($wpdb->prepare(
 			"SELECT post_id FROM {$wpdb->postmeta} 
 			 WHERE meta_key = '_thumbnail_id' 
@@ -591,6 +587,7 @@ class Main {
 			$attachment_id, 
 			$product_id
 		), ARRAY_A);
+		$result = array_map(fn($row) => $row['post_id'], $as_featured);
 
 		$in_galleries = $wpdb->get_results($wpdb->prepare(
 			"SELECT post_id, meta_value FROM {$wpdb->postmeta} 
@@ -600,8 +597,6 @@ class Main {
 			'%' . $wpdb->esc_like($attachment_id) . '%',
 			$product_id
 		), ARRAY_A);
-
-		$result = $as_featured;
 		foreach ($in_galleries as $gallery) {
 			$ids = explode(',', $gallery['meta_value']);
 			if (in_array($attachment_id, $ids)) {
@@ -987,9 +982,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 	/**
 	 * Get oasis product id by post_id
-	 *
 	 * @param $postId
-	 *
 	 * @return string|null
 	 */
 	public static function getOasisProductIdByPostId( $postId ): ?string {
@@ -1005,6 +998,47 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	{
 		global $wpdb;
 		return $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A) ?? [];
+	}
+
+	/**
+	 * Get image attachment_id for post_id
+	 * @param array $post_ids
+	 * @return array
+	 */
+	public static function getImagesForPostIds(array $post_ids = []): array
+	{
+		global $wpdb;
+		$result = [];
+		$placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+
+		$attachments = $wpdb->get_results($wpdb->prepare(
+			"SELECT meta_value, post_id FROM {$wpdb->postmeta} 
+			 WHERE meta_key = '_thumbnail_id' 
+			 AND post_id in ($placeholders)", 
+			$post_ids
+		), ARRAY_A);
+
+		foreach ($attachments as $attachment) {
+			if (!isset($result[$attachment['post_id']])) {
+				$result[$attachment['post_id']] = [];
+			}
+			$result[$attachment['post_id']][] = $attachment['meta_value'];
+		}
+
+		$in_galleries = $wpdb->get_results($wpdb->prepare(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} 
+			 WHERE meta_key = '_product_image_gallery' 
+			 AND post_id in ($placeholders)", 
+			$post_ids
+		), ARRAY_A);
+
+		foreach ($in_galleries as $gallery) {
+			if (!isset($result[$gallery['post_id']])) {
+				$result[$gallery['post_id']] = [];
+			}
+			$result[$gallery['post_id']] = array_merge($result[$gallery['post_id']], explode(',', $gallery['meta_value']));
+		}
+		return $result;
 	}
 
 	/**

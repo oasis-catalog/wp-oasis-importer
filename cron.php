@@ -13,7 +13,7 @@ use OasisImport\Cli;
 try {
 	$params = [
 		'short' => 'k:u',
-		'long'  => ['key:', 'site:', 'oid:', 'sku:', 'up', 'up_image', 'add_image', 'debug', 'debug_log'],
+		'long'  => ['key:', 'site:', 'oid:', 'sku:', 'up', 'up_image', 'add_image', 'repair_image', 'debug', 'debug_log'],
 	];
 
 	$errors = '';
@@ -33,6 +33,7 @@ Options:
 -u  --up       specify this key to use the update
 --add_image    add image if empty
 --up_image     update only image
+--repair_image repair image
 --debug        show log
 --debug_log    wrire log to file
 Example import products:
@@ -65,11 +66,14 @@ Errors: ' . $errors . PHP_EOL);
 	else if(isset($cliOptions['add_image'])){
 		$cron_opt['task'] = 'add_image';
 	}
+	else if(isset($cliOptions['repair_image'])){
+		$cron_opt['task'] = 'repair_image';
+	}
 	else {
 		$cron_opt['task'] = 'import';
 	}
 
-	Cli::RunCron($cron_key, $cron_opt, [
+	Cli::Run($cron_key, $cron_opt, [
 		'debug' => isset($cliOptions['debug']),
 		'debug_log' => isset($cliOptions['debug_log'])
 	]);

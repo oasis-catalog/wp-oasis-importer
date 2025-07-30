@@ -10,11 +10,27 @@ use Exception;
 class Cli {
 	public static OasisConfig $cf;
 
-	public static function RunCron($cron_key, $cron_opt = [], $opt = [])
+	public static function Run($cron_key, $cron_opt = [], $opt = [])
 	{
 		$cf = new OasisConfig($opt);
 
-		if($cron_opt['task'] == 'add_image' || $cron_opt['task'] == 'up_image'){
+		if ($cron_opt['task'] == 'repair_image'){
+			$cf->init();
+			if (!$cf->checkCronKey($cron_key)) {
+				$cf->log('Error! Invalid --key');
+				die('Error! Invalid --key');
+			}
+			if ($cf->is_cdn_photo) {
+				$cf->log('Error! On CDN photo');
+				die('Error! On CDN photo');
+			}
+			self::RepairImage([
+				'oid' => $cron_opt['oid'] ?? '',
+				'sku' => $cron_opt['sku'] ?? '',
+				'is_up' => $cron_opt['task'] == 'up_image'
+			]);
+		}
+		elseif ($cron_opt['task'] == 'add_image' || $cron_opt['task'] == 'up_image'){
 			$cf->init();
 			if (!$cf->checkCronKey($cron_key)) {
 				$cf->log('Error! Invalid --key');
@@ -316,5 +332,75 @@ class Cli {
 			echo $exception->getMessage();
 			die();
 		}
+	}
+
+	public static function RepairImage()
+	{
+		self::$cf->log('Начало восстановления картинок');
+		$products = Api::curlQuery('products', [
+			'fields' => 'images',
+			'showDeleted' => '1',
+		]);
+		$images = [];
+		foreach ($products as $product) {
+			foreach (($product->images ?? []) as $image) {
+				if (!isset($image->superbig)) {
+					continue;
+				}
+				$images[basename($image->superbig)] = $image->superbig;
+			}
+		}
+
+		$post_ids = array_map(fn($row) => $row['post_id'], Main::getOasisDbRows());
+
+		foreach (Main::getImagesForPostIds($post_ids) as $post_id => $attachments) {
+			foreach ($attachments as $attachment_id) {
+				$file_path = get_attached_file($attachment_id);
+				if (empty($file_path)) {
+					continue;
+				}
+				
+				if (!file_exists($file_path)) {
+					self::$cf->log('Файл не найден attachment_id: ' . $attachment_id);
+					self::$cf->log(' - post_id: '. $post_id);
+					self::$cf->log(' - path: '. $file_path);
+					self::$cf->log(' - url: '. wp_get_attachment_url($attachment_id));
+
+					$server_url = $images[basename($file_path)] ?? null;
+					if ($server_url) {
+						$file_dir = dirname($file_path);
+						wp_mkdir_p($file_dir);
+						$image_data = file_get_contents($server_url);
+						if ($image_data === false){
+							self::$cf->log('Error, get_contents False');
+							continue;
+						}
+						if(file_put_contents($file_path, $image_data)) {;
+							$metadata = wp_get_attachment_metadata($attachment_id);
+							// Удаляем все файлы миниатюр
+							if (isset($metadata['sizes'])) {
+								foreach ($metadata['sizes'] as $size => $size_info) {
+									$_thumb_path = $file_dir . '/' . $size_info['file'];
+									if (file_exists($_thumb_path)) {
+										self::$cf->log(' - удаляем миниатюру: ' . $_thumb_path);
+										unlink($_thumb_path);
+									}
+								}
+								$metadata['sizes'] = array();
+								wp_update_attachment_metadata($attachment_id, $metadata);
+							}
+							self::$cf->log(' - ok');
+						}
+						else {
+							self::$cf->log('Error, ошибка записи в файл');
+						}
+					}
+					else {
+						self::$cf->log('Error, нет картинки на сервере');
+					}
+				}
+			}
+		}
+		self::$cf->log('Окончание восстановления картинок');
 	}
 }

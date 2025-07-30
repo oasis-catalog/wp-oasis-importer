@@ -255,24 +255,20 @@ class Api {
 
 	/**
 	 * Get api data
-	 *
 	 * @param $type
 	 * @param array $args
 	 * @param bool $sleep
 	 * @param string $version
-	 *
 	 * @return array|mixed
 	 */
 	public static function curlQuery($type, array $args = [], bool $sleep = true, string $version = 'v4') {
 		if (empty(self::$cf->api_key)){
 			return [];
 		}
-
-		$args_pref = [
+		$args = array_merge([
 			'key'    => self::$cf->api_key,
 			'format' => 'json',
-		];
-		$args = array_merge($args_pref, $args);
+		], $args);
 
 		try {
 			$ch = curl_init();
@@ -280,7 +276,7 @@ class Api {
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			$content = curl_exec($ch);
 
-			if ( $content === false ) {
+			if ($content === false) {
 				throw new Exception('Error: ' . curl_error($ch));
 			} else {
 				$result = json_decode($content);
