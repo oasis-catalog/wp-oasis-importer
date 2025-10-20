@@ -13,17 +13,30 @@ use WC_Product_Variation;
 use WP_Post;
 use WP_Query;
 
-class Main {
+class Main
+{
+	public const ATTR_COLOR_ID    = 1000000001; // Цвет товара
+	public const ATTR_MATERIAL_ID = 1000000002; // Материал товара
+	public const ATTR_BRANDING_ID = 1000000008; // Метод нанесения
+	public const ATTR_BARCODE_ID  = 1000000011; // Штрихкод
+	public const ATTR_GENDER_ID   = 65;        	// Пол
+	public const ATTR_FLASH_ID    = 219;        // Объем памяти
+	public const ATTR_MARKING_ID  = 254;        // Обязательная маркировка
+	public const ATTR_REMOTE_ID   = 310;        // Минимальная сумма для удалённого склада
+	public const ATTR_SIZE_NAME   = 'Размер';
+
+
 	public static OasisConfig $cf;
 	public static $attrVariation = [];
 	public static $brands = [];
 
+	private static array $oasisCategories;
+
 	/**
 	 * Prepare attributes for variations
-	 *
-	 * @return void
 	 */
-	public static function prepareAttributeData() {
+	public static function prepareAttributeData()
+	{
 		$attr_names = [
 			'color'		=> 'Цвет',
 			'size'		=> 'Размер'
@@ -63,307 +76,283 @@ class Main {
 			];
 		}
 	}
-	
 
 	/**
-	 * Check product in table oasis_products
-	 * @param array $where
-	 * @param string $type
-	 * @return array|WP_Post|null
+	 * Load categories oasis
 	 */
-	public static function checkProductOasisTable(array $where, string $type) {
-		global $wpdb;
-
-		$sql    = '';
-		$values = [$type];
-		foreach ($where as $key => $value) {
-			if ($key == 'post_id') {
-				$sql .= " AND op." . $key . " = %d";
-			} else {
-				$sql .= " AND op." . $key . " = %s";
-			}
-			$values[] = $value;
-		}
-
-		$dbResults = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT op.post_id, op.product_id_oasis, p.ID, p.post_modified 
-				FROM {$wpdb->prefix}oasis_products op
-				LEFT JOIN {$wpdb->prefix}posts p
-				ON op.post_id = p.ID
-				WHERE op.type = %s" . $sql,
-				$values
-			),
-			ARRAY_A
-		);
-		$dbResult = reset($dbResults);
-
-		if ($dbResult) {
-			if (is_null($dbResult['ID'])) {
-				$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => $dbResult['post_id'], 'type' => $type]);
-			} else {
-				$result = $dbResult;
-			}
-		}
-
-		return $result ?? null;
+	public static function prepareCategories()
+	{
+		self::$oasisCategories = Api::getCategoriesOasis();
 	}
 
 	/**
-	 * Insert row into table oasis_products
-	 *
-	 * @param $post_id
-	 * @param string $product_id_oasis
-	 * @param string $model_id
-	 * @param string $type
-	 * @param $parentSizeId
+	 * @param $productId
+	 * @param int $type
+	 * @return array
 	 */
-	public static function addProductOasisTable( $post_id, string $product_id_oasis, string $model_id, string $type, $parentSizeId = null ) {
-		global $wpdb;
-
-		$data = [
-			'post_id'          => $post_id,
-			'product_id_oasis' => $product_id_oasis,
-			'model_id_oasis'   => $model_id,
-			'type'             => $type
-		];
-
-		if ( ! empty( $parentSizeId ) ) {
-			$data['variation_parent_size_id'] = $parentSizeId;
-		}
-
-		$wpdb->insert( $wpdb->prefix . 'oasis_products', $data );
+	public static function checkProduct($productId, string $type = '')
+	{
+		return reset(self::checkProducts($productId, $type));
 	}
 
 	/**
-	 * Get first product
-	 *
-	 * @param $model
-	 *
-	 * @return false|mixed
+	 * Check products
+	 * @param $productId
+	 * @param $productId
+	 * @param string $type
+	 * @return array
 	 */
-	public static function getFirstProduct( $model ) {
-		foreach ( $model as $product ) {
-			if ( $product->rating === 5 || self::getProductStatus( $product, $product->total_stock ) == 'publish' ) {
-				return $product;
-			}
+	public static function checkProducts($productId, string $type = '')
+	{
+		global $wpdb;
+		$sql = "SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+				FROM {$wpdb->prefix}posts p
+				INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
+				INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'
+				INNER JOIN {$wpdb->prefix}postmeta pm_updated ON p.ID = pm_updated.post_id AND pm_updated.meta_key = '_oasis_updated'
+				WHERE pm_product.meta_value = %s";
+		$values = [$productId];
+
+		if (!empty($type)) {
+			$sql .= ' AND p.post_type = %s';
+			$values[] = $type;
 		}
 
-		return reset( $model );
+		return $wpdb->get_results($wpdb->prepare($sql, $values), ARRAY_A);
+	}
+
+	/**
+	 * Check products for oasis group_id
+	 * @param $group_id
+	 * @return array
+	 */
+	public static function checkGroupProducts($group_id)
+	{
+		global $wpdb;
+		return $wpdb->get_results($wpdb->prepare(
+			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+			FROM {$wpdb->prefix}posts p
+			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
+			INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'
+			INNER JOIN {$wpdb->prefix}postmeta pm_updated ON p.ID = pm_updated.post_id AND pm_updated.meta_key = '_oasis_updated'
+			WHERE pm_group.meta_value = %s", [$group_id]
+		), ARRAY_A);
 	}
 
 	/**
 	 * Add WooCommerce product
 	 * @param $group_id
-	 * @param $oasisProduct
-	 * @param $model
-	 * @param $categories
+	 * @param $product
+	 * @param $products
 	 * @param $totalStock
 	 * @param bool $is_variable
-	 * @return int|void
+	 * @return int
 	 */
-	public static function addWcProduct($group_id, $oasisProduct, $model, $categories, $totalStock, bool $is_variable = false) {
-		try {
-			$dataPrice = self::getDataPrice($oasisProduct);
+	public static function addWcProduct($group_id, $product, $products, $totalStock, bool $is_variable = false)
+	{
+		$wcProduct = $is_variable ? new WC_Product_Variable() : new WC_Product_Simple();
 
-			$wcProduct = $is_variable ? new WC_Product_Variable() : new WC_Product_Simple();
-			$wcProduct->set_name( $oasisProduct->name );
-			$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
-			$wcProduct->set_category_ids( $categories );
-			$wcProduct->set_slug( self::getUniquePostName( $oasisProduct->name, 'product' ) );
-			$wcProduct->set_manage_stock( true );
-			$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
-			$wcProduct->set_price( $dataPrice['price'] );
-			$wcProduct->set_regular_price( $dataPrice['regular_price'] );
-			$wcProduct->set_sale_price( $dataPrice['sale_price'] );
-			$wcProduct->set_stock_quantity( $totalStock );
-			$wcProduct->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
-			$wcProduct->set_attributes(self::prepareProductAttributes($oasisProduct, $model, $is_variable));
-			$wcProduct->set_reviews_allowed(self::$cf->is_comments);
+		$product_name = self::$cf->is_without_quotes ? self::removeQuotes($product->name) : $product->name;
+		$wcProduct->set_props([
+			'name'            => $product_name,
+			'description'     => self::preparePostContent($product),
+			'category_ids'    => self::getProductCategories($product),
+			'slug'            => self::getUniquePostName($product_name, 'product'),
+			'manage_stock'    => true,
+			'status'          => self::getProductStatus($product, $totalStock),
+			'stock_quantity'  => $totalStock,
+			'backorders'      => $product->rating === 5 ? 'yes' : 'no',
+			'attributes'      => self::prepareProductAttributes($product, $products, $is_variable),
+			'reviews_allowed' => self::$cf->is_comments,
+		]);
 
-			$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
-			if ( $defaultAttr ) {
-				$wcProduct->set_default_attributes( $defaultAttr );
-			}
-
-			if (!$is_variable) {
-				$wcProduct->set_sku($oasisProduct->article);
-			}
-
-			$wcProductId = $wcProduct->save();
-			if(!self::$cf->is_fast_import){
-				$images = self::processingPhoto($oasisProduct->images, $wcProductId);
-				$wcProduct->set_image_id(array_shift($images));
-				$wcProduct->set_gallery_image_ids($images);	
-				$wcProduct->save();
-			}
-
-			self::updateWcProductBrand($wcProductId, $oasisProduct);
-			self::addProductOasisTable($wcProductId, $oasisProduct->id, $group_id, 'product');
-			self::$cf->log('Добавлен товар id '.$oasisProduct->id);
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-
-			if ( $exception->getErrorCode() == 'product_invalid_sku' ) {
-				self::deleteWcProductBySky( $oasisProduct );
-			} else {
-				die();
-			}
+		$defaultAttr = self::getProductDefaultAttributes($product->id, $products);
+		if ($defaultAttr) {
+			$wcProduct->set_default_attributes($defaultAttr);
 		}
 
-		return $wcProductId ?? false;
+		if (!$is_variable) {
+			$dataPrice = self::getDataPrice($product);
+			$wcProduct->set_props([
+				'sku'           => $product->article,
+				'price'         => $dataPrice['price'],
+				'regular_price' => $dataPrice['regular_price'],
+				'sale_price'    => $dataPrice['sale_price'],
+			]);
+		}
+
+		$wcProduct->add_meta_data('_oasis_product', $product->id);
+		$wcProduct->add_meta_data('_oasis_group', $group_id);
+		$wcProduct->add_meta_data('_oasis_updated', $product->updated_at);
+
+		$wcProductId = $wcProduct->save();
+		if(!self::$cf->is_fast_import){
+			$images = self::processingPhoto($product->images, $wcProductId);
+			$wcProduct->set_image_id(array_shift($images));
+			$wcProduct->set_gallery_image_ids($images);	
+			$wcProduct->save();
+		}
+
+		self::updateWcProductBrand($wcProductId, $product);
+		return $wcProductId;
 	}
 
 	/**
 	 * Up product
-	 * @param $productId
-	 * @param $model
-	 * @param $categories
+	 *
+	 * @param $wcProductId
+	 * @param $product
+	 * @param $products
 	 * @param $totalStock
 	 * @param bool $is_variable
-	 * @return bool|void
 	 */
-	public static function upWcProduct($productId, $model, $categories, $totalStock, bool $is_variable = false) {
-		$oasisProduct = self::getFirstProduct( $model );
-		$dataPrice    = self::getDataPrice($oasisProduct);
+	public static function upWcProduct($dbProduct, $product, $products, $totalStock, bool $is_variable = false)
+	{
+		$wcProduct = wc_get_product($dbProduct['post_id']);
+		$need_save = false;
 
-		try {
-			$wcProduct = wc_get_product( $productId );
+		if (self::getNeedUp($dbProduct, $product)) {
+			$wcProduct->set_props([
+				'name'            => self::$cf->is_without_quotes ? self::removeQuotes($product->name) : $product->name,
+				'manage_stock'    => true,
+				'backorders'      => $product->rating === 5 ? 'yes' : 'no',
+				'description'     => self::preparePostContent($product),
+				'attributes'      => self::prepareProductAttributes($product, $products, $is_variable),
+				'reviews_allowed' => self::$cf->is_comments,
+			]);
 
-			if ( self::checkWcProductType( $wcProduct, $model ) ) {
-				if ( $wcProduct === false ) {
-					throw new Exception( 'Error open product. No product with this ID' );
-				}
-
-				$wcProduct->set_name( $oasisProduct->name );
-				$wcProduct->set_description( self::preparePostContent( $oasisProduct ) );
-				$wcProduct->set_manage_stock( true );
-				$wcProduct->set_status( self::getProductStatus( $oasisProduct, $totalStock ) );
-				$wcProduct->set_price( $dataPrice['price'] );
-				$wcProduct->set_regular_price( $dataPrice['regular_price'] );
-				$wcProduct->set_sale_price( $dataPrice['sale_price'] );
-				$wcProduct->set_stock_quantity( (int) $totalStock );
-				$wcProduct->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
-				$wcProduct->set_attributes(self::prepareProductAttributes($oasisProduct, $model, $is_variable));
-				$wcProduct->set_reviews_allowed(self::$cf->is_comments);
-				$wcProduct->set_date_modified( time() );
-
-				if($categories){
-					$wcProduct->set_category_ids( $categories );
-				}
-
-				$defaultAttr = self::getProductDefaultAttributes( $oasisProduct->id, $model );
-				if ( $defaultAttr ) {
-					$wcProduct->set_default_attributes( $defaultAttr );
-				}
-
-				if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcProduct ) === false) {
-					self::deleteWcProductImages($wcProduct);
-					$images = self::processingPhoto( $oasisProduct->images, $productId );
-					$wcProduct->set_image_id( array_shift( $images ) );
-					$wcProduct->set_gallery_image_ids( $images );
-				}
-
-				$wcProduct->save();
-				self::$cf->log('Обновлен товар OAId='.$oasisProduct->id.', WPId=' . $productId);
-
-				return true;
-			} else {
-				self::deleteWcProduct( $wcProduct );
-				self::$cf->log('Некорректный тип, товар удален id ' . $oasisProduct->id);
-
-				return false;
+			$defaultAttr = self::getProductDefaultAttributes($product->id, $products);
+			if ($defaultAttr) {
+				$wcProduct->set_default_attributes($defaultAttr);
 			}
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-			die();
+			$need_save = true;
+		}
+
+		$old_data = $wcProduct->get_data();
+
+		if (!self::$cf->is_not_up_cat) {
+			$categories = self::getProductCategories($product);
+			if (!self::compareIsEqualArray($categories, $old_data['category_ids'])) {
+				$wcProduct->set_category_ids($categories);
+				$need_save = true;
+			}
+		}
+
+		$up_data = [
+			['status', self::getProductStatus($product, $totalStock)],
+			['stock_quantity', (int)$totalStock],
+		];
+		if (!$is_variable) {
+			$dataPrice = self::getDataPrice($product);
+			$up_data += [
+				['price', $dataPrice['price']],
+				['regular_price', $dataPrice['regular_price']],
+				['sale_price', $dataPrice['sale_price']],
+			];
+		}
+
+		foreach ($up_data as $row) {
+			$key = $row[0];
+			$val = $row[1];
+
+			if ($old_data[$key] !== $val) {
+				$wcProduct->{'set_'.$key}($val);
+				$need_save = true;
+			}
+		}
+
+		if (self::$cf->is_up_photo || !self::checkImages($product->images, $wcProduct)) {
+			self::deleteWcProductImages($wcProduct);
+			$images = self::processingPhoto($product->images, $dbProduct['post_id']);
+			$wcProduct->set_image_id(array_shift($images));
+			$wcProduct->set_gallery_image_ids($images);
+			$need_save = true;
+		}
+
+		if ($need_save) {
+			$wcProduct->set_date_modified(time());
+			$wcProduct->update_meta_data('_oasis_updated', $product->updated_at);
+			$wcProduct->save();
 		}
 	}
 
 	/**
 	 * Add product image
 	 *
-	 * @param $productId
-	 * @param $model
+	 * @param $post_id
+	 * @param $oasisProduct
 	 * @param $is_up
-	 *
-	 * @return bool|void
 	 */
-	public static function wcProductAddImage($productId, $model, $is_up = false)
+	public static function wcProductAddImage($post_id, $oasisProduct, $is_up = false)
 	{
-		$oasisProduct = self::getFirstProduct($model);
+		$wcProduct = wc_get_product($post_id);
 
-		try {
-			$wcProduct = wc_get_product($productId);
-
-			if (empty($wcProduct)) {
-				throw new Exception('Error open product. No product with this ID');
-			}
-			if(!$is_up && !empty($wcProduct->get_image_id())){
-				return true;
-			}
-
-			self::deleteWcProductImages($wcProduct);
-			$images = self::processingPhoto($oasisProduct->images, $productId);
-			$wcProduct->set_image_id(array_shift($images));
-			$wcProduct->set_gallery_image_ids($images);
-			$wcProduct->set_date_modified(time());
-			$wcProduct->save();
-			return true;
-		} catch (Exception $exception) {
-			echo $exception->getMessage() . PHP_EOL;
-			die();
+		if (empty($wcProduct)) {
+			throw new Exception('Error open product. No product with this ID');
 		}
+		if(!$is_up && !empty($wcProduct->get_image_id())){
+			return true;
+		}
+
+		self::deleteWcProductImages($wcProduct);
+		$images = self::processingPhoto($oasisProduct->images, $post_id);
+		$wcProduct->set_image_id(array_shift($images));
+		$wcProduct->set_gallery_image_ids($images);
+		$wcProduct->set_date_modified(time());
+		$wcProduct->save();
 	}
 
 	/**
 	 * Add variation
 	 * @param $group_id
 	 * @param $productId
-	 * @param $oasisProduct
+	 * @param $variation
 	 * @return int|void|null
 	 */
-	public static function addWcVariation($group_id, $productId, $oasisProduct) {
+	public static function addWcVariation($group_id, $productId, $variation)
+	{
 		try {
-			$dataPrice = self::getDataPrice($oasisProduct);
-
 			$wcVariation = new WC_Product_Variation();
-			$wcVariation->set_name( $oasisProduct->full_name );
-			$wcVariation->set_manage_stock( true );
-			$wcVariation->set_sku( $oasisProduct->article );
-			$wcVariation->set_parent_id( $productId );
-			$wcVariation->set_slug( self::getUniquePostName( $oasisProduct->name, 'product_variation' ) );
-			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-			$wcVariation->set_price( $dataPrice['price'] );
-			$wcVariation->set_regular_price( $dataPrice['regular_price'] );
-			$wcVariation->set_sale_price( $dataPrice['sale_price'] );
-			$wcVariation->set_stock_quantity( intval( $oasisProduct->total_stock ) );
-			$wcVariation->set_backorders($oasisProduct->rating === 5 ? 'yes' : 'no');
+			$dataPrice = self::getDataPrice($variation);
 
-			if ($attributes = self::getVariationAttributes($oasisProduct)) {
+			$wcVariation->set_props([
+				'name'           => $variation->full_name,
+				'manage_stock'   => true,
+				'sku'            => $variation->article,
+				'parent_id'      => $productId,
+				'slug'           => self::getUniquePostName($variation->name, 'product_variation'),
+				'status'         => self::getProductStatus($variation, $variation->total_stock, true),
+				'stock_quantity' => intval($variation->total_stock),
+				'backorders'     => $variation->rating === 5 ? 'yes' : 'no',
+				'price'          => $dataPrice['price'],
+				'regular_price'  => $dataPrice['regular_price'],
+				'sale_price'     => $dataPrice['sale_price'],
+			]);
+
+			if ($attributes = self::getVariationAttributes($variation)) {
 				$wcVariation->set_attributes($attributes);
 			}
-			if ($meta_data = self::getVariationMetaData($oasisProduct)) {
+			if ($meta_data = self::getVariationMetaData($variation)) {
 				foreach ($meta_data as $key => $value) {
 					$wcVariation->add_meta_data($key, $value);
 				}
 			}
+			$wcVariation->add_meta_data('_oasis_product', $variation->id);
+			$wcVariation->add_meta_data('_oasis_group', $group_id);
+			$wcVariation->add_meta_data('_oasis_updated', $variation->updated_at);
 
 			$wcVariationId = $wcVariation->save();
 
-			if ($oasisProduct->images && !self::$cf->is_fast_import) {
-				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $wcVariationId );
-				$wcVariation->set_image_id( array_shift( $images ) );
+			if ($variation->images && !self::$cf->is_fast_import) {
+				$images = self::processingPhoto([reset($variation->images)], $wcVariationId );
+				$wcVariation->set_image_id(array_shift($images));
 				$wcVariation->save();
 			}
-
-			self::addProductOasisTable( $wcVariationId, $oasisProduct->id, $group_id, 'product_variation', $oasisProduct->parent_size_id );
-			self::$cf->log(' - добавлен вариант id ' . $oasisProduct->id);
 		} catch ( Exception $exception ) {
 			echo $exception->getMessage() . PHP_EOL;
 
 			if ( $exception->getErrorCode() == 'product_invalid_sku' ) {
-				self::deleteWcProductBySky( $oasisProduct );
+				self::deleteWcProductBySky( $variation );
 			} else {
 				die();
 			}
@@ -376,101 +365,135 @@ class Main {
 	 * Up variation
 	 *
 	 * @param $dbVariation
-	 * @param $oasisProduct
+	 * @param $variation
 	 */
-	public static function upWcVariation($dbVariation, $oasisProduct)
+	public static function upWcVariation($dbVariation, $variation)
 	{
-		try {
-			$dataPrice   = self::getDataPrice($oasisProduct);
-			$wcVariation = wc_get_product( $dbVariation['post_id'] );
+		$wcVariation = wc_get_product($dbVariation['post_id']);
+		$dataPrice   = self::getDataPrice($variation);
+		$need_save   = false;
 
-			if ( $wcVariation === false ) {
-				throw new Exception( 'Error open variation. No variation with this ID' );
-			}
+		if (self::getNeedUp($dbVariation, $variation)) {
+			$wcVariation->set_name($variation->full_name);
+			$wcVariation->set_manage_stock(true);
+			$wcVariation->set_backorders( $variation->rating === 5 ? 'yes' : 'no' );
 
-			$wcVariation->set_name( $oasisProduct->full_name );
-			$wcVariation->set_manage_stock( true );
-			$wcVariation->set_status( self::getProductStatus( $oasisProduct, $oasisProduct->total_stock, true ) );
-			$wcVariation->set_price( $dataPrice['price'] );
-			$wcVariation->set_regular_price( $dataPrice['regular_price'] );
-			$wcVariation->set_sale_price( $dataPrice['sale_price'] );
-			$wcVariation->set_stock_quantity( (int) $oasisProduct->total_stock );
-			$wcVariation->set_backorders( $oasisProduct->rating === 5 ? 'yes' : 'no' );
-			$wcVariation->set_date_modified( time() );
-
-			if ($attributes = self::getVariationAttributes($oasisProduct)) {
+			if ($attributes = self::getVariationAttributes($variation)) {
 				$wcVariation->set_attributes($attributes);
 			}
-			if ($meta_data = self::getVariationMetaData($oasisProduct)) {
+
+			if ($meta_data = self::getVariationMetaData($variation)) {
 				foreach ($meta_data as $key => $value) {
 					$wcVariation->update_meta_data($key, $value);
 				}
 			}
+			$need_save = true;
+		}
 
-			if (self::$cf->is_up_photo || self::checkImages( $oasisProduct->images, $wcVariation ) === false) {
-				self::deleteWcProductImages($wcVariation);
-				$images = self::processingPhoto( [ reset( $oasisProduct->images ) ], $dbVariation['post_id'] );
-				$wcVariation->set_image_id( array_shift( $images ) );
+		$old_data = $wcVariation->get_data();
+		foreach ([
+				['status', self::getProductStatus( $variation, $variation->total_stock, true )],
+				['price', $dataPrice['price']],
+				['regular_price', $dataPrice['regular_price']],
+				['sale_price', $dataPrice['sale_price']],
+				['stock_quantity', (int) $variation->total_stock],
+			] as $row)
+		{
+			$key = $row[0];
+			$val = $row[1];
+
+			if ($old_data[$key] !== $val) {
+				$wcVariation->{'set_'.$key}($val);
+				$need_save = true;
 			}
+		}
 
+		if (self::$cf->is_up_photo || !self::checkImages($variation->images, $wcVariation)) {
+			self::deleteWcProductImages($wcVariation);
+			$images = self::processingPhoto([reset($variation->images)], $dbVariation['post_id']);
+			$wcVariation->set_image_id(array_shift($images));
+			$need_save = true;
+		}
+
+		if ($need_save) {
+			$wcVariation->set_date_modified(time());
+			$wcVariation->update_meta_data('_oasis_updated', $variation->updated_at);
 			$wcVariation->save();
-
-			self::$cf->log(' - обновлен вариант OAId='.$oasisProduct->id.', WPId=' . $dbVariation['post_id']);
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-			die();
 		}
 	}
 
 	/**
 	 * Add variation image
 	 *
-	 * @param $dbVariation
+	 * @param $post_id
 	 * @param $oasisProduct
 	 * @param $is_up
 	 */
-	public static function wcVariationAddImage($dbVariation, $oasisProduct, $is_up = false) {
-		try {
-			$wcVariation = wc_get_product($dbVariation['post_id']);
+	public static function wcVariationAddImage($post_id, $oasisProduct, $is_up = false)
+	{
+		$wcVariation = wc_get_product($post_id);
 
-			if ($wcVariation === false) {
-				throw new Exception('Error open variation. No variation with this ID');
-			}
-			if(!$is_up && !empty($wcVariation->get_image_id())){
-				return true;
-			}
-
-			self::deleteWcProductImages($wcVariation);
-			$images = self::processingPhoto([reset($oasisProduct->images)], $dbVariation['post_id']);
-			$wcVariation->set_image_id(array_shift($images));
-			$wcVariation->set_date_modified(time());
-			$wcVariation->save();
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-			die();
+		if ($wcVariation === false) {
+			throw new Exception('Error open variation. No variation with this ID');
 		}
+		if(!$is_up && !empty($wcVariation->get_data()['image_id'])){
+			return true;
+		}
+
+		self::deleteWcProductImages($wcVariation);
+		$images = self::processingPhoto([reset($oasisProduct->images)], $post_id);
+		$wcVariation->set_image_id(array_shift($images));
+		$wcVariation->set_date_modified(time());
+		$wcVariation->save();
 	}
 
 	/**
 	 * Add Brand in WooCommerce product
 	 *
 	 * @param $wcProductId
-	 * @param $oasisProduct
-	 *
-	 * @return void
+	 * @param $product
 	 */
-	public static function updateWcProductBrand($wcProductId, $oasisProduct): void
+	public static function updateWcProductBrand($wcProductId, $product)
 	{
-		if(self::$cf->is_brands && !empty($oasisProduct->brand_id)){
-			$brand = self::$brands[$oasisProduct->brand_id] ?? null;
-			if($brand){
-				if(!isset($brand['term_id'])){
+		if (self::$cf->is_brands && !empty($product->brand_id)) {
+			$brand = self::$brands[$product->brand_id] ?? null;
+			if ($brand) {
+				if (!isset($brand['term_id'])) {
 					$term_id = self::getTermIdByOasisBrand($brand);
-					self::$brands[$oasisProduct->brand_id]['term_id'] = $brand['term_id'] = $term_id;
+					self::$brands[$product->brand_id]['term_id'] = $brand['term_id'] = $term_id;
 				}
-				if(!empty($brand['term_id'])){
+				if (!empty($brand['term_id'])) {
 					wp_set_object_terms($wcProductId, $brand['term_id'], 'product_brand');
 				}
+			}
+		}
+	}
+
+	/**
+	 * Check need update product
+	 * @param $dbProduct
+	 * @param $product
+	 * @return bool
+	 */
+	public static function getNeedUp($dbProduct, $product)
+	{
+		return ($product->updated_at ?? '1') > ($dbProduct['updated_at'] ?? '');
+	}
+
+	/**
+	 * Delete product for posts_id
+	 *
+	 * @param $posts_id
+	 */
+	public static function deleteProductForPostId($posts_id)
+	{
+		if (!is_array($posts_id)) {
+			$posts_id = [$posts_id];
+		}
+		foreach ($posts_id as $post_id) {
+			$wcProduct = wc_get_product(intval($post_id));
+			if ($wcProduct) {
+				self::deleteWcProduct($wcProduct);
 			}
 		}
 	}
@@ -480,34 +503,49 @@ class Main {
 	 *
 	 * @param $productId
 	 */
-	public static function checkDeleteProduct( $productId ) {
-		global $wpdb;
-
-		$dbResults = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT op.post_id, p.ID 
-				FROM {$wpdb->prefix}oasis_products op
-				LEFT JOIN {$wpdb->prefix}posts p
-				ON op.post_id = p.ID
-				WHERE op.product_id_oasis = %s",
-				$productId
-			),
-			ARRAY_A
-		);
-
-		if ( $dbResults ) {
-			foreach ( $dbResults as $dbResult ) {
-				if ( ! is_null( $dbResult['ID'] ) ) {
-					$wcProduct = wc_get_product( intval( $dbResult['post_id'] ) );
-
-					if ( $wcProduct ) {
-						self::deleteWcProduct( $wcProduct );
-					}
-				}
-
-				$wpdb->delete( $wpdb->prefix . 'oasis_products', [ 'post_id' => intval( $dbResult['post_id'] ) ] );
+	public static function checkDeleteProduct($productId)
+	{
+		foreach (self::checkProducts($productId) as $dbProduct) {
+			$wcProduct = wc_get_product(intval($dbProduct['post_id']));
+			if ($wcProduct) {
+				self::deleteWcProduct($wcProduct);
 			}
 		}
+	}
+
+	/**
+	 * Check and delete product by Oasis group id
+	 *
+	 * @param $group_id
+	 */
+	public static function checkDeleteGroup($group_id)
+	{
+		foreach (self::checkGroupProducts($group_id) as $dbProduct) {
+			$wcProduct = wc_get_product(intval($dbProduct['post_id']));
+			if ($wcProduct) {
+				self::deleteWcProduct($wcProduct);
+			}
+		}
+	}
+
+	/**
+	 * Compare arrays
+	 *
+	 * @param $arr1
+	 * @param $arr2
+	 * @return bool
+	 */
+	private static function compareIsEqualArray($arr1 = [], $arr2 = []): bool
+	{
+		if (count($arr1) != count($arr2)) {
+			return false;
+		}
+		foreach ($arr1 as $item1) {
+			if (!in_array($item1, $arr2)){
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -515,8 +553,9 @@ class Main {
 	 *
 	 * @param $product
 	 */
-	private static function deleteWcProductBySky( $product ) {
-		$wcProductID = wc_get_product_id_by_sku( $product->article );
+	private static function deleteWcProductBySky($product)
+	{
+		$wcProductID = wc_get_product_id_by_sku($product->article);
 
 		if ( $wcProductID ) {
 			$wcProduct = wc_get_product( $wcProductID );
@@ -527,16 +566,15 @@ class Main {
 
 	/**
 	 * Delete woocommerce product
+	 * 
 	 * @param $wcProduct
 	 */
 	private static function deleteWcProduct($wcProduct)
 	{
-		global $wpdb;
 		if ($wcProduct->is_type('variable')) {
 			foreach ($wcProduct->get_children() as $child_id) {
 				$child = wc_get_product($child_id);
 				self::deleteWcProductImages($child);
-				$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => intval($child_id)]);
 				$child->delete(true);
 				self::$cf->log(' - удален wc_product_variation_id: ' . $child_id);
 			}
@@ -544,16 +582,17 @@ class Main {
 
 		self::deleteWcProductImages($wcProduct);
 		$id = $wcProduct->get_id();
-		$wpdb->delete($wpdb->prefix . 'oasis_products', ['post_id' => $id]);
 		$wcProduct->delete(true);
 		self::$cf->log(' - удален wc_product_id: ' . $id);
 	}
 
 	/**
 	 * Delete images for woocommerce product
+	 * 
 	 * @param $wcProduct
 	 */
-	private static function deleteWcProductImages($wcProduct) {
+	private static function deleteWcProductImages($wcProduct)
+	{
 		$images = array_merge(
 			[$wcProduct->get_image_id()], 
 			$wcProduct->get_gallery_image_ids());
@@ -577,7 +616,8 @@ class Main {
 	 * @param $attachment_id
 	 * @param $product_id
 	 */
-	private static function checkAttachmentOtherPost($attachment_id, $product_id = 0) {
+	private static function checkAttachmentOtherPost($attachment_id, $product_id = 0)
+	{
 		global $wpdb;
 		$as_featured = $wpdb->get_results($wpdb->prepare(
 			"SELECT post_id FROM {$wpdb->postmeta} 
@@ -607,27 +647,13 @@ class Main {
 	}
 
 	/**
-	 * Check woocommerce product type
-	 *
-	 * @param $wcProduct
-	 * @param $model
-	 *
-	 * @return bool
-	 */
-	public static function checkWcProductType( $wcProduct, $model ): bool {
-		$type = count( $model ) > 1 ? 'variable' : 'simple';
-
-		return $wcProduct->get_type() === $type;
-	}
-
-	/**
 	 * Calculation price
 	 *
 	 * @param $product
-	 *
 	 * @return array
 	 */
-	public static function getDataPrice($product): array {
+	public static function getDataPrice($product): array
+	{
 		$price     = self::$cf->is_price_dealer ? $product->discount_price : $product->price;
 		$old_price = !empty( $product->old_price ) ? $product->old_price : null;
 
@@ -666,11 +692,10 @@ class Main {
 	 * Get array IDs WooCommerce categories
 	 *
 	 * @param $product
-	 * @param $oasisCategories
-	 *
 	 * @return array
 	 */
-	public static function getProductCategories($product, $oasisCategories): array {
+	public static function getProductCategories($product): array
+	{
 		$result = [];
 		
 		foreach ($product->categories as $oasis_cat_id) {
@@ -681,10 +706,10 @@ class Main {
 				$result = array_merge($result, array_map(fn($x) => $x->term_id, $parents));
 			}
 			else{
-				$full_categories = self::getOasisParentsCategoriesId($oasis_cat_id, $oasisCategories);
+				$full_categories = self::getOasisParentsCategoriesId($oasis_cat_id);
 
 				foreach ($full_categories as $categoryId) {
-					$result[] = self::getCategoryId( $oasisCategories, $categoryId );
+					$result[] = self::getCategoryId($categoryId);
 				}
 			}
 		}
@@ -695,15 +720,13 @@ class Main {
 	 * Get total stock products
 	 *
 	 * @param array $products
-	 *
 	 * @return int
 	 */
-	public static function getTotalStock(array $products): int {
+	public static function getTotalStock(array $products): int
+	{
 		$result = 0;
 		foreach ($products as $product) {
-			if (empty($product->is_stopped)) {
-				$result += intval($product->total_stock);
-			}
+			$result += intval($product->total_stock);
 		}
 		return $result;
 	}
@@ -730,7 +753,7 @@ class Main {
 
 		foreach ($product->attributes as $attr) {
 			switch ($attr->id ?? false) {
-				case 1000000001: // цвет
+				case self::ATTR_COLOR_ID: // цвет
 					$colorIds = [];
 					$pantones = [];
 					foreach ($models as $model) {
@@ -781,18 +804,18 @@ class Main {
 					}
 					break;
 				
-				case 1000000008: // Метод нанесения
+				case self::ATTR_BRANDING_ID: // Метод нанесения
 					$brandings[] = trim($attr->value);
 					break;
 
-				case 65: // Гендер (пол)
+				case self::ATTR_GENDER_ID: // Гендер (пол)
 					$wcAttributes[] = self::getWcObjectProductAttribute(
 						self::createAttribute('Пол', [$attr->value]),
 						[$attr->value],
 						true, false);
 					break;
 
-				case 1000000002: // Материал товара
+				case self::ATTR_MATERIAL_ID: // Материал товара
 					$materials      = self::getStandardAttributeMaterial($attr->value);
 					$wcAttributes[] = self::getWcObjectProductAttribute(
 						self::createAttribute('Материал (фильтр)', $materials, 'material'),
@@ -808,7 +831,7 @@ class Main {
 					break;
 
 				default:
-					if ($attr->name != 'Размер') {
+					if ($attr->name != self::ATTR_SIZE_NAME) {
 						$wcAttributes[] = self::getWcObjectProductAttribute(
 							[
 								'attribute_id'       => 0,
@@ -837,7 +860,8 @@ class Main {
 	 * @param $model
 	 * @return array
 	 */
-	public static function getProductDefaultAttributes($productId, $model): array {
+	public static function getProductDefaultAttributes($productId, $model): array
+	{
 		$result = [];
 		if (count($model) > 1) {
 			foreach ($model as $product) {
@@ -849,7 +873,7 @@ class Main {
 					}
 				}
 				foreach ($product->attributes as $attribute) {
-					if (isset($attribute->id) && $attribute->id == '1000000001') {
+					if (isset($attribute->id) && $attribute->id == self::ATTR_COLOR_ID) {
 						if ($product->id == $productId) {
 							$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
 							$term = self::getTermByName($attribute->value, $taxonomy);
@@ -869,12 +893,13 @@ class Main {
 	 * @param $models
 	 * @return array
 	 */
-	public static function getProductAttributeColor($attribute, $models): array {
+	public static function getProductAttributeColor($attribute, $models): array
+	{
 		$result = [];
 		if (count($models) > 1) {
 			foreach ($models as $model) {
 				foreach ($model->attributes as $attr) {
-					if (isset($attr->id) && $attr->id == '1000000001') {
+					if (isset($attr->id) && $attr->id == self::ATTR_COLOR_ID) {
 						$result[] = trim($attr->value);
 						break;
 					}
@@ -893,7 +918,8 @@ class Main {
 	 * @param $models
 	 * @return array
 	 */
-	public static function getProductAttributeSize($models): array {
+	public static function getProductAttributeSize($models): array
+	{
 		$result = [];
 		if (count($models) > 1) {
 			foreach ($models as $product) {
@@ -913,7 +939,8 @@ class Main {
 	 * @param array $data
 	 * @return array
 	 */
-	public static function sortSizeByStandard(array $data): array {
+	public static function sortSizeByStandard(array $data): array
+	{
 		$etalonSizes = [
 			'3XS',
 			'2XS',
@@ -939,69 +966,54 @@ class Main {
 	}
 
 	/**
-	 * Get variation parent size id
-	 *
-	 * @param $variation
-	 *
-	 * @return int|null
-	 */
-	public static function getVariationParentSizeId( $variation ): ?int {
-		global $wpdb;
-
-		$dbResults = $wpdb->get_results( "
-SELECT * FROM {$wpdb->prefix}oasis_products 
-WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
-	AND type = 'product_variation'
-", ARRAY_A );
-
-		if ( $dbResults ) {
-			$post = get_post( reset( $dbResults )['post_id'] );
-
-			if ( ! $post ) {
-				$wpdb->update( $wpdb->prefix . 'oasis_products',
-					[ 'variation_parent_size_id' => null ],
-					[ 'post_id' => reset( $dbResults )['post_id'], 'type' => 'product_variation' ] );
-			} else {
-				$result = $post->ID;
-			}
-		}
-
-		return $result ?? null;
-	}
-
-	/**
 	 * Get product id oasis by order item
 	 *
 	 * @param $item
-	 *
 	 * @return string|null
 	 */
-	public static function getOasisProductIdByOrderItem( $item ): ?string {
-		return Main::getOasisProductIdByPostId( $item->get_variation_id() ? $item->get_variation_id() : $item->get_product_id() );
+	public static function getOasisProductIdByOrderItem( $item ): ?string
+	{
+		return Main::getOasisProductIdByPostId($item->get_variation_id() ? $item->get_variation_id() : $item->get_product_id());
 	}
 
 	/**
 	 * Get oasis product id by post_id
-	 * @param $postId
+	 * 
+	 * @param int $post_id
 	 * @return string|null
 	 */
-	public static function getOasisProductIdByPostId( $postId ): ?string {
+	public static function getOasisProductIdByPostId(int $post_id): ?string
+	{
 		global $wpdb;
-		$dbResults = $wpdb->get_row("SELECT `product_id_oasis` FROM {$wpdb->prefix}oasis_products WHERE `post_id` = " . intval($postId), ARRAY_A);
-		return !empty($dbResults['product_id_oasis']) ? strval($dbResults['product_id_oasis']) : null;
+		$dbResults = $wpdb->get_row($wpdb->prepare(
+			"SELECT DISTINCT pm_product.meta_value as product_id
+			FROM {$wpdb->prefix}posts p
+			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
+			WHERE p.ID = " . $post_id
+		), ARRAY_A);
+		return $dbResults['product_id'] ?? null;
 	}
 
 	/**
+	 * Get products
+	 *
 	 * @return array
 	 */
 	public static function getOasisDbRows(): array
 	{
 		global $wpdb;
-		return $wpdb->get_results("SELECT `post_id`, `product_id_oasis`, `type` FROM {$wpdb->prefix}oasis_products", ARRAY_A) ?? [];
+		return $wpdb->get_results($wpdb->prepare(
+			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+			FROM {$wpdb->prefix}posts p
+			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
+			INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'
+			INNER JOIN {$wpdb->prefix}postmeta pm_updated ON p.ID = pm_updated.post_id AND pm_updated.meta_key = '_oasis_updated'"
+		), ARRAY_A);
 	}
 
 	/**
 	 * Get image attachment_id for post_id
+	 *
 	 * @param array $post_ids
 	 * @return array
 	 */
@@ -1042,24 +1054,16 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	}
 
 	/**
-	 * Delete oasis product for post_id
-	 * @param $post_id
-	 * @return void
-	 */
-	public static function deleteOasisProductByPostId($post_id) {
-		global $wpdb;
-		$wpdb->delete($wpdb->prefix . 'oasis_products', [ 'post_id' => $post_id ] );
-	}
-
-	/**
 	 * Get object wc product attribute
+	 *
 	 * @param $attr
 	 * @param $values
 	 * @param bool $visible
 	 * @param bool $is_variable
 	 * @return WC_Product_Attribute
 	 */
-	public static function getWcObjectProductAttribute($attr, array $values, bool $visible, bool $is_variable): WC_Product_Attribute {
+	public static function getWcObjectProductAttribute($attr, array $values, bool $visible, bool $is_variable): WC_Product_Attribute
+	{
 		if ($attr['attribute_id']) {
 			$options = [];
 			foreach ($values as $value) {
@@ -1083,10 +1087,12 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 	/**
 	 * Get variation attributes
+	 *
 	 * @param $variation
 	 * @return array
 	 */
-	public static function getVariationAttributes($variation): array {
+	public static function getVariationAttributes($variation): array
+	{
 		$result = [];
 		if (!empty($variation->size)) {
 			$taxonomy = sanitize_title('pa_' . self::$attrVariation['size']['slug']);
@@ -1095,7 +1101,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 		}
 
 		foreach ($variation->attributes as $attribute) {
-			if (isset($attribute->id) && $attribute->id == '1000000001') {
+			if (isset($attribute->id) && $attribute->id == self::ATTR_COLOR_ID) {
 				$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
 				$term = self::getTermByName($attribute->value, $taxonomy);
 				$result[$taxonomy] = $term->slug;
@@ -1106,10 +1112,12 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 	/**
 	 * Get variation metadata
+	 *
 	 * @param $variation
 	 * @return array
 	 */
-	public static function getVariationMetaData($variation): array {
+	public static function getVariationMetaData($variation): array
+	{
 		$result = [];
 		$pantones = [];
 		foreach ($variation->colors as $color) {
@@ -1125,7 +1133,6 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	}
 
 	
-
 	/**
 	 * Get term
 	 * @param $name
@@ -1148,39 +1155,39 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * @param string $raw_name Name of attribute to create.
 	 * @param array $terms Terms to create for the attribute.
 	 * @param string $slug
-	 *
 	 * @return array
 	 */
-	public static function createAttribute( string $raw_name, array $terms, string $slug = '' ): array {
+	public static function createAttribute(string $raw_name, array $terms, string $slug = ''): array
+	{
 		global $wc_product_attributes;
 
-		delete_transient( 'wc_attribute_taxonomies' );
-		WC_Cache_Helper::invalidate_cache_group( 'woocommerce-attributes' );
+		delete_transient('wc_attribute_taxonomies');
+		WC_Cache_Helper::invalidate_cache_group('woocommerce-attributes');
 
-		$attribute_labels = wp_list_pluck( wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name' );
-		$attribute_name   = array_search( empty( $slug ) ? $raw_name : $slug, $attribute_labels, true );
-		if ( ! $attribute_name ) {
-			$attribute_name = wc_sanitize_taxonomy_name( empty( $slug ) ? $raw_name : $slug );
+		$attribute_labels = wp_list_pluck(wc_get_attribute_taxonomies(), 'attribute_label', 'attribute_name');
+		$attribute_name   = array_search(empty($slug) ? $raw_name : $slug, $attribute_labels, true);
+		if (!$attribute_name) {
+			$attribute_name = wc_sanitize_taxonomy_name(empty($slug) ? $raw_name : $slug);
 		}
 
-		$attribute_name = substr( self::transliteration( $attribute_name ), 0, 27 );
-		$attribute_id   = wc_attribute_taxonomy_id_by_name( $attribute_name );
+		$attribute_name = substr(self::transliteration($attribute_name), 0, 27);
+		$attribute_id   = wc_attribute_taxonomy_id_by_name($attribute_name);
 
 		if ( ! $attribute_id ) {
-			$taxonomy_name = wc_attribute_taxonomy_name( $attribute_name );
-			unregister_taxonomy( $taxonomy_name );
+			$taxonomy_name = wc_attribute_taxonomy_name($attribute_name);
+			unregister_taxonomy($taxonomy_name);
 
-			$attribute_id = wc_create_attribute( [
+			$attribute_id = wc_create_attribute([
 				'name'         => $raw_name,
 				'slug'         => $attribute_name,
 				'type'         => 'select',
 				'order_by'     => 'menu_order',
 				'has_archives' => 0,
-			] );
+			]);
 
 			register_taxonomy(
 				$taxonomy_name,
-				apply_filters( 'woocommerce_taxonomy_objects_' . $taxonomy_name, [ 'product' ] ),
+				apply_filters('woocommerce_taxonomy_objects_' . $taxonomy_name, [ 'product' ]),
 				apply_filters(
 					'woocommerce_taxonomy_args_' . $taxonomy_name,
 					[
@@ -1197,12 +1204,12 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 			$wc_product_attributes = [];
 
-			foreach ( wc_get_attribute_taxonomies() as $taxonomy ) {
-				$wc_product_attributes[ wc_attribute_taxonomy_name( $taxonomy->attribute_name ) ] = $taxonomy;
+			foreach (wc_get_attribute_taxonomies() as $taxonomy) {
+				$wc_product_attributes[ wc_attribute_taxonomy_name($taxonomy->attribute_name)] = $taxonomy;
 			}
 		}
 
-		$attribute = wc_get_attribute( $attribute_id );
+		$attribute = wc_get_attribute($attribute_id);
 		$return    = [
 			'attribute_name'     => $attribute->name,
 			'attribute_taxonomy' => $attribute->slug,
@@ -1210,9 +1217,9 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			'term_ids'           => [],
 		];
 
-		foreach ( $terms as $term ) {
-			$result = term_exists( $term, $attribute->slug );
-			if ( ! $result ) {
+		foreach ($terms as $term) {
+			$result = term_exists($term, $attribute->slug);
+			if (!$result) {
 				$result = wp_insert_term($term, $attribute->slug, [
 					'slug' => self::transliteration($term)
 				]);
@@ -1228,7 +1235,8 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * @param $colorIds
 	 * @return array
 	 */
-	public static function checkColorsToFilter($colorIds): array {
+	public static function checkColorsToFilter($colorIds): array
+	{
 		$result = [];
 		$colors = [
 			1480 => 'Голубой',
@@ -1261,34 +1269,43 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	}
 
 	/**
+	 * Remove quotes
+	 *
+	 * @param $text
+	 * @return string
+	 */
+	private static function removeQuotes($text): string
+	{
+		return str_replace(['\'', '"', '«', '»'], ['', '', '', ''], $text);
+	}
+
+	/**
 	 * Get unique post_name by post_title
 	 *
 	 * @param $name
 	 * @param $post_type
 	 * @param null $productId
 	 * @param int $count
-	 *
 	 * @return string
 	 */
-	public static function getUniquePostName( $name, $post_type, $productId = null, int $count = 0 ): string {
-		$post_name = self::transliteration( $name );
+	public static function getUniquePostName($name, $post_type, $productId = null, int $count = 0): string
+	{
+		$post_name = self::transliteration($name);
 
-		if ( ! empty( $count ) ) {
+		if (!empty($count)) {
 			$post_name = $post_name . '-' . $count;
 		}
 
-		$dbPosts = get_posts( [
+		$dbPosts = get_posts([
 			'name'        => $post_name,
 			'post_type'   => $post_type,
-			'post_status' => [ 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash', 'any' ],
-			'exclude'     => ! empty( $productId ) ? intval( $productId ) : '',
-		] );
+			'post_status' => ['publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash', 'any'],
+			'exclude'     => !empty($productId) ? intval($productId) : '',
+		]);
 
-		if ( $dbPosts ) {
-			$post_name = self::getUniquePostName( $name, $post_type, $productId, ++ $count );
+		if ($dbPosts) {
+			$post_name = self::getUniquePostName($name, $post_type, $productId, ++$count);
 		}
-		unset( $name, $post_type, $productId, $count, $dbPosts );
-
 		return $post_name;
 	}
 
@@ -1296,49 +1313,45 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Prepare post content
 	 *
 	 * @param $product
-	 *
 	 * @return string
 	 */
-	public static function preparePostContent( $product ): string {
-		$result = ! empty( $product->description ) ? $product->description : '';
-
-		if ( ! empty( $product->defect ) ) {
+	public static function preparePostContent($product): string
+	{
+		$result = !empty($product->description) ? $product->description : '';
+		if (!empty($product->defect)) {
 			$result .= PHP_EOL . '<p>' . trim( $product->defect ) . '</p>';
 		}
-
 		return $result;
 	}
 
 	/**
 	 * Get id category woocommerce
 	 *
-	 * @param $categories
 	 * @param $categoryId
-	 *
 	 * @return int
 	 */
-	public static function getCategoryId( $categories, $categoryId ): int {
-		$terms = self::getTermsByCatId( $categoryId );
+	public static function getCategoryId($categoryId): int
+	{
+		$terms = self::getTermsByCatId($categoryId);
 
-		if ( ! $terms ) {
-			$category      = self::searchObject( $categories, $categoryId );
+		if (! $terms) {
+			$category = self::searchObject(self::$oasisCategories, $categoryId);
 			$parentTermsId = 0;
 
-			if ( ! is_null( $category->parent_id ) ) {
-				$parentTerms = self::getTermsByCatId( $category->parent_id );
+			if (!is_null($category->parent_id)) {
+				$parentTerms = self::getTermsByCatId($category->parent_id);
 
-				if ( $parentTerms ) {
+				if ($parentTerms) {
 					$parentTermsId = $parentTerms->term_id;
 				} else {
-					$parentTermsId = self::getCategoryId( $categories, $category->parent_id );
+					$parentTermsId = self::getCategoryId($category->parent_id);
 				}
 			}
 
-			$result = self::addCategory( $category, $parentTermsId );
+			$result = self::addCategory($category, $parentTermsId);
 		} else {
-			$result = (int) $terms->term_id;
+			$result = (int)$terms->term_id;
 		}
-		unset( $categories, $categoryId, $terms, $category, $parentTermsId, $parentTerms );
 
 		return $result;
 	}
@@ -1348,10 +1361,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 *
 	 * @param $category
 	 * @param $parentTermsId
-	 *
 	 * @return int
 	 */
-	public static function addCategory( $category, $parentTermsId ): int {
+	public static function addCategory($category, $parentTermsId): int
+	{
 		require_once ABSPATH . '/wp-admin/includes/taxonomy.php';
 
 		$data = [
@@ -1362,9 +1375,8 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			'taxonomy'             => 'product_cat',
 		];
 
-		$cat_id = wp_insert_category( $data );
-		update_term_meta( $cat_id, 'oasis_cat_id', $category->id );
-		unset( $category, $parentTermsId, $data );
+		$cat_id = wp_insert_category($data);
+		update_term_meta($cat_id, 'oasis_cat_id', $category->id);
 
 		return $cat_id;
 	}
@@ -1373,12 +1385,12 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Get terms by oasis id category
 	 *
 	 * @param $categoryId
-	 *
 	 * @return object|array
 	 */
-	public static function getTermsByCatId( $categoryId ) {
+	public static function getTermsByCatId($categoryId)
+	{
 		$args = [
-			'taxonomy'   => [ 'product_cat' ],
+			'taxonomy'   => ['product_cat'],
 			'hide_empty' => false,
 			'meta_query' => [
 				[
@@ -1388,20 +1400,18 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			],
 		];
 
-		$terms = get_terms( $args );
-		unset( $categoryId, $args );
-
-		return $terms ? reset( $terms ) : [];
+		$terms = get_terms($args);
+		return $terms ? reset($terms) : [];
 	}
 
 	/**
 	 * Get terms by oasis id category
 	 *
 	 * @param $brand
-	 *
 	 * @return int|false
 	 */
-	public static function getTermIdByOasisBrand($brand) {
+	public static function getTermIdByOasisBrand($brand)
+	{
 		$args = [
 			'taxonomy' =>	'product_brand',
 			'number'  =>	1,
@@ -1472,10 +1482,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Get array parents for term_id
 	 *
 	 * @param $term_id
-	 *
 	 * @return array
 	 */
-	public static function getTermParents($term_id): array {
+	public static function getTermParents($term_id): array
+	{
 		$term = get_term($term_id, 'product_cat');
 		if (!$term) {
 			return [];
@@ -1498,10 +1508,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 *
 	 * @param $data
 	 * @param $id
-	 *
 	 * @return false|mixed|null
 	 */
-	public static function searchObject( $data, $id ) {
+	public static function searchObject($data, $id)
+	{
 		$neededObject = array_filter( $data, function ( $e ) use ( $id ) {
 			return $e->id == $id;
 		} );
@@ -1534,25 +1544,18 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 	/**
 	 * Get categories level 1
-	 *
-	 * @param null $categories
-	 *
 	 * @return array
 	 */
-	public static function getOasisMainCategories( $categories = null ): array {
+	public static function getOasisMainCategories(): array
+	{
 		$result = [];
+		$categories = Api::getCategoriesOasis();
 
-		if ( ! $categories ) {
-			$categories = Api::getCategoriesOasis();
-		}
-
-		foreach ( $categories as $category ) {
-			if ( $category->level === 1 ) {
+		foreach ($categories as $category) {
+			if ($category->level === 1) {
 				$result[] = $category->id;
 			}
 		}
-		unset( $categories, $category );
-
 		return $result;
 	}
 
@@ -1560,16 +1563,15 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Get oasis parents id categories
 	 *
 	 * @param null $cat_id
-	 * @param null $oasisCategories
-	 *
 	 * @return array
 	 */
-	public static function getOasisParentsCategoriesId($cat_id, $oasisCategories): array {
+	public static function getOasisParentsCategoriesId($cat_id): array
+	{
 		$result = [];
 		$parent_id = $cat_id;
 
 		while($parent_id){
-			foreach ($oasisCategories as $category) {
+			foreach (self::$oasisCategories as $category) {
 				if ($parent_id == $category->id) {
 					array_unshift($result, $category->id);
 					$parent_id = $category->parent_id;
@@ -1589,10 +1591,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * @param array $relCategories
 	 * @param int $parent_id
 	 * @param bool $parent_checked
-	 *
 	 * @return string
 	 */
-	public static function buildTreeCats($data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0, bool $parent_checked = false): string {
+	public static function buildTreeCats($data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0, bool $parent_checked = false): string
+	{
 		$treeItem = '';
 		if ( ! empty( $data[ $parent_id ] ) ) {
 			foreach($data[ $parent_id ] as $item){
@@ -1649,10 +1651,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * @param $data
 	 * @param int $checked_id
 	 * @param int $parent_id
-	 *
 	 * @return string
 	 */
-	public static function buildTreeRadioCats( $data, ?array $checked_id = null, int $parent_id = 0 ): string {
+	public static function buildTreeRadioCats( $data, ?array $checked_id = null, int $parent_id = 0 ): string
+	{
 		$treeItem = '';
 		if ( ! empty( $data[ $parent_id ] ) ) {
 			foreach($data[ $parent_id ] as $item){
@@ -1687,10 +1689,10 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * String transliteration for url
 	 *
 	 * @param $string
-	 *
 	 * @return string
 	 */
-	public static function transliteration( $string ): string {
+	public static function transliteration( $string ): string
+	{
 		$arr_trans = [
 			'А'  => 'A',
 			'Б'  => 'B',
@@ -1792,7 +1794,8 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * @param $str
 	 * @return array
 	 */
-	static public function getStandardAttributeMaterial($str): array {
+	static public function getStandardAttributeMaterial($str): array
+	{
 		$result     = [];
 		$attributes = [
 			'акрил',
@@ -1889,11 +1892,11 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Add/update product photos
 	 *
 	 * @param $images
-	 * @param $product_id
-	 *
+	 * @param $wcProductId
 	 * @return array
 	 */
-	public static function processingPhoto($images, $product_id): array {
+	public static function processingPhoto($images, $wcProductId): array
+	{
 		$attachIds = [];
 		if ($images) {
 			$image_subsizes = wp_get_registered_image_subsizes();
@@ -1965,7 +1968,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 						'post_title'     => sanitize_file_name( $filename ),
 						'post_content'   => '',
 						'post_status'    => 'inherit',
-						'post_parent'    => $product_id,
+						'post_parent'    => $wcProductId,
 					];
 					$attach_id   = wp_insert_attachment($attachment);
 					$attach_data = array(
@@ -1995,7 +1998,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 							'post_title'     => sanitize_file_name($filename),
 							'post_content'   => '',
 							'post_status'    => 'inherit',
-							'post_parent'    => $product_id,
+							'post_parent'    => $wcProductId,
 						];
 
 						$attach_id   = wp_insert_attachment($attachment, $file);
@@ -2012,64 +2015,54 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 
 	/**
 	 * Checking product images for relevance
-	 *
 	 * Usage:
-	 *
 	 * Check is good - true
-	 *
 	 * Check is bad - false
 	 *
 	 * @param $images
 	 * @param $wcProduct
-	 *
 	 * @return bool
 	 */
-	public static function checkImages( $images, $wcProduct ): bool {
-		$db_images = get_post_meta( $wcProduct->get_id(), '_thumbnail_id' );
+	public static function checkImages($images, $wcProduct): bool
+	{
+		$db_images = get_post_meta($wcProduct->get_id(), '_thumbnail_id');
 
-		if ( empty( intval( reset( $db_images ) ) ) ) {
+		if (empty(intval(reset($db_images)))) {
 			return false;
 		}
 
-		if ( $wcProduct->get_type() == 'variation' ) {
-			$images = [ reset( $images ) ];
+		if ($wcProduct->get_type() == 'variation') {
+			$images = [reset($images)];
 		} else {
-			$db_images = array_merge( $db_images, $wcProduct->get_gallery_image_ids() );
+			$db_images = array_merge($db_images, $wcProduct->get_gallery_image_ids());
 		}
 
-		if ( count( $images ) !== count( $db_images ) ) {
+		if (count($images) !== count($db_images)) {
 			return false;
 		}
 
-		$posts = get_posts( [
+		$posts = get_posts([
 			'numberposts' => - 1,
 			'post_type'   => 'attachment',
-			'include'     => implode( ',', $db_images )
-		] );
-
-		if ( empty( $posts ) ) {
+			'include'     => implode(',', $db_images)
+		]);
+		if (empty($posts)) {
 			return false;
 		}
 
 		$attachments = [];
-
-		foreach ( $posts as $post ) {
+		foreach ($posts as $post) {
 			$attachments[] = (array) $post;
 		}
-		unset( $posts, $post );
-
-		foreach ( $images as $image ) {
-			if ( empty( $image->superbig ) ) {
+		foreach ($images as $image) {
+			if (empty($image->superbig)) {
 				return false;
 			}
-
-			$keyNeeded = array_search( basename( $image->superbig ), array_column( $attachments, 'post_title' ) );
-
-			if ( $keyNeeded === false || $image->updated_at > strtotime( $attachments[ $keyNeeded ]['post_date_gmt'] ) ) {
+			$keyNeeded = array_search(basename($image->superbig), array_column($attachments, 'post_title'));
+			if ($keyNeeded === false || $image->updated_at > strtotime($attachments[$keyNeeded ]['post_date_gmt'])) {
 				return false;
 			}
 		}
-
 		return true;
 	}
 
@@ -2077,13 +2070,13 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	 * Get page by title
 	 *
 	 * @param $title
-	 *
 	 * @return int|null
 	 */
-	public static function getAttachmentIdByTitle( $title ): ?int {
+	public static function getAttachmentIdByTitle($title): ?int
+	{
 		$query = new WP_Query( [
 			'post_type'              => 'attachment',
-			'title'                  => sanitize_file_name( $title ),
+			'title'                  => sanitize_file_name($title),
 			'post_status'            => 'all',
 			'posts_per_page'         => 1,
 			'update_post_term_cache' => false,
@@ -2095,7 +2088,7 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 			'fields'                 => 'ids'
 		] );
 
-		if ( ! empty( $query->posts ) ) {
+		if (!empty($query->posts)) {
 			return $query->posts[0];
 		} else {
 			return null;
@@ -2103,23 +2096,17 @@ WHERE variation_parent_size_id = '" . $variation->parent_size_id . "'
 	}
 
 	/**
-	 * Finding an array within an array.
-	 *
-	 * @param array $needle The array to be found
-	 * @param array $haystack Array to be searched
-	 *
-	 * @return int|string|null Returns the key of the found array. If not found will return NULL
+	 * @param $array
+	 * @param $keys
+	 * @return bool
 	 */
-	public static function checkDiffArray( array $needle, array $haystack ) {
-		ksort( $needle );
-		foreach ( $haystack as $key => $value ) {
-			ksort( $value );
-
-			if ( $needle === $value ) {
-				return $key;
+	public static function arrayKeysExists($array, $keys): bool
+	{
+		foreach ($keys as $key) {
+			if (array_key_exists($key, $array)) {
+				return true;
 			}
 		}
-
-		return null;
-	}
+		return false;
+	}	
 }

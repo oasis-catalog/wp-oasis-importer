@@ -7,10 +7,10 @@ use OasisImport\Api;
 
 
 class Config {
-	public const IMG_SIZE_THUMBNAIL = 	[80, 60];
-	public const IMG_SIZE_SMALL = 		[220, 165];
-	public const IMG_SIZE_BIG = 		[640, 480];
-	public const IMG_SIZE_SUPERBIG =	[1000, 750];
+	public const IMG_SIZE_THUMBNAIL = [80, 60];
+	public const IMG_SIZE_SMALL     = [220, 165];
+	public const IMG_SIZE_BIG       = [640, 480];
+	public const IMG_SIZE_SUPERBIG  = [1000, 750];
 
 	public bool $is_debug = false;
 	public bool $is_debug_log = false;
@@ -45,6 +45,7 @@ class Config {
 
 	public bool $is_no_vat;
 	public bool $is_not_on_order;
+	public bool $is_not_defect;
 	public ?float $price_from;
 	public ?float $price_to;
 	public ?int $rating;
@@ -59,6 +60,7 @@ class Config {
 	public bool $is_up_photo;
 	public bool $is_cdn_photo;
 	public bool $is_fast_import;
+	public bool $is_without_quotes;
 
 	private bool $is_init = false;
 	private bool $is_init_rel = false;
@@ -111,23 +113,22 @@ class Config {
 		}
 
 		$this->progress = get_option('oasis_progress', [
-			'item' => 0,			// count updated products
-			'total' => 0,			// count all products
-			'step' => 0,			// step (for limit)
-			'step_item' => 0,		// count updated products for step
-			'step_total' => 0,		// count step total products
-			'date' => '',			// date end import
-			'date_step' => ''		// date end import for step
+			'item'       => 0,  // count updated products
+			'total'      => 0,  // count all products
+			'step'       => 0,  // step (for limit)
+			'step_item'  => 0,  // count updated products for step
+			'step_total' => 0,  // count step total products
+			'date'       => '', // date end import
+			'date_step'  => ''  // date end import for step
 		]);
 
 		$opt = get_option('oasis_options', []);
 
-		$this->api_key =		$opt['api_key'] ?? '';
-		$this->api_user_id =	$opt['api_user_id'] ?? '';
-		$this->currency =		$opt['currency'] ?? 'rub';
-		$this->limit =			!empty($opt['limit']) ? intval($opt['limit']) : null;
-
-		$this->categories =		$opt['categories'] ?? [];
+		$this->api_key     = $opt['api_key'] ?? '';
+		$this->api_user_id = $opt['api_user_id'] ?? '';
+		$this->currency    = $opt['currency'] ?? 'rub';
+		$this->limit       = !empty($opt['limit']) ? intval($opt['limit']) : null;
+		$this->categories  = $opt['categories'] ?? [];
 
 		$cat_rel = $opt['cat_relation'] ?? [];
 		$this->categories_rel = [];
@@ -142,36 +143,38 @@ class Config {
 			];
 		}
 		
-		$this->price_factor =			!empty($opt['price_factor']) ? floatval(str_replace(',', '.', $opt['price_factor'])) : null;
-		$this->price_increase =			!empty($opt['price_increase']) ? floatval(str_replace(',', '.', $opt['price_increase'])) : null;
-		$this->is_price_dealer =		!empty($opt['is_price_dealer']);
+		$this->price_factor      = !empty($opt['price_factor']) ? floatval(str_replace(',', '.', $opt['price_factor'])) : null;
+		$this->price_increase    = !empty($opt['price_increase']) ? floatval(str_replace(',', '.', $opt['price_increase'])) : null;
+		$this->is_price_dealer   = !empty($opt['is_price_dealer']);
+		$this->is_import_anytime = !empty($opt['is_import_anytime']);
 
-		$this->is_import_anytime =		!empty($opt['is_import_anytime']);
 		$dt = null;
 		if(!empty($this->progress['date'])){
 			$dt = \DateTime::createFromFormat('d.m.Y H:i:s', $this->progress['date']);
 		}
 		$this->import_date = $dt;
 
-		$this->category_rel = 			!empty($opt['category_rel']) ? intval($opt['category_rel']) : null;
-		$this->category_rel_label = 	'';
-		$this->is_not_up_cat =			!empty($opt['is_not_up_cat']);
+		$this->category_rel       = !empty($opt['category_rel']) ? intval($opt['category_rel']) : null;
+		$this->category_rel_label = '';
 
-		$this->is_no_vat =				!empty($opt['is_no_vat']);
-		$this->is_not_on_order =		!empty($opt['is_not_on_order']);
-		$this->price_from =				!empty($opt['price_from']) ? floatval(str_replace(',', '.', $opt['price_from'])) : null;
-		$this->price_to =				!empty($opt['price_to']) ? floatval(str_replace(',', '.', $opt['price_to'])) : null;
-		$this->rating =					!empty($opt['rating']) ? intval($opt['rating']) : null;
-		$this->is_wh_moscow =			!empty($opt['is_wh_moscow']);
-		$this->is_wh_europe =			!empty($opt['is_wh_europe']);
-		$this->is_wh_remote =			!empty($opt['is_wh_remote']);
-		$this->is_comments =			!empty($opt['is_comments']);
-		$this->is_brands =				!empty($opt['is_brands']);
-		$this->is_disable_sales =		!empty($opt['is_disable_sales']);
-		$this->is_branding =			!empty($opt['is_branding']);
-		$this->is_up_photo =			!empty($opt['is_up_photo']);
-		$this->is_cdn_photo =			!empty($opt['is_cdn_photo']);
-		$this->is_fast_import =			!empty($opt['is_fast_import']);
+		$this->is_not_up_cat     = !empty($opt['is_not_up_cat']);
+		$this->is_no_vat         = !empty($opt['is_no_vat']);
+		$this->is_not_on_order   = !empty($opt['is_not_on_order']);
+		$this->is_not_defect     = !empty($opt['is_not_defect']);
+		$this->price_from        = !empty($opt['price_from']) ? floatval(str_replace(',', '.', $opt['price_from'])) : null;
+		$this->price_to          = !empty($opt['price_to']) ? floatval(str_replace(',', '.', $opt['price_to'])) : null;
+		$this->rating            = !empty($opt['rating']) ? intval($opt['rating']) : null;
+		$this->is_wh_moscow      = !empty($opt['is_wh_moscow']);
+		$this->is_wh_europe      = !empty($opt['is_wh_europe']);
+		$this->is_wh_remote      = !empty($opt['is_wh_remote']);
+		$this->is_comments       = !empty($opt['is_comments']);
+		$this->is_brands         = !empty($opt['is_brands']);
+		$this->is_disable_sales  = !empty($opt['is_disable_sales']);
+		$this->is_branding       = !empty($opt['is_branding']);
+		$this->is_up_photo       = !empty($opt['is_up_photo']);
+		$this->is_cdn_photo      = !empty($opt['is_cdn_photo']);
+		$this->is_fast_import    = !empty($opt['is_fast_import']);
+		$this->is_without_quotes = !empty($opt['is_without_quotes']);
 
 		$this->is_init = true;
 	}
@@ -269,13 +272,13 @@ class Config {
 	}
 
 	public function progressClear() {
-		$this->progress['total'] = 0;
-		$this->progress['step'] = 0;
-		$this->progress['item'] = 0;
-		$this->progress['step_item'] = 0;
+		$this->progress['total']      = 0;
+		$this->progress['step']       = 0;
+		$this->progress['item']       = 0;
+		$this->progress['step_item']  = 0;
 		$this->progress['step_total'] = 0;
-		$this->progress['date'] = '';
-		$this->progress['date_step'] = '';
+		$this->progress['date']       = '';
+		$this->progress['date_step']  = '';
 		update_option('oasis_progress', $this->progress);
 	}
 
@@ -337,7 +340,7 @@ class Config {
 	}
 
 	public function checkPermissionImport(): bool {
-		if(!$this->is_import_anytime && 
+		if (!$this->is_import_anytime && 
 			$this->import_date &&
 			$this->import_date->format("Y-m-d") == (new \DateTime())->format("Y-m-d")){
 				return false;
@@ -347,7 +350,7 @@ class Config {
 
 	public function log($str) {
 		if ($this->is_debug || $this->is_debug_log) {
-			$str = date('H:i:s').' '.$str;
+			$str = date('H:i:s') . ' ' . $str;
 
 			if ($this->is_debug_log) {
 				file_put_contents($this->upload_path . '/oasis_'.date('Y-m-d').'.log', $str . "\n", FILE_APPEND);
@@ -365,10 +368,10 @@ class Config {
 	}
 
 	public function getRelCategoryId($oasis_cat_id) {
-		if(isset($this->categories_rel[$oasis_cat_id])){
+		if (isset($this->categories_rel[$oasis_cat_id])) {
 			return $this->categories_rel[$oasis_cat_id]['id'];
 		}
-		if(isset($this->category_rel)){
+		if (isset($this->category_rel)) {
 			return $this->category_rel;
 		}
 		return null;
@@ -376,7 +379,7 @@ class Config {
 
 	public function activate() {
 		if (!is_dir($this->upload_path)) {
-			if(!wp_mkdir_p($this->upload_path)){
+			if (!wp_mkdir_p($this->upload_path)) {
 				die('Failed to create directories: ' . $this->upload_path);
 			}
 		}

@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog - Product Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Импорт товаров из каталога oasiscatalog.com в Woocommerce. Выгрузка заказов из Woocommerce в oasiscatalog. Виджет редактирования нанесения.
-Version: 2.5.2
+Version: 2.6.0
 Text Domain: wp-oasis-importer
 License: GPL2
 
@@ -49,23 +49,6 @@ function oasis_activate() {
 
 	$cf = OasisConfig::instance();
 	$cf->activate();
-
-	global $wpdb;
-	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-
-	$charset_collate = $wpdb->get_charset_collate();
-
-	$sql = "CREATE TABLE {$wpdb->prefix}oasis_products (
-	post_id bigint(20) unsigned NOT NULL,
-	product_id_oasis char(12) NOT NULL,
-	model_id_oasis char(12) NOT NULL,
-	variation_parent_size_id char(12) DEFAULT NULL,
-	type char(30) NOT NULL,
-	PRIMARY KEY (post_id)
-	)
-	{$charset_collate};";
-
-	dbDelta( $sql );
 }
 
 /**
@@ -192,6 +175,14 @@ function oasis_settings_init() {
 			'is_not_up_cat',
 			__( 'Do not update categories', 'wp-oasis-importer' ),
 			fn() => oasis_sf_checbox('is_not_up_cat', $cf->is_not_up_cat),
+			'oasis',
+			'oasis_section_developers'
+		);
+
+		add_settings_field(
+			'is_not_defect',
+			__( 'No defective goods', 'wp-oasis-importer' ),
+			fn() => oasis_sf_checbox('is_not_defect', $cf->is_not_defect),
 			'oasis',
 			'oasis_section_developers'
 		);
@@ -374,6 +365,13 @@ function oasis_settings_init() {
 			'is_fast_import',
 			__( 'Quick import of products', 'wp-oasis-importer' ),
 			fn() => oasis_sf_checbox('is_fast_import', $cf->is_fast_import, __( 'Import without photos. After a full upload of all products, the option is turned off', 'wp-oasis-importer' )),
+			'oasis',
+			'oasis_section_additionally'
+		);
+		add_settings_field(
+			'is_without_quotes',
+			__( 'Remove quotes', 'wp-oasis-importer' ),
+			fn() => oasis_sf_checbox('is_without_quotes', $cf->is_without_quotes, __( 'Remove quotes in the title', 'wp-oasis-importer' )),
 			'oasis',
 			'oasis_section_additionally'
 		);
@@ -729,7 +727,7 @@ function oasis_get_progress_bar() {
 function oasis_get_all_categories() {
 	$categories = get_categories( [
 		'taxonomy'   => 'product_cat',
-		'hide_empty'   => 0
+		'hide_empty' => 0
 	]);
 
 	$arr = [];
@@ -761,10 +759,10 @@ function oasis_init_filter() {
 	]);
 
 	if($cf->is_cdn_photo){
-		add_filter( 'image_downsize', 'oasis_filter_image_downsize', 10, 3);
+		add_filter('image_downsize', 'oasis_filter_image_downsize', 10, 3);
 
 		function oasis_filter_image_downsize($downsize, $id, $size = 'medium') {
-			if($downsize){
+			if ($downsize) {
 				return $downsize;
 			}
 
@@ -774,7 +772,7 @@ function oasis_init_filter() {
 			}
 
 			$oasis_id = Main::getOasisProductIdByPostId($post->post_parent);
-			if(!$oasis_id){
+			if (!$oasis_id) {
 				return false;
 			}
 
@@ -790,7 +788,7 @@ function oasis_init_filter() {
 				$size_data = $imagedata['sizes'][$size] ?? $imagedata['sizes']['medium'] ?? [];
 			}
 			
-			if(empty($size_data['cdn'])){
+			if (empty($size_data['cdn'])) {
 				return false;
 			}
 
@@ -821,7 +819,7 @@ function oasis_init_filter() {
 			}
 
 			$oasis_id = Main::getOasisProductIdByPostId($post->post_parent);
-			if(!$oasis_id){
+			if (!$oasis_id) {
 				return $url;
 			}
 
@@ -831,15 +829,10 @@ function oasis_init_filter() {
 			}
 			$size_data = $imagedata['sizes']['medium'] ?? [];
 			
-			if(empty($size_data['cdn'])){
+			if (empty($size_data['cdn'])) {
 				return $url;
 			}
 			return $size_data['cdn'];
 		}
 	}
-}
-
-add_action('delete_post', 'oasis_after_delete_post', 10, 1);
-function oasis_after_delete_post($post_id){
-	Main::deleteOasisProductByPostId($post_id);
 }
