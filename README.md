@@ -8,42 +8,43 @@ WordPress version: 5.8+
 
 Свободное пространство на диске не менее 25Gb
 
-## Usage
+## Установка
 
-Скачать архив wp-oasis-importer.zip из [свежего релиза](https://github.com/oasis-catalog/wp-oasis-importer/releases), установить и активировать плагин на вашем сайте в разделе: http://site.com/wp-admin/plugin-install.php
+На вашем сайте в разделе установки плагинов http://site.com/wp-admin/plugin-install.php
+
+Загрузка:
+ - через поиск по названию Oasiscatalog Importer
+ - скачать и установить вручную https://ru.wordpress.org/plugins/oasiscatalog-importer/
+ - скачать архив oasiscatalog-importer.zip из [свежего релиза](https://github.com/oasis-catalog/wp-oasis-importer/releases) и установить вручную
+
 
 Перейдите на страницу настроек модуля «WooCommerce» -> «Импорт Oasis» и укажите действующий API ключ и User ID из [личного кабинета oasiscatalog](https://www.oasiscatalog.com/cabinet/integrations) и сохраните настройки модуля. 
 
 Рекомендуем указывать лимит 5000. 
 
-В панели управления хостингом добавить crontab задачи со страницы настроек модуля
+### Настройка запуска
 
-**Возможные ошибки на хостинге Timeweb:**
+Процесс импорта товаров запускается в фоновом режиме.
 
-```libgomp: Thread creation failed: Resource temporarily unavailable```
+Доступно 2 режима работы:
 
-Для исправления необходимо привести команду запуска к такому виду:
-
-```
-env MAGICK_THREAD_LIMIT=1 /opt/php74/bin/php /YOUR_PATH/public_html/wp-content/plugins/wp-oasis-importer/cli.php --key=YOUR_KEY
-```
+ - с помощью инструментов Wordpress, настройте расписание
+ - с помощью планировщика задач (требуется WP-CLI), в панели управления хостингом
 
 ### Заказы
 
 После установки плагина и указания USER ID на станице WooCommerce->Заказы у заказов появится кнопка «Выгрузить» при условии что в заказе только товары Оазиса. 
 
-**Возможность выгрузить имеется только у пользователей с правами «Супер-Админ», «Админ» и «Менеджера магазина»** 
+**Возможность выгрузить имеется только у пользователей с правами «Супер-Админ», «Админ» и «Менеджера магазина»**
 
-## Виджет нанесения
+## Часто задаваемыми вопросы и подсказки по настройкам
 
-Для работы виджета необходимо на странице оформления заказа подготовить данные по товарам: 
-```angular2html
-<div class="js--oasis-branding-widget" data-product-id="00000000006" data-product-quantity="2"></div>
-<input type="hidden" name="branding[items][00000000006]" value="2">
+[FAQ.md](./FAQ.MD)
 
-<div class="js--oasis-branding-widget" data-product-id="00000000018" data-product-quantity="5"></div>
-<input type="hidden" name="branding[items][00000000018]" value="5">
-...
-```
+## Куда можно сообщить об ошибках?
 
-Получить ID товара ```data-product-id="00000000006"``` можно в цикле с помощью метода ```get_product_id_oasis_by_cart_item( $cart_item );``` который принимает в качестве параметра ```$cart_item```
+Сообщайте об ошибках или пожеланиях тут https://github.com/oasis-catalog/wp-oasis-importer/issues
+
+## Плагин содержит/включает
+1. **Bootstrap**, Version: 5.3.3, License: MIT, [https://getbootstrap.com/](https://getbootstrap.com/)
+2. **Oasis-catalog/branding-widget**, Version: 1.3.0, License: ISC, [https://www.npmjs.com/package/@oasis-catalog/branding-widget/](https://www.npmjs.com/package/@oasis-catalog/branding-widget/)

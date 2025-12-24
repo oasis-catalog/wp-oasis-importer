@@ -1,8 +1,8 @@
 <?php
 
-namespace OasisImport;
+namespace OasiscatalogImporter;
 
-use OasisImport\Config as OasisConfig;
+use OasiscatalogImporter\Config as OasisConfig;
 use Exception;
 use WC_Cache_Helper;
 use WC_Product;
@@ -92,7 +92,8 @@ class Main
 	 */
 	public static function checkProduct($productId, string $type = '')
 	{
-		return reset(self::checkProducts($productId, $type));
+		$products = self::checkProducts($productId, $type);
+		return reset($products);
 	}
 
 	/**
@@ -348,13 +349,12 @@ class Main
 				$wcVariation->set_image_id(array_shift($images));
 				$wcVariation->save();
 			}
-		} catch ( Exception $exception ) {
-			echo $exception->getMessage() . PHP_EOL;
-
-			if ( $exception->getErrorCode() == 'product_invalid_sku' ) {
-				self::deleteWcProductBySky( $variation );
+		} catch (Exception $e) {
+			if ($e->getErrorCode() == 'product_invalid_sku') {
+				self::$cf->error($e->getMessage() . PHP_EOL);
+				self::deleteWcProductBySky($variation);
 			} else {
-				die();
+				self::$cf->fatal($e->getMessage());
 			}
 		}
 
@@ -989,7 +989,7 @@ class Main
 			"SELECT DISTINCT pm_product.meta_value as product_id
 			FROM {$wpdb->prefix}posts p
 			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
-			WHERE p.ID = " . $post_id
+			WHERE p.ID = %d", [$post_id]
 		), ARRAY_A);
 		return $dbResults['product_id'] ?? null;
 	}
@@ -1596,8 +1596,8 @@ class Main
 	public static function buildTreeCats($data, array $checkedArr = [], array $relCategories = [], int $parent_id = 0, bool $parent_checked = false): string
 	{
 		$treeItem = '';
-		if ( ! empty( $data[ $parent_id ] ) ) {
-			foreach($data[ $parent_id ] as $item){
+		if (!empty($data[$parent_id])) {
+			foreach ($data[$parent_id] as $item) {
 				$checked = $parent_checked || in_array($item['id'], $checkedArr);
 
 				$rel_cat = $relCategories[$item['id']] ?? null;
@@ -1610,39 +1610,38 @@ class Main
 
 				$treeItemChilds = self::buildTreeCats($data, $checkedArr, $relCategories, $item['id'], $checked);
 
-				if(empty($treeItemChilds)){
+				if (empty($treeItemChilds)) {
 					$treeItem .= '<div class="oa-tree-leaf">
 						<div class="oa-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
-							<input type="hidden" class="oa-tree-inp-rel" name="oasis_options[cat_relation][]" value="' . $rel_value . '" />
+							<input type="hidden" class="oa-tree-inp-rel" name="oasis_import_options[cat_relation][]" value="' . esc_attr($rel_value) . '" />
 							<label>
-								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . ($checked ? ' checked' : '' ) . '/>
-								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_import_options[categories][]" value="' . esc_attr($item['id']) . '"' . ($checked ? ' checked="checked"' : '' ) . '/>
+								<div class="oa-tree-btn-relation"></div>' . esc_html($item['name']) . '
 							</label>
 							<div class="oa-tree-dashed"></div>
-							<div class="oa-tree-relation">' . $rel_label . '</div>
+							<div class="oa-tree-relation">' . esc_html($rel_label) . '</div>
 						</div>
 					</div>';
 				}
-				else{
+				else {
 					$treeItem .= '<div class="oa-tree-node oa-tree-collapsed">
 						<div class="oa-tree-label ' . ($rel_value ? 'relation-active' : '') . '">
-							<input type="hidden" class="oa-tree-inp-rel"  name="oasis_options[cat_relation][]" value="' . $rel_value . '" />
+							<input type="hidden" class="oa-tree-inp-rel"  name="oasis_import_options[cat_relation][]" value="' . esc_attr($rel_value) . '" />
 							<span class="oa-tree-handle-p">+</span>
 							<span class="oa-tree-handle-m">-</span>
 							<label>
-								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_options[categories][]" value="' . $item['id'] . '"' . ($checked ? ' checked' : '' ) . '/>
-								<div class="oa-tree-btn-relation"></div>' . $item['name'] . '
+								<input type="checkbox" class="oa-tree-cb-cat" name="oasis_import_options[categories][]" value="' . esc_attr($item['id']) . '"' . ($checked ? ' checked="checked"' : '' ) . '/>
+								<div class="oa-tree-btn-relation"></div>' . esc_html($item['name']) . '
 							</label>
 							<div class="oa-tree-dashed"></div>
-							<div class="oa-tree-relation">' . $rel_label . '</div>
+							<div class="oa-tree-relation">' . esc_html($rel_label) . '</div>
 						</div>
 						<div class="oa-tree-childs">' . $treeItemChilds . '</div>
 					</div>';
 				}
 			}
 		}
-
-		return $treeItem ?? '';
+		return $treeItem;
 	}
 
 	/**
@@ -1653,36 +1652,35 @@ class Main
 	 * @param int $parent_id
 	 * @return string
 	 */
-	public static function buildTreeRadioCats( $data, ?array $checked_id = null, int $parent_id = 0 ): string
+	public static function buildTreeRadioCats($data, ?array $checked_id = null, int $parent_id = 0): string
 	{
 		$treeItem = '';
-		if ( ! empty( $data[ $parent_id ] ) ) {
-			foreach($data[ $parent_id ] as $item){
-				$checked = $checked_id === $item['id'];
+		if (!empty($data[$parent_id])) {
+			foreach ($data[$parent_id] as $item) {
+				$checked = $checked_id === $item['id'] ? ' checked="checked"' : '';
 
-				$treeItemChilds = self::buildTreeRadioCats( $data, $checked_id, $item['id'] );
+				$treeItemChilds = self::buildTreeRadioCats($data, $checked_id, $item['id']);
 
-				if(empty($treeItemChilds)){
+				if (empty($treeItemChilds)) {
 					$treeItem .= '<div class="oa-tree-leaf">
 						<div class="oa-tree-label">
-							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
+							<label><input type="radio" name="oasis_import_radio_tree" value="' . esc_attr($item['id']) . '"' . $checked . '/>' . esc_attr($item['name']) . '</label>
 						</div>
 					</div>';
 				}
-				else{
+				else {
 					$treeItem .= '<div class="oa-tree-node oa-tree-collapsed">
 						<div class="oa-tree-label">
 							<span class="oa-tree-handle-p">+</span>
 							<span class="oa-tree-handle-m">-</span>
-							<label><input type="radio" name="oasis_radio_tree" value="' . $item['id'] . '"' . $checked . '/>' . $item['name'] . '</label>
+							<label><input type="radio" name="oasis_import_radio_tree" value="' . esc_attr($item['id']) . '"' . $checked . '/>' . esc_attr($item['name']) . '</label>
 						</div>
 						<div class="oa-tree-childs">' . $treeItemChilds . '</div>
 					</div>';
 				}
 			}
 		}
-
-		return $treeItem ?? '';
+		return $treeItem;
 	}
 
 	/**

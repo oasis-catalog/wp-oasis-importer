@@ -1,33 +1,32 @@
 <?php
+if (!defined('ABSPATH')) {
+	exit;
+}
 
-use OasisImport\Api;
-use OasisImport\Main;
+use OasiscatalogImporter\Api;
+use OasiscatalogImporter\Main;
+use OasiscatalogImporter\Config as OasisConfig;
 
-add_action('init', 'init_branding');
+add_action('init', 'oasis_import_branding_init');
 
-function init_branding() {
-	$options = get_option('oasis_options');
+function oasis_import_branding_init() {
+	$options = get_option('oasis_import_options');
 
 	if (empty($options['is_branding'])) {
 		return;
 	}
 	$IS_HPOS = get_option('woocommerce_custom_orders_table_enabled') === 'yes';
 
-	add_action('wp_enqueue_scripts', 'init_scripts_branding');
-	function init_scripts_branding() {
-		wp_enqueue_style('branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@1.3.0/client/style.css');
-		wp_enqueue_script('branding-widget', '//unpkg.com/@oasis-catalog/branding-widget@1.3.0/client/index.iife.js', [], '', true);
-		wp_enqueue_script('oasis-branding', plugins_url('/assets/js/widget.js', dirname( __FILE__ ) ), ['jquery'], '', true);
-	}
-
-	add_action('wp_enqueue_scripts', 'up_ajax_data_oasis_branding', 99);
-	function up_ajax_data_oasis_branding() {
-		wp_localize_script('jquery', 'uptotalprice', ['url' => admin_url('admin-ajax.php')]);
+	add_action('wp_enqueue_scripts', 'oasis_import_branding_scripts');
+	function oasis_import_branding_scripts() {
+		wp_enqueue_style('oasis-import-branding-widget', plugins_url('/assets/css/branding-widget.css', dirname( __FILE__ )), [], OasisConfig::VERSION);
+		wp_enqueue_script('oasis-import-branding-widget', plugins_url('/assets/js/branding-widget.js', dirname( __FILE__ )), [], OasisConfig::VERSION, ['in_footer' => true]);
+		wp_enqueue_script('oasis-import-widget', plugins_url('/assets/js/widget.js', dirname( __FILE__ )), ['jquery'], OasisConfig::VERSION, ['in_footer' => true]);
 	}
 
 	// карточка товара
-	add_filter('woocommerce_available_variation', 'oasis_prepare_variation', 10, 1);
-	function oasis_prepare_variation ($data) {
+	add_filter('woocommerce_available_variation', 'oasis_import_branding_prepare_variation', 10, 1);
+	function oasis_import_branding_prepare_variation ($data) {
 		if ($data['variation_id']) {
 			$data['product_id_oasis'] = Main::getOasisProductIdByPostId($data['variation_id']) ?? '';
 		}
@@ -35,49 +34,56 @@ function init_branding() {
 	}
 	
 	// добавление в карточку товара
-	add_action('woocommerce_before_add_to_cart_button', 'oasis_branding');
-	function oasis_branding() {
+	add_action('woocommerce_before_add_to_cart_button', 'oasis_import_branding_cart');
+	function oasis_import_branding_cart() {
 		global $product;
 
 		$product_id_oasis = Main::getOasisProductIdByPostId($product->get_id());
 		if ($product_id_oasis) {
-			$locale		= str_replace('_', '-', get_locale());
-			$currency	= get_woocommerce_currency();
-			$row		= '<div class="js--oasis-client-branding-widget" data-oasis-locale="'.$locale.'" data-oasis-currency="'.$currency.'"';
-			if ($product->is_type('simple')){
-				$row .= ' data-oasis-product-id="'.$product_id_oasis.'"';
-			}
-			$row .= '></div>';
-			echo $row;
+			echo '<div class="js--oasis-client-branding-widget"'
+					. ' data-oasis-locale="' . esc_attr(str_replace('_', '-', get_locale())) . '"'
+					. ' data-oasis-currency="' . esc_attr(get_woocommerce_currency()) . '"'
+					. ' data-oasis-product-id="' . ($product->is_type('simple') ? esc_attr($product_id_oasis) : '') . '"'
+					. '></div>';
 		}
 	}
 
 	// добавление в корзину
-	add_filter('woocommerce_add_cart_item_data', 'oasis_add_cart_item_data', 10, 3);
-	function oasis_add_cart_item_data($cart_item_data, $product_id, $variation_id) {
-		if ($oasis_branding = $_REQUEST['branding']) {
+	add_filter('woocommerce_add_cart_item_data', 'oasis_import_branding_add_cart_item_data', 10, 3);
+	function oasis_import_branding_add_cart_item_data($cart_item_data, $product_id, $variation_id) {
+		$oasisBranding = [];
+		foreach ($_REQUEST['branding'] ?? [] as $requestItem) {
+			$item = [];
+			foreach (['productId', 'placeId', 'typeId', 'width', 'height', 'logoId'] as $k) {
+				if ($v = sanitize_text_field($requestItem[$k])) {
+					$item[$k] = $v;
+				}
+			}
+			if (!empty($item['productId'])) {
+				$oasisBranding[] = $item;
+			}
+		}
+		if ($oasisBranding) {
 			try {
-				if ($productId = reset($oasis_branding)['productId']) {
-					$data = Api::getBrandingCoef($productId);
-					if ($data) {
-						$labels = [];
+				$data = Api::getBrandingCoef($oasisBranding[0]['productId']);
+				if ($data) {
+					$labels = [];
 
-						foreach ($oasis_branding as $branding) {
-							foreach ($data->methods as $method) {
-								foreach ($method->types as $type) {
-									if ($branding['typeId'] == $type->id) {
-										$labels[] = $type->name;
-										break 2;
-									}
+					foreach ($oasisBranding as $branding) {
+						foreach ($data->methods as $method) {
+							foreach ($method->types as $type) {
+								if ($branding['typeId'] == $type->id) {
+									$labels[] = $type->name;
+									break 2;
 								}
 							}
 						}
-
-						$cart_item_data['oasis_branding'] = [
-							'data' => $oasis_branding,
-							'label' => implode(', ', $labels),
-						];
 					}
+
+					$cart_item_data['oasis_branding'] = [
+						'data' => $oasisBranding,
+						'label' => implode(', ', $labels),
+					];
 				}
 			} catch (\Throwable $e) {
 			}
@@ -87,11 +93,11 @@ function init_branding() {
 	}
 
 	// корзина
-	add_filter('woocommerce_get_item_data', 'oasis_get_item_data', 10, 2);
-	function oasis_get_item_data($item_data, $cart_item) {
+	add_filter('woocommerce_get_item_data', 'oasis_import_branding_get_item_data', 10, 2);
+	function oasis_import_branding_get_item_data($item_data, $cart_item) {
 		if (isset($cart_item['oasis_branding'])) {
 			$item_data = array_merge($item_data, [[
-					'key'     => __('Branding', 'wp-oasis-importer'),
+					'key'     => esc_attr__('Branding', 'oasiscatalog-importer'),
 					'display' => $cart_item['oasis_branding']['label'],
 				], [
 					'key'     => 'Стоимость нанесения',
@@ -102,12 +108,12 @@ function init_branding() {
 		return $item_data;
 	}
 
-	add_filter('woocommerce_get_cart_contents', 'oasis_woocommerce_get_cart_contents');
-	function oasis_woocommerce_get_cart_contents($cart_contents) {
+	add_filter('woocommerce_get_cart_contents', 'oasis_import_branding_get_cart_contents');
+	function oasis_import_branding_get_cart_contents($cart_contents) {
 		$is_up = false;
 		foreach ($cart_contents as $cart_item) {
 			if (isset($cart_item['oasis_branding'])
-				&& (empty($cart_item['oasis_branding']['date_up']) || $cart_item['oasis_branding']['date_up'] != date('Y-m-d')))
+				&& (empty($cart_item['oasis_branding']['date_up']) || $cart_item['oasis_branding']['date_up'] != gmdate('Y-m-d')))
 			{
 				$is_up = true;
 				break;
@@ -115,7 +121,7 @@ function init_branding() {
 		}
 		if ($is_up) {
 			$cart_contents = &wc()->cart->cart_contents;
-			$data = prepare_oasis_branding_car_items($cart_contents);
+			$data = oasis_import_branding_prepare_branding_car_items($cart_contents);
 			if ($data) {
 				$result = Api::brandingCalc($data, ['timeout' => 10]);
 				if (empty($result->error) && !empty($result->branding)) {
@@ -127,7 +133,7 @@ function init_branding() {
 								$price += $result->branding[$n]->main->price->client->total;
 							}
 							$cart_item['oasis_branding']['price'] = $price;
-							$cart_item['oasis_branding']['date_up'] = date('Y-m-d');
+							$cart_item['oasis_branding']['date_up'] = gmdate('Y-m-d');
 							$i++;
 						}
 					}
@@ -137,8 +143,8 @@ function init_branding() {
 		return $cart_contents;
 	}
 
-	add_action('woocommerce_cart_calculate_fees', 'oasis_cart_calculate_fees', 10, 1);
-	function oasis_cart_calculate_fees($cart) {
+	add_action('woocommerce_cart_calculate_fees', 'oasis_import_branding_cart_calculate_fees', 10, 1);
+	function oasis_import_branding_cart_calculate_fees($cart) {
 		$branding_cost = 0;
 		foreach ($cart->cart_contents as $cart_item) {
 			if (isset($cart_item['oasis_branding'])) {
@@ -147,50 +153,49 @@ function init_branding() {
 		}
 		
 		if (!empty($branding_cost)) {
-			$cart->add_fee(__('Branding', 'wp-oasis-importer'), $branding_cost);
+			$cart->add_fee(esc_attr__('Branding', 'oasiscatalog-importer'), $branding_cost);
 		}
 	}
-	add_action('woocommerce_after_cart_item_quantity_update', 'oasis_woocommerce_after_cart_item_quantity_update', 10, 3);
-	function oasis_woocommerce_after_cart_item_quantity_update($cart_item_key, $quantity, $old_quantity) {
+	add_action('woocommerce_after_cart_item_quantity_update', 'oasis_import_branding_after_cart_item_quantity_update', 10, 3);
+	function oasis_import_branding_after_cart_item_quantity_update($cart_item_key, $quantity, $old_quantity) {
 		foreach (wc()->cart->cart_contents as $key => &$cart_item) {
 			if ($key === $cart_item_key && isset($cart_item['oasis_branding'])) {
 				$cart_item['oasis_branding']['date_up'] = null;
 			}
 		}
-		return $cart_contents;
 	}
 
 	// заказ
-	add_filter('woocommerce_checkout_create_order_line_item', 'oasis_update_order_meta', 10, 3);
-	function oasis_update_order_meta ($item, $cart_item_key, $values) {
+	add_filter('woocommerce_checkout_create_order_line_item', 'oasis_import_branding_update_order_meta', 10, 3);
+	function oasis_import_branding_update_order_meta ($item, $cart_item_key, $values) {
 		if (isset($values['oasis_branding'])) {
-			$item->add_meta_data(__('Branding', 'wp-oasis-importer'), $values['oasis_branding']['label']);
-			$item->add_meta_data(__('Cost of branding', 'wp-oasis-importer'), $values['oasis_branding']['price']);
+			$item->add_meta_data(esc_attr__('Branding', 'oasiscatalog-importer'), $values['oasis_branding']['label']);
+			$item->add_meta_data(esc_attr__('Cost of branding', 'oasiscatalog-importer'), $values['oasis_branding']['price']);
 		}
 	}
 
 	if ($IS_HPOS) {
-		add_action('woocommerce_store_api_checkout_order_processed', 'save_order_meta_oasis_branding', 10, 1);
-		function save_order_meta_oasis_branding ($order) {
-			$data = prepare_oasis_branding_car_items(wc()->cart->cart_contents);
+		add_action('woocommerce_store_api_checkout_order_processed', 'oasis_import_branding_save_order_meta', 10, 1);
+		function oasis_import_branding_save_order_meta ($order) {
+			$data = oasis_import_branding_prepare_branding_car_items(wc()->cart->cart_contents);
 			if ($data) {
-				$order->add_meta_data('oasis_branding', json_encode($data));
+				$order->add_meta_data('oasis_branding', wp_json_encode($data));
 				$order->save_meta_data();
 			}
 		}
 	}
 	else {
-		add_action('woocommerce_checkout_order_processed', 'save_order_meta_oasis_branding', 10, 3);
-		function save_order_meta_oasis_branding($order_id, $posted_data, $order) {
-			$data = prepare_oasis_branding_car_items(wc()->cart->cart_contents);
+		add_action('woocommerce_checkout_order_processed', 'oasis_import_branding_save_order_meta', 10, 3);
+		function oasis_import_branding_save_order_meta($order_id, $posted_data, $order) {
+			$data = oasis_import_branding_prepare_branding_car_items(wc()->cart->cart_contents);
 			if ($data) {
-				$order->add_meta_data('oasis_branding', json_encode($data));
+				$order->add_meta_data('oasis_branding', wp_json_encode($data));
 				$order->save_meta_data();
 			}
 		}
 	}
 
-	function prepare_oasis_branding_car_items($cart_items = []) {
+	function oasis_import_branding_prepare_branding_car_items($cart_items = []) {
 		$items = [];
 		$brandings = [];
 
@@ -222,8 +227,8 @@ function init_branding() {
  * @param $cart_item
  * @return mixed|string
  */
-function get_product_id_oasis_by_cart_item($cart_item) {
-	$options = get_option('oasis_options');
+function oasis_import_branding_get_product_id($cart_item) {
+	$options = get_option('oasis_import_options');
 	if (empty($options['is_branding'])) {
 		return;
 	}

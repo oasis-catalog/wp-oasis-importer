@@ -1,16 +1,15 @@
 <?php
 
-namespace OasisImport;
+namespace OasiscatalogImporter;
 
-use OasisImport\Config as OasisConfig;
-use OasisImport\Main;
+use OasiscatalogImporter\Config as OasisConfig;
+use OasiscatalogImporter\Main;
 use Exception;
-
 
 class Cli {
 	public static OasisConfig $cf;
 
-	public static function Run($cron_key, $cron_opt = [], $opt = [])
+	public static function Run($com, $opt = [])
 	{
 		set_time_limit(0);
 		ini_set('memory_limit', '2G');
@@ -21,48 +20,43 @@ class Cli {
 
 		$cf = new OasisConfig($opt);
 
-		if ($cron_opt['task'] == 'repair_image'){
+		if ($com == 'repair_image'){
 			$cf->init();
-			if (!$cf->checkCronKey($cron_key)) {
-				$cf->log('Error! Invalid --key');
-				die('Error! Invalid --key');
+			if (!$cf->checkKey()) {
+				$cf->fatal('Invalid key');
 			}
 			if ($cf->is_cdn_photo) {
-				$cf->log('Error! On CDN photo');
-				die('Error! On CDN photo');
+				$cf->fatal('Error! On CDN photo');
 			}
 			self::RepairImage();
 		}
-		elseif ($cron_opt['task'] == 'add_image' || $cron_opt['task'] == 'up_image'){
+		elseif (in_array($com, ['add_image', 'up_image'])){
 			$cf->init();
-			if (!$cf->checkCronKey($cron_key)) {
-				$cf->log('Error! Invalid --key');
-				die('Error! Invalid --key');
+			if (!$cf->checkKey()) {
+				$cf->fatal('Invalid key');
 			}
 			self::AddImage([
-				'oid' => $cron_opt['oid'] ?? '',
-				'sku' => $cron_opt['sku'] ?? '',
-				'is_up' => $cron_opt['task'] == 'up_image'
+				'oid' => $opt['oid'] ?? '',
+				'sku' => $opt['sku'] ?? '',
+				'is_up' => $com == 'up_image'
 			]);
 		}
 		else {
-			$cf->lock(function() use ($cf, $cron_key, $cron_opt) {
+			$cf->lock(function() use ($cf, $com, $opt) {
 				$cf->init();
 
-				if (!$cf->checkCronKey($cron_key)) {
-					$cf->log('Error! Invalid --key');
-					die('Error! Invalid --key');
+				if (!$cf->checkKey()) {
+					$cf->fatal('Invalid key');
 				}
 
-				switch ($cron_opt['task']) {
-					case 'import':
+				switch ($com) {
+					case 'run':
 						$cf->initRelation();
 
 						if(!$cf->checkPermissionImport()) {
-							$cf->log('Import once day');
-							die('Import once day');
+							$cf->fatal('Import once day');
 						}
-						self::Import($cron_opt);
+						self::Import($opt);
 						break;
 
 					case 'up':
@@ -70,8 +64,7 @@ class Cli {
 						break;
 				}
 			}, function() use ($cf) {
-				$cf->log('Already running');
-				die('Already running');
+				$cf->fatal('Already running');
 			});
 		}
 	}
@@ -184,9 +177,8 @@ class Cli {
 			}
 			self::$cf->progressEnd();
 			self::$cf->log('Окончание обновления товаров');
-		} catch (Exception $exception) {
-			echo $exception->getMessage();
-			die();
+		} catch (Exception $e) {
+			self::$cf->fatal($e->getMessage());
 		}
 	}
 
@@ -221,8 +213,8 @@ class Cli {
 			}
 
 			self::$cf->log('Окончание обновления остатков');
-		} catch (Exception $exception) {
-			die();
+		} catch (Exception $e) {
+			self::$cf->fatal($e->getMessage());
 		}
 	}
 
@@ -270,9 +262,8 @@ class Cli {
 				self::$cf->log('Выполнено ' . ++$count . ' из ' . $total . ' OAId=' . $product->id);
 			}
 			self::$cf->log('Окончание обновления картинок товаров');
-		} catch (Exception $exception) {
-			echo $exception->getMessage();
-			die();
+		} catch (Exception $e) {
+			self::$cf->fatal($e->getMessage());
 		}
 	}
 

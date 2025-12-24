@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Oasiscatalog - Product Importer 2.5.2\n"
+"Project-Id-Version: Oasiscatalog Importer 3.0.0\n"
 "Report-Msgid-Bugs-To: https://www.oasiscatalog.com\n"
 "Last-Translator: Nikolay Visheratin\n"
 "Language-Team: https://www.oasiscatalog.com\n"
@@ -12,312 +12,392 @@ msgstr ""
 "Language: ru\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: wp-oasis-importer.php:86
+#: oasiscatalog-importer.php:180
 msgid "Setting up import of Oasis products"
 msgstr "Настройка импорта товаров Oasis"
 
-#: wp-oasis-importer.php:93
+#: oasiscatalog-importer.php:68
+msgid "Launch settings"
+msgstr "Настройка запуска"
+
+#: oasiscatalog-importer.php:187
 msgid "Key API"
 msgstr "Ключ API"
 
-#: wp-oasis-importer.php:104
+#: oasiscatalog-importer.php:198
 msgid "API User ID"
 msgstr "ID пользователя"
 
-#: wp-oasis-importer.php:114
-#: wp-oasis-importer.php:399
+#: oasiscatalog-importer.php:208
+#: oasiscatalog-importer.php:494
 msgid "Specify the API key!"
 msgstr "Укажите API ключ!"
 
-#: wp-oasis-importer.php:116
+#: oasiscatalog-importer.php:210
 msgid "API key is invalid"
 msgstr "API ключ не верный"
 
-#: wp-oasis-importer.php:122
+#: oasiscatalog-importer.php:216
 msgid "Currency"
 msgstr "Валюта"
 
-#: wp-oasis-importer.php:136
-#: wp-oasis-importer.php:646
+#: oasiscatalog-importer.php:230
+#: oasiscatalog-importer.php:728
 msgid "Categories"
 msgstr "Категории"
 
-#: wp-oasis-importer.php:176
+#: oasiscatalog-importer.php:288
 msgid "Do not update categories"
 msgstr "Не обновлять категории"
 
-#: wp-oasis-importer.php:209
+#: oasiscatalog-importer.php:319
 msgid "No VAT"
 msgstr "Без НДС"
 
-#: wp-oasis-importer.php:217
+#: oasiscatalog-importer.php:326
 msgid "Without goods \"to order\""
 msgstr "Без товаров \"под заказ\""
 
-#: wp-oasis-importer.php:225
+#: oasiscatalog-importer.php:333
 msgid "Price from"
 msgstr "Цена от"
 
-#: wp-oasis-importer.php:233
+#: oasiscatalog-importer.php:340
 msgid "Price to"
 msgstr "Цена до"
 
-#: wp-oasis-importer.php:241
+#: oasiscatalog-importer.php:347
 msgid "Type"
 msgstr "Тип"
 
-#: wp-oasis-importer.php:258
+#: oasiscatalog-importer.php:363
 msgid "In stock in Moscow"
 msgstr "На складе в Москве"
 
-#: wp-oasis-importer.php:266
+#: oasiscatalog-importer.php:370
 msgid "In stock in Europe"
 msgstr "На складе в Европе"
 
-#: wp-oasis-importer.php:274
+#: oasiscatalog-importer.php:377
 msgid "At a remote warehouse"
 msgstr "На удаленном складе"
 
-#: wp-oasis-importer.php:200
+#: oasiscatalog-importer.php:312
 msgid "Limit products"
 msgstr "Лимит товаров"
 
-#: wp-oasis-importer.php:201
+#: oasiscatalog-importer.php:313
 msgid "The number of products received from the API and processed in one run."
 msgstr "Количество товаров получаемое из API и обрабатываемое за один запуск."
 
-#: wp-oasis-importer.php:282
+#: oasiscatalog-importer.php:385
 msgid "Price settings"
 msgstr "Настройки цен"
 
-#: wp-oasis-importer.php:289
+#: oasiscatalog-importer.php:391
 msgid "Price factor"
 msgstr "Коэффициент цены"
 
-#: wp-oasis-importer.php:290
+#: oasiscatalog-importer.php:392
 msgid "The price will be multiplied by this factor. For example, in order to increase the cost by 20%, you need to specify 1.2"
 msgstr "Цена будет умножена на данный коэффициент. Например, для того чтобы увеличить стоимость на 20% необходимо указать 1,2"
 
-#: wp-oasis-importer.php:297
+#: oasiscatalog-importer.php:398
 msgid "Add to price"
 msgstr "Добавить к цене"
 
-#: wp-oasis-importer.php:298
+#: oasiscatalog-importer.php:399
 msgid "This value will be added to the price. For example, if you specify 100, then 100 will be added to the cost of all products."
 msgstr "К цене будет добавлена данная величина. Например, если указать 100, то у всех товаров к стоимости будет добавлено 100."
 
-#: wp-oasis-importer.php:305
+#: oasiscatalog-importer.php:405
 msgid "Use dealer prices"
 msgstr "Использовать диллерские цены"
 
-#: wp-oasis-importer.php:313
+#: oasiscatalog-importer.php:413
 msgid "Additional settings"
 msgstr "Дополнительные настройки"
 
-#: wp-oasis-importer.php:320
+#: oasiscatalog-importer.php:419
 msgid "Enable reviews"
 msgstr "Включить отзывы"
 
-#: wp-oasis-importer.php:321
+#: oasiscatalog-importer.php:420
 msgid "Enable commenting on imported products"
 msgstr "Включить комментирование импортируемых товаров"
 
-#: wp-oasis-importer.php:335
+#: oasiscatalog-importer.php:433
 msgid "Hide discounts"
 msgstr "Скрыть скидки"
 
-#: wp-oasis-importer.php:336
+#: oasiscatalog-importer.php:434
 msgid "Hide \"old\" price in products"
 msgstr "Скрыть \"старую\" цену в товарах"
 
-#: wp-oasis-importer.php:343
+#: oasiscatalog-importer.php:440
 msgid "Widget branding"
 msgstr "Виджет нанесения"
 
-#: wp-oasis-importer.php:344
+#: oasiscatalog-importer.php:441
 msgid "Enable branding widget on checkout page"
 msgstr "Включить виджет нанесения на странице оформления заказа"
 
-#: wp-oasis-importer.php:351
+#: oasiscatalog-importer.php:447
 msgid "Up photo"
 msgstr "Обновление фото"
 
-#: wp-oasis-importer.php:352
+#: oasiscatalog-importer.php:448
 msgid "Enable update photos"
 msgstr "Включить обновление фото"
 
-#: wp-oasis-importer.php:359
+#: oasiscatalog-importer.php:454
 msgid "Use CDN image server"
 msgstr "Использовать CDN сервер изображений"
 
-#: wp-oasis-importer.php:360
+#: oasiscatalog-importer.php:455
 msgid "Display product photos without uploading, saves space on hosting. May not work correctly with some themes and plugins"
 msgstr "Отображать фото товаров без загрузки, экономит место на хостинге. Возможна некорректная работа с некоторыми темами и плагинами"
 
-#: wp-oasis-importer.php:96
+#: oasiscatalog-importer.php:190
 msgid "After specifying the key, it will be possible to configure the import of products into Woocommerce from the Oasis website"
 msgstr "После указания ключа можно будет настроить импорт товаров в Woocommerce с сайта Oasis"
 
-#: wp-oasis-importer.php:107
+#: oasiscatalog-importer.php:201
 msgid "After specifying the user id, it will be possible to upload orders to Oasis"
 msgstr "После указания user id можно будет выгружать заказы в Oasis"
 
-#: wp-oasis-importer.php:245
+#: oasiscatalog-importer.php:351
 msgid "---Select---"
 msgstr "---Выбирать---"
 
-#: wp-oasis-importer.php:246
+#: oasiscatalog-importer.php:352
 msgid "Only new items"
 msgstr "Только новинки"
 
-#: wp-oasis-importer.php:247
+#: oasiscatalog-importer.php:353
 msgid "Only hits"
 msgstr "Только хиты"
 
-#: wp-oasis-importer.php:248
+#: oasiscatalog-importer.php:354
 msgid "Discount only"
 msgstr "Только со скидкой"
 
-#: wp-oasis-importer.php:466
-#: wp-oasis-importer.php:467
+#: oasiscatalog-importer.php:608
+#: oasiscatalog-importer.php:609
 msgid "Oasis Import"
 msgstr "Оазис импорт"
 
-#: wp-oasis-importer.php:514
+#: oasiscatalog-importer.php:640
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: wp-oasis-importer.php:537
-#: wp-oasis-importer.php:718
+#: oasiscatalog-importer.php:662
+#: oasiscatalog-importer.php:831
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: wp-oasis-importer.php:546
+#: oasiscatalog-importer.php:661
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
-#: wp-oasis-importer.php:562
-#: wp-oasis-importer.php:710
-#, php-format
-msgid "%s step in progress out of %s. Current step status"
-msgstr "Выполняется %s шаг из %s. Статус текущего шага"
-
-#: wp-oasis-importer.php:564
-#: wp-oasis-importer.php:712
-#, php-format
-msgid "Next step %s of %s."
-msgstr "Следующий шаг %s из %s."
-
-#: wp-oasis-importer.php:583
-#, php-format
-msgid "Last import completed: %s"
-msgstr "Последний импорт завершен: %s"
-
-#: wp-oasis-importer.php:593
-msgid ""
-"To enable automatic updating of the directory, you need to add crontab tasks in the hosting control panel: <br/>\n"
-"<strong>Do not disclose this information!</strong>"
-msgstr ""
-"Для включения автоматического обновления каталога необходимо в панели управления хостингом добавить crontab задачи: <br/>\n"
-"<strong>Не разглашайте эти данные!</strong>"
-
-#: wp-oasis-importer.php:599
+#: oasiscatalog-importer.php:81
 msgid "Download / update products 1 time per day"
 msgstr "Загрузка/обновление товаров 1 раз в сутки"
 
-#: wp-oasis-importer.php:604
-#: wp-oasis-importer.php:617
+#: oasiscatalog-importer.php:86
+#: oasiscatalog-importer.php:99
 msgid "Copy"
 msgstr "Копировать"
 
-#: wp-oasis-importer.php:612
-msgid "Renewal of balances 1 time in 30 minutes"
-msgstr "Обновление остатков 1 раз в 30 минут"
+#: oasiscatalog-importer.php:94
+msgid "Renewal of balances 1 time in 2 hours"
+msgstr "Обновление остатков 1 раз в 2 часа"
 
-#: wp-oasis-importer.php:636
+#: oasiscatalog-importer.php:719
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: wp-oasis-importer.php:651
+#: oasiscatalog-importer.php:733
 msgid "Clear"
 msgstr "Очистить"
 
-#: wp-oasis-importer.php:652
+#: oasiscatalog-importer.php:734
 msgid "Select"
 msgstr "Выбрать"
 
-#: wp-oasis-importer.php:693
+#: oasiscatalog-importer.php:775
 msgid "Settings"
 msgstr "Настройки"
 
-#: src/order.php:16
-#: src/order.php:52
-#: src/order.php:56
+#: src/order.php:17
+#: src/order.php:51
+#: src/order.php:55
 msgid "Unload"
 msgstr "Выгрузить"
 
-#: src/order.php:34
+#: src/order.php:35
 msgid "Invalid items in the order"
 msgstr "В заказе недопустимые товары"
 
-#: src/order.php:50
+#: src/order.php:49
 msgid "The order is being processed, please wait."
 msgstr "Заказ обрабатывается, ожидайте."
 
-#: src/order.php:52
+#: src/order.php:51
 msgid "Error, please try again."
 msgstr "Ошибка, попробуйте еще раз."
 
-#: wp-oasis-importer.php:160
+#: oasiscatalog-importer.php:272
 msgid "Default category"
 msgstr "Категория по умолчанию"
 
-#: wp-oasis-importer.php:165
+#: oasiscatalog-importer.php:277
 msgid "If no link is specified for a product category, the product will be placed in the default category"
 msgstr "Если для категории товара не указана связь, товар будет помещен в категорию по умолчанию"
 
-#: wp-oasis-importer.php:192
+#: oasiscatalog-importer.php:304
 msgid "Do not limit update"
 msgstr "Не ограничивать обновление"
 
-#: wp-oasis-importer.php:193
+#: oasiscatalog-importer.php:305
 msgid "Full product update is limited, no more than once a day"
 msgstr "Полное обновление товаров ограничено, не чаще раз в день"
 
-#: wp-oasis-importer.php:327
+#: oasiscatalog-importer.php:426
 msgid "Enable brands"
 msgstr "Включить бренды"
 
-#: wp-oasis-importer.php:328
+#: oasiscatalog-importer.php:427
 msgid "Enable brands on imported products"
 msgstr "Включить бренды импортируемых товаров"
 
-#: wp-oasis-importer.php:366
+#: oasiscatalog-importer.php:461
 msgid "Quick import of products"
 msgstr "Быстрый импорт товаров"
 
-#: wp-oasis-importer.php:367
+#: oasiscatalog-importer.php:462
 msgid "Import without photos. After a full upload of all products, the option is turned off"
 msgstr "Импорт без фотографий. После полновый загрузки всех товаров, опция отключается"
 
-#: wp-oasis-importer.php:373
+#: oasiscatalog-importer.php:468
 msgid "Remove quotes"
 msgstr "Удалять кавычки"
 
-#: wp-oasis-importer.php:374
+#: oasiscatalog-importer.php:469
 msgid "Remove quotes in the title"
 msgstr "Удалять кавычки в названии"
 
-#: wp-oasis-importer.php:184
+#: oasiscatalog-importer.php:296
 msgid "No defective goods"
 msgstr "Без товаров с дефектом"
 
-#: src/branding.php:94
-#: src/branding.php:150
-#: src/branding.php:167
+#: src/branding.php:87
+#: src/branding.php:143
+#: src/branding.php:159
 msgid "Branding"
 msgstr "Нанесение"
 
-#: src/branding.php:168
+#: src/branding.php:160
 msgid "Cost of branding"
 msgstr "Стоимость нанесения"
+
+#: oasiscatalog-importer.php:244
+#: oasiscatalog-importer.php:860
+msgid "Collapse all"
+msgstr "Свернуть все"
+
+#: oasiscatalog-importer.php:245
+#: oasiscatalog-importer.php:861
+msgid "Expand all"
+msgstr "Развернуть все"
+
+#. translators: status bar is process. 1: current step, 2: all steps
+#: oasiscatalog-importer.php:686
+#: oasiscatalog-importer.php:822
+msgid "%1$s step in progress out of %2$s. Current step status"
+msgstr "Выполняется %1$s шаг из %2$s. Статус текущего шага"
+
+#. translators: status bar, next step. 1: next step, 2: all steps
+#: oasiscatalog-importer.php:689
+#: oasiscatalog-importer.php:825
+msgid "Next step %1$s of %2$s."
+msgstr "Следующий шаг %1$s из %2$s."
+
+#. translators: date last import. 1: date
+#: oasiscatalog-importer.php:709
+msgid "Last import completed: %1$s"
+msgstr "Последний импорт завершен: %1$s"
+
+#: oasiscatalog-importer.php:75
+msgid "The product import process runs in the background."
+msgstr "Процесс импорта товаров запускается в фоновом режиме."
+
+#: oasiscatalog-importer.php:76
+msgid "You can adjust the time using WordPress tools."
+msgstr "Вы можете настроить время с помощью интрументов Вордпресс."
+
+#: oasiscatalog-importer.php:77
+msgid "Or add the command to your hosting task scheduler."
+msgstr "Либо добавить команду в планировщик задач на Ваш хостинг."
+
+#: oasiscatalog-importer.php:78
+msgid "This requires WP-CLI. Example for crontab, please ensure the path is correct"
+msgstr "Для этого требуется WP-CLI. Примеры для crontab, позжалуйста убедитесь в правильности пути"
+
+#: oasiscatalog-importer.php:111
+msgid "Next run of product imports:"
+msgstr "Следующий запуск импорт продукции:"
+
+#: oasiscatalog-importer.php:116
+msgid "Next run of stock update:"
+msgstr "Следующий запуск обновления остатков:"
+
+#: oasiscatalog-importer.php:127
+#: oasiscatalog-importer.php:144
+msgid "Schedule of imports of products"
+msgstr "Расписание импорта товаров"
+
+#: oasiscatalog-importer.php:131
+#: oasiscatalog-importer.php:160
+msgid "---Off---"
+msgstr "---Отключен---"
+
+#: oasiscatalog-importer.php:132
+msgid "Every day"
+msgstr "Каждый день"
+
+#: oasiscatalog-importer.php:133
+msgid "Once every two days"
+msgstr "Раз в два дня"
+
+#: oasiscatalog-importer.php:134
+msgid "Once every three days"
+msgstr "Раз в три дня"
+
+#: oasiscatalog-importer.php:135
+msgid "Once a week"
+msgstr "Раз в неделю"
+
+#: oasiscatalog-importer.php:156
+msgid "Schedule for updating stock"
+msgstr "Расписание обновления остатков"
+
+#: oasiscatalog-importer.php:161
+msgid "Every hour"
+msgstr "Каждый час"
+
+#: oasiscatalog-importer.php:162
+msgid "Every 2 hours"
+msgstr "Каждые 2 часа"
+
+#: oasiscatalog-importer.php:163
+msgid "Every 3 hours"
+msgstr "Каждые 3 часа"
+
+#: oasiscatalog-importer.php:164
+msgid "Every 6 hours"
+msgstr "Каждые 6 часа"
+
+#: oasiscatalog-importer.php:165
+msgid "Every 12 hours"
+msgstr "Каждые 12 часов"

@@ -1,8 +1,8 @@
 <?php
 
-namespace OasisImport;
+namespace OasiscatalogImporter;
 
-use OasisImport\Config as OasisConfig;
+use OasiscatalogImporter\Config as OasisConfig;
 use Exception;
 
 class Api {
@@ -85,23 +85,21 @@ class Api {
 
 	/**
 	 * Get categories oasis
-	 * @param bool $sleep
 	 * @return array
 	 */
-	public static function getCategoriesOasis(bool $sleep = true): array
+	public static function getCategoriesOasis(): array
 	{
-		return self::curlQuery('categories', ['fields' => 'id,parent_id,root,level,slug,name,path'], $sleep);
+		return self::curlQuery('categories', ['fields' => 'id,parent_id,root,level,slug,name,path']);
 	}
 
 	/**
 	 * Get currencies oasis
 	 *
-	 * @param bool $sleep
 	 * @return array
 	 */
-	public static function getCurrenciesOasis(bool $sleep = true): array
+	public static function getCurrenciesOasis(): array
 	{
-		return self::curlQuery( 'currencies', [], $sleep );
+		return self::curlQuery('currencies', []);
 	}
 
 	/**
@@ -109,20 +107,19 @@ class Api {
 	 *
 	 * @return array
 	 */
-	public static function getStockOasis(): array {
-		return self::curlQuery( 'stock', [ 'fields' => 'article,stock,id,stock-remote' ] );
+	public static function getStockOasis(): array
+	{
+		return self::curlQuery('stock', ['fields' => 'article,stock,id,stock-remote']);
 	}
 
 	/**
 	 * Get brands
 	 *
-	 * @param bool $sleep
-	 * 
 	 * @return array
 	 */
-	public static function getBrands(bool $sleep = true): array
+	public static function getBrands(): array
 	{
-		return self::curlQuery('brands', [], $sleep, 'v3');
+		return self::curlQuery('brands', [], 'v3');
 	}
 
 	/**
@@ -162,11 +159,11 @@ class Api {
 	 * @param $admin
 	 * @return array|mixed
 	 */
-	public static function getBrandingCoef($id, $admin = false)
+	public static function getBrandingCoef($id)
 	{
 		return self::curlQuery('branding/coef', [
 			'id' => $id 
-		], false, 'v4');
+		], 'v4');
 	}
 
 	/**
@@ -176,55 +173,45 @@ class Api {
 	 * @param array $data
 	 * @return array|mixed
 	 */
-	public static function curlSend(string $type, array $data, array $params = [])
+	public static function curlSend(string $type, array $data, array $params = [], $version = 'v4')
 	{
 		if (empty(self::$cf->api_key)){
 			return [];
 		}
-
 		$args_pref = [
 			'key'    => self::$cf->api_key,
 			'format' => 'json',
 		];
 
 		try {
-			$ch = curl_init('https://api.oasiscatalog.com/v4/' . $type . '?' . http_build_query($args_pref));
-			curl_setopt_array($ch, [
-				CURLOPT_POST           => 1,
-				CURLOPT_POSTFIELDS     => json_encode($data),
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_SSL_VERIFYPEER => false,
-				CURLOPT_HEADER         => false,
-				CURLOPT_TIMEOUT        => $params['timeout'] ?? 0,
-				CURLOPT_HTTPHEADER     => [
-					'Content-Type: application/json',
-					'Accept: application/json',
-				]
+			$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type . '?' . http_build_query($args_pref), [
+				'method' => 'POST',
+				'timeout' => $params['timeout'] ?? 0,
+				'body' => wp_json_encode($data),
+				'headers' => [
+					'Content-Type' => 'application/json',
+					'Accept' => 'application/json',
+				],
 			]);
-			$content = curl_exec($ch);
 
-			if ($content === false) {
-				throw new Exception('Error: ' . curl_error($ch));
+			if (!is_wp_error($response)) {
+				$code = $response['response']['code'];
+
+				if ($code === 401) {
+					throw new Exception('Error Unauthorized. Invalid API key!');
+				}
+				elseif ($code != 200) {
+					throw new Exception('Error. Code: ' . $code);
+				}
+				else {
+					return json_decode($response['body'], false);
+				}
 			} else {
-				$result = json_decode($content, false);
-			}
-
-			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
-
-			if ($http_code === 401) {
-				throw new Exception('Error Unauthorized. Invalid API key!');
-			} elseif ($http_code != 200 && $http_code != 500) {
-				throw new Exception('Error: ' . ($result->error ?? '') . PHP_EOL . 'Code: ' . $http_code);
+				throw new Exception('Error: ' . $response->get_error_message());
 			}
 		} catch (Exception $e) {
-			if (PHP_SAPI === 'cli') {
-				echo $e->getMessage() . PHP_EOL;
-			}
-			return [];
+			self::$cf->fatal($e->getMessage());
 		}
-
-		return $result;
 	}
 
 	/**
@@ -232,11 +219,10 @@ class Api {
 	 *
 	 * @param $type
 	 * @param array $args
-	 * @param bool $sleep
 	 * @param string $version
 	 * @return array|mixed
 	 */
-	public static function curlQuery($type, array $args = [], bool $sleep = true, string $version = 'v4')
+	public static function curlQuery($type, array $args = [], string $version = 'v4')
 	{
 		if (empty(self::$cf->api_key)){
 			return [];
@@ -247,36 +233,29 @@ class Api {
 		], $args);
 
 		try {
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, 'https://api.oasiscatalog.com/'.$version.'/'.$type.'?'. http_build_query($args));
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			$content = curl_exec($ch);
+			$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type, [
+				'method' => 'GET',
+				'timeout' => 30,
+				'body' => $args,
+			]);
 
-			if ($content === false) {
-				throw new Exception('Error: ' . curl_error($ch));
+			if (!is_wp_error($response)) {
+				$code = $response['response']['code'];
+
+				if ($code === 401) {
+					throw new Exception('Error Unauthorized. Invalid API key!');
+				}
+				elseif ($code != 200) {
+					throw new Exception('Error. Code: ' . $code);
+				}
+				else {
+					return json_decode($response['body'], false);
+				}
 			} else {
-				$result = json_decode($content, false);
-			}
-
-			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
-
-			if ($sleep) {
-				sleep(1);
-			}
-
-			if ($http_code === 401) {
-				throw new Exception('Error Unauthorized. Invalid API key!');
-			} elseif ($http_code != 200) {
-				throw new Exception('Error. Code: ' . $http_code);
+				throw new Exception('Error: ' . $response->get_error_message());
 			}
 		} catch (Exception $e) {
-			if (PHP_SAPI === 'cli') {
-				echo $e->getMessage() . PHP_EOL;
-			}
-			return [];
+			self::$cf->fatal($e->getMessage());
 		}
-
-		return $result;
 	}
 }

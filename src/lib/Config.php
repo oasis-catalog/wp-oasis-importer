@@ -1,19 +1,22 @@
 <?php
-namespace OasisImport;
 
-use OasisImport\Main;
-use OasisImport\Cli;
-use OasisImport\Api;
+namespace OasiscatalogImporter;
 
+use OasiscatalogImporter\Main;
+use OasiscatalogImporter\Cli;
+use OasiscatalogImporter\Api;
 
 class Config {
+	public const VERSION = '3.0.0';
+
 	public const IMG_SIZE_THUMBNAIL = [80, 60];
 	public const IMG_SIZE_SMALL     = [220, 165];
 	public const IMG_SIZE_BIG       = [640, 480];
 	public const IMG_SIZE_SUPERBIG  = [1000, 750];
 
-	public bool $is_debug = false;
-	public bool $is_debug_log = false;
+	public bool $is_info = false;
+	public bool $is_info_log = false;
+	public string $mode;
 	public string $upload_path;
 
 	public string $api_key;
@@ -87,10 +90,11 @@ class Config {
 
 	public function __construct($opt = []) {
 		$upload_dir = wp_upload_dir();
-		$this->upload_path = $upload_dir['basedir'] . '/wp-oasis-importer';
+		$this->upload_path = $upload_dir['basedir'] . '/oasiscatalog-importer';
 
-		$this->is_debug = !empty($opt['debug']);
-		$this->is_debug_log = !empty($opt['debug_log']);
+		$this->is_info     = !empty($opt['info']);
+		$this->is_info_log = !empty($opt['info_log']);
+		$this->mode        = $opt['mode'] ?? '';
 
 		Cli::$cf = $this;
 		Main::$cf = $this;
@@ -112,7 +116,7 @@ class Config {
 			return;
 		}
 
-		$this->progress = get_option('oasis_progress', [
+		$this->progress = get_option('oasis_import_progress', [
 			'item'       => 0,  // count updated products
 			'total'      => 0,  // count all products
 			'step'       => 0,  // step (for limit)
@@ -122,7 +126,7 @@ class Config {
 			'date_step'  => ''  // date end import for step
 		]);
 
-		$opt = get_option('oasis_options', []);
+		$opt = get_option('oasis_import_options', []);
 
 		$this->api_key     = $opt['api_key'] ?? '';
 		$this->api_user_id = $opt['api_user_id'] ?? '';
@@ -218,7 +222,12 @@ class Config {
 		$this->progress['total'] = $total;
 		$this->progress['step_total'] = $step_total;
 		$this->progress['step_item'] = 0;
-		update_option('oasis_progress', $this->progress);
+		update_option('oasis_import_progress', $this->progress);
+
+		if ($this->mode == 'WP_CLI' && !$this->is_info && !$this->is_info_log) {
+			global $oasis_import_wp_cli_progess;
+			$oasis_import_wp_cli_progess = \WP_CLI\Utils\make_progress_bar('Status', $step_total);
+		}
 	}
 
 	public function progressUp() {
@@ -227,7 +236,15 @@ class Config {
 		}
 
 		$this->progress['step_item']++;
-		update_option('oasis_progress', $this->progress);
+
+		if ($this->mode == 'WP_CLI') {
+			global $oasis_import_wp_cli_progess;
+			if (!empty($oasis_import_wp_cli_progess)) {
+				$oasis_import_wp_cli_progess->tick();
+			}
+		}
+
+		update_option('oasis_import_progress', $this->progress);
 	}
 
 	public function progressEnd() {
@@ -263,12 +280,19 @@ class Config {
 
 		if($this->is_fast_import && $is_stop_fast_import){
 			$this->is_fast_import = false;
-			$_opt = get_option('oasis_options', []);
+			$_opt = get_option('oasis_import_options', []);
 			$_opt['is_fast_import'] = false;
-			update_option('oasis_options', $_opt);
+			update_option('oasis_import_options', $_opt);
 		}
 
-		update_option('oasis_progress', $this->progress);
+		if ($this->mode == 'WP_CLI') {
+			global $oasis_import_wp_cli_progess;
+			if (!empty($oasis_import_wp_cli_progess)) {
+				$oasis_import_wp_cli_progess->finish();
+			}
+		}
+
+		update_option('oasis_import_progress', $this->progress);
 	}
 
 	public function progressClear() {
@@ -279,7 +303,7 @@ class Config {
 		$this->progress['step_total'] = 0;
 		$this->progress['date']       = '';
 		$this->progress['date_step']  = '';
-		update_option('oasis_progress', $this->progress);
+		update_option('oasis_import_progress', $this->progress);
 	}
 
 	public function getOptBar() {
@@ -309,16 +333,12 @@ class Config {
 		];
 	}
 
-	public function checkCronKey(string $cron_key): bool {
-		return $cron_key === md5($this->api_key);
-	}
-
-	public function getCronKey(): string {
-		return md5($this->api_key);
+	public function checkKey(): bool {
+		return !empty($this->api_key);
 	}
 
 	public function checkApi(): bool {
-		return !empty(Api::getCurrenciesOasis(false));
+		return !empty(Api::getCurrenciesOasis());
 	}
 
 	public function lock($fn, $fn_error) {
@@ -349,22 +369,50 @@ class Config {
 	}
 
 	public function log($str) {
-		if ($this->is_debug || $this->is_debug_log) {
+		if ($this->is_info || $this->is_info_log) {
 			$str = date('H:i:s') . ' ' . $str;
 
-			if ($this->is_debug_log) {
+			if ($this->is_info_log) {
 				file_put_contents($this->upload_path . '/oasis_'.date('Y-m-d').'.log', $str . "\n", FILE_APPEND);
 			} else {
+				if ($this->mode == 'WP_CLI') {
+					\WP_CLI::log($str);
+				}
+				else {
+					echo $str . PHP_EOL;
+				}
+			}
+		}
+	}
+
+	public function error($str) {
+		$str = date('H:i:s') . ' ' . $str;
+
+		if ($this->is_info_log) {
+			file_put_contents($this->upload_path . '/oasis_'.date('Y-m-d').'.log', $str . "\n", FILE_APPEND);
+		} else {
+			if ($this->mode == 'WP_CLI') {
+				\WP_CLI::error($str);
+			}
+			else {
 				echo $str . PHP_EOL;
 			}
 		}
 	}
 
-	public function deleteLogFile() {
-		$filePath = $this->upload_path . '/oasis.log';
-		if (file_exists($filePath)) {
-			unlink($filePath);
+	public function fatal($str) {
+		$str = date('H:i:s') . ' ' . $str;
+		if ($this->is_info_log) {
+			file_put_contents($this->upload_path . '/oasis_'.date('Y-m-d').'.log', $str . "\n", FILE_APPEND);
+		} else {
+			if ($this->mode == 'WP_CLI') {
+				\WP_CLI::error($str);
+			}
+			else {
+				echo $str . PHP_EOL;
+			}
 		}
+		die();
 	}
 
 	public function getRelCategoryId($oasis_cat_id) {
@@ -380,13 +428,13 @@ class Config {
 	public function activate() {
 		if (!is_dir($this->upload_path)) {
 			if (!wp_mkdir_p($this->upload_path)) {
-				die('Failed to create directories: ' . $this->upload_path);
+				$this->fatal('Failed to create directories: ' . $this->upload_path);
 			}
 		}
 	}
 
 	public function loadCurrencies(): bool {
-		$data = Api::getCurrenciesOasis(false);
+		$data = Api::getCurrenciesOasis();
 		if(empty($data))
 			return false;
 
@@ -402,8 +450,8 @@ class Config {
 	}
 
 	public function deactivate() {
-		delete_option('oasis_options');
-		delete_option('oasis_progress');
+		delete_option('oasis_import_options');
+		delete_option('oasis_import_progress');
 		$this->rmdDir($this->upload_path);
 	}
 
