@@ -7,7 +7,7 @@ use OasiscatalogImporter\Cli;
 use OasiscatalogImporter\Api;
 
 class Config {
-	public const VERSION = '3.0.0';
+	public const VERSION = '3.0.1';
 
 	public const IMG_SIZE_THUMBNAIL = [80, 60];
 	public const IMG_SIZE_SMALL     = [220, 165];
@@ -52,9 +52,7 @@ class Config {
 	public ?float $price_from;
 	public ?float $price_to;
 	public ?int $rating;
-	public bool $is_wh_moscow;
-	public bool $is_wh_europe;
-	public bool $is_wh_remote;
+	public bool $is_not_wh_remote;
 
 	public bool $is_comments;
 	public bool $is_brands;
@@ -168,9 +166,7 @@ class Config {
 		$this->price_from        = !empty($opt['price_from']) ? floatval(str_replace(',', '.', $opt['price_from'])) : null;
 		$this->price_to          = !empty($opt['price_to']) ? floatval(str_replace(',', '.', $opt['price_to'])) : null;
 		$this->rating            = !empty($opt['rating']) ? intval($opt['rating']) : null;
-		$this->is_wh_moscow      = !empty($opt['is_wh_moscow']);
-		$this->is_wh_europe      = !empty($opt['is_wh_europe']);
-		$this->is_wh_remote      = !empty($opt['is_wh_remote']);
+		$this->is_not_wh_remote  = !empty($opt['is_not_wh_remote']);
 		$this->is_comments       = !empty($opt['is_comments']);
 		$this->is_brands         = !empty($opt['is_brands']);
 		$this->is_disable_sales  = !empty($opt['is_disable_sales']);
@@ -214,19 +210,19 @@ class Config {
 		$this->is_progress = true;
 	}
 
-	public function progressStart(int $total, int $step_total) {
+	public function progressStart(int $total, int $stepTotal) {
 		if (!$this->is_progress) {
 			return;
 		}
 
 		$this->progress['total'] = $total;
-		$this->progress['step_total'] = $step_total;
+		$this->progress['step_total'] = $stepTotal;
 		$this->progress['step_item'] = 0;
 		update_option('oasis_import_progress', $this->progress);
 
 		if ($this->mode == 'WP_CLI' && !$this->is_info && !$this->is_info_log) {
 			global $oasis_import_wp_cli_progess;
-			$oasis_import_wp_cli_progess = \WP_CLI\Utils\make_progress_bar('Status', $step_total);
+			$oasis_import_wp_cli_progess = \WP_CLI\Utils\make_progress_bar('Status', $stepTotal);
 		}
 	}
 

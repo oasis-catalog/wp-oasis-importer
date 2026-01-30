@@ -3,7 +3,7 @@ Contributors: oasisvisheratinnikolay
 Tags: Oasiscatalog, products, catalog, import
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -70,6 +70,9 @@ Report bugs on the [GitHub repository](https://github.com/oasis-catalog/wp-oasis
 4. Run synchronization
 
 == Changelog ==
+
+= 3.0.1 - 2025-12-23 =
+- fix bug and optimization
 
 = 3.0.0 - 2025-12-23 =
 - publication

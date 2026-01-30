@@ -184,7 +184,7 @@ class Main
 
 		$wcProduct->add_meta_data('_oasis_product', $product->id);
 		$wcProduct->add_meta_data('_oasis_group', $group_id);
-		$wcProduct->add_meta_data('_oasis_updated', $product->updated_at);
+		$wcProduct->add_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at);
 
 		$wcProductId = $wcProduct->save();
 		if(!self::$cf->is_fast_import){
@@ -262,7 +262,7 @@ class Main
 			}
 		}
 
-		if (self::$cf->is_up_photo || !self::checkImages($product->images, $wcProduct)) {
+		if (self::$cf->is_up_photo || self::getNeedImagesUp($dbProduct, $product)) {
 			self::deleteWcProductImages($wcProduct);
 			$images = self::processingPhoto($product->images, $dbProduct['post_id']);
 			$wcProduct->set_image_id(array_shift($images));
@@ -272,7 +272,7 @@ class Main
 
 		if ($need_save) {
 			$wcProduct->set_date_modified(time());
-			$wcProduct->update_meta_data('_oasis_updated', $product->updated_at);
+			$wcProduct->update_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at);
 			$wcProduct->save();
 		}
 	}
@@ -314,16 +314,17 @@ class Main
 	{
 		try {
 			$wcVariation = new WC_Product_Variation();
-			$dataPrice = self::getDataPrice($variation);
-
+			$dataPrice   = self::getDataPrice($variation);
+			$stock       = self::getStock($variation);
+			
 			$wcVariation->set_props([
 				'name'           => $variation->full_name,
 				'manage_stock'   => true,
 				'sku'            => $variation->article,
 				'parent_id'      => $productId,
 				'slug'           => self::getUniquePostName($variation->name, 'product_variation'),
-				'status'         => self::getProductStatus($variation, $variation->total_stock, true),
-				'stock_quantity' => intval($variation->total_stock),
+				'status'         => self::getProductStatus($variation, $stock, true),
+				'stock_quantity' => $stock,
 				'backorders'     => $variation->rating === 5 ? 'yes' : 'no',
 				'price'          => $dataPrice['price'],
 				'regular_price'  => $dataPrice['regular_price'],
@@ -340,12 +341,12 @@ class Main
 			}
 			$wcVariation->add_meta_data('_oasis_product', $variation->id);
 			$wcVariation->add_meta_data('_oasis_group', $group_id);
-			$wcVariation->add_meta_data('_oasis_updated', $variation->updated_at);
+			$wcVariation->add_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at);
 
 			$wcVariationId = $wcVariation->save();
 
 			if ($variation->images && !self::$cf->is_fast_import) {
-				$images = self::processingPhoto([reset($variation->images)], $wcVariationId );
+				$images = self::processingPhoto([reset($variation->images)], $wcVariationId);
 				$wcVariation->set_image_id(array_shift($images));
 				$wcVariation->save();
 			}
@@ -391,12 +392,13 @@ class Main
 		}
 
 		$old_data = $wcVariation->get_data();
+		$stock = self::getStock($variation);
 		foreach ([
-				['status', self::getProductStatus( $variation, $variation->total_stock, true )],
+				['status', self::getProductStatus($variation, $stock, true )],
 				['price', $dataPrice['price']],
 				['regular_price', $dataPrice['regular_price']],
 				['sale_price', $dataPrice['sale_price']],
-				['stock_quantity', (int) $variation->total_stock],
+				['stock_quantity', $stock],
 			] as $row)
 		{
 			$key = $row[0];
@@ -408,7 +410,7 @@ class Main
 			}
 		}
 
-		if (self::$cf->is_up_photo || !self::checkImages($variation->images, $wcVariation)) {
+		if (self::$cf->is_up_photo || self::getNeedImagesUp($dbVariation, $variation)) {
 			self::deleteWcProductImages($wcVariation);
 			$images = self::processingPhoto([reset($variation->images)], $dbVariation['post_id']);
 			$wcVariation->set_image_id(array_shift($images));
@@ -417,7 +419,7 @@ class Main
 
 		if ($need_save) {
 			$wcVariation->set_date_modified(time());
-			$wcVariation->update_meta_data('_oasis_updated', $variation->updated_at);
+			$wcVariation->update_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at);
 			$wcVariation->save();
 		}
 	}
@@ -475,9 +477,22 @@ class Main
 	 * @param $product
 	 * @return bool
 	 */
-	public static function getNeedUp($dbProduct, $product)
+	public static function getNeedUp($dbProduct, $product): bool
 	{
-		return ($product->updated_at ?? '1') > ($dbProduct['updated_at'] ?? '');
+		$date = explode(',', $dbProduct['updated_at'] ?? '')[0] ?? '';
+		return ($product->updated_at ?? '1') > $date;
+	}
+
+	/**
+	 * Check need update product images
+	 * @param $dbProduct
+	 * @param $product
+	 * @return bool
+	 */
+	public static function getNeedImagesUp($dbProduct, $product): bool
+	{
+		$date = explode(',', $dbProduct['updated_at'] ?? '')[1] ?? '';
+		return ($product->images_updated_at ?? '1') > $date;
 	}
 
 	/**
@@ -717,18 +732,14 @@ class Main
 	}
 
 	/**
-	 * Get total stock products
+	 * Get stock product
 	 *
-	 * @param array $products
+	 * @param $product
 	 * @return int
 	 */
-	public static function getTotalStock(array $products): int
+	public static function getStock($product): int
 	{
-		$result = 0;
-		foreach ($products as $product) {
-			$result += intval($product->total_stock);
-		}
-		return $result;
+		return self::$cf->is_not_wh_remote ? (int)$product->stock_msk : (int)$product->total_stock;
 	}
 
 	/**
@@ -2009,59 +2020,6 @@ class Main
 		}
 
 		return $attachIds;
-	}
-
-	/**
-	 * Checking product images for relevance
-	 * Usage:
-	 * Check is good - true
-	 * Check is bad - false
-	 *
-	 * @param $images
-	 * @param $wcProduct
-	 * @return bool
-	 */
-	public static function checkImages($images, $wcProduct): bool
-	{
-		$db_images = get_post_meta($wcProduct->get_id(), '_thumbnail_id');
-
-		if (empty(intval(reset($db_images)))) {
-			return false;
-		}
-
-		if ($wcProduct->get_type() == 'variation') {
-			$images = [reset($images)];
-		} else {
-			$db_images = array_merge($db_images, $wcProduct->get_gallery_image_ids());
-		}
-
-		if (count($images) !== count($db_images)) {
-			return false;
-		}
-
-		$posts = get_posts([
-			'numberposts' => - 1,
-			'post_type'   => 'attachment',
-			'include'     => implode(',', $db_images)
-		]);
-		if (empty($posts)) {
-			return false;
-		}
-
-		$attachments = [];
-		foreach ($posts as $post) {
-			$attachments[] = (array) $post;
-		}
-		foreach ($images as $image) {
-			if (empty($image->superbig)) {
-				return false;
-			}
-			$keyNeeded = array_search(basename($image->superbig), array_column($attachments, 'post_title'));
-			if ($keyNeeded === false || $image->updated_at > strtotime($attachments[$keyNeeded ]['post_date_gmt'])) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	/**

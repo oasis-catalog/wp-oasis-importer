@@ -96,9 +96,8 @@ class Cli {
 				self::$cf->progressOn();
 			}
 
-			$stats     = Api::getStatProducts();
-			$groups    = [];
-			$totalStep = 0;
+			$groups = [];
+			$progressStep = 0;
 
 			foreach (Api::getOasisProducts($args) as $product) {
 				if (empty($product->is_deleted)) {
@@ -107,20 +106,27 @@ class Cli {
 					} else {
 						$groups[$product->group_id][$product->id] = $product;
 					}
-					$totalStep ++;
+					$progressStep++;
 				} else {
 					Main::checkDeleteProduct($product->id);
 				}
 			}
+			array_walk($groups, fn(&$g) => ksort($g));
 
-			self::$cf->progressStart($stats->products, $totalStep);
+			if (self::$cf->limit > 0) {
+				self::$cf->progressStart(Api::getStatProducts()->products, $progressStep);
+			} else {
+				self::$cf->progressStart($progressStep, $progressStep);
+			}
 
 			$total = count($groups);
 			$count = 0;
 
 			foreach ($groups as $group_id => $products) {
 				self::$cf->log('Начало обработки модели ' . $group_id);
-				$totalStock = Main::getTotalStock($products);
+				$totalStock = array_reduce($products, function($sum, $product) {
+    				return $sum + Main::getStock($product);
+				}, 0);
 				$dbGroupProducts = Main::checkGroupProducts($group_id);
 
 				if (count($products) === 1) {
@@ -203,7 +209,7 @@ class Cli {
 			foreach ($oasisProducts as $product_id => $post_id) {
 				$stock_item = $stock[$product_id] ?? null;
 				if ($stock_item) {
-					$val = intval($stock_item->stock) + intval($stock_item->{"stock-remote"});
+					$val = self::$cf->is_not_wh_remote ? (int)$stock_item->stock : ((int)$stock_item->stock + (int)$stock_item->{"stock-remote"});
 					update_post_meta($post_id, '_stock', $val);
 				}
 				else {

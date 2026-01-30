@@ -16,8 +16,22 @@ class Api {
 	 */
 	public static function getOasisProducts(array $args = []): array
 	{
+		$fields = 'id,article,group_id'
+					. ',is_deleted,is_stopped'
+					. ',name,full_name,description,defect'
+					. ',size,colors,rating'
+					. ',price,old_price'
+					. ',attributes,categories,images'
+					. ',updated_at,images_updated_at';
+
+		$fields .= self::$cf->is_not_wh_remote ? ',stock_msk' : ',total_stock';
+
+		if (self::$cf->is_brands)       $fields .= ',brand_id';
+		if (self::$cf->is_price_dealer) $fields .= ',discount_price';
+
 		$data = [
-			'fieldset'		=> 'full',
+			'format'		=> 'json',
+			'fields'		=> $fields,
 			'not_on_order'	=> self::$cf->is_not_on_order,
 			'excludeDefect' => self::$cf->is_not_defect,
 			'currency'		=> self::$cf->currency,
@@ -25,9 +39,6 @@ class Api {
 			'price_from'	=> self::$cf->price_from,
 			'price_to'		=> self::$cf->price_to,
 			'rating'		=> self::$cf->rating,
-			'moscow'		=> self::$cf->is_wh_moscow,
-			'europe'		=> self::$cf->is_wh_europe,
-			'remote'		=> self::$cf->is_wh_remote,
 		];
 		foreach ($data as $key => $value) {
 			if ($value) {
@@ -70,9 +81,6 @@ class Api {
 			'price_from'    => self::$cf->price_from,
 			'price_to'      => self::$cf->price_to,
 			'rating'        => self::$cf->rating,
-			'moscow'        => self::$cf->is_wh_moscow,
-			'europe'        => self::$cf->is_wh_europe,
-			'remote'        => self::$cf->is_wh_remote,
 			'category'      => implode(',', self::$cf->categories ?: Main::getOasisMainCategories()),
 		];
 		foreach ($data as $key => $value) {
@@ -109,7 +117,9 @@ class Api {
 	 */
 	public static function getStockOasis(): array
 	{
-		return self::curlQuery('stock', ['fields' => 'article,stock,id,stock-remote']);
+		return self::curlQuery('stock', [
+			'fields' => self::$cf->is_not_wh_remote ? 'id,stock' : 'id,stock,stock-remote'
+		]);
 	}
 
 	/**
@@ -176,41 +186,37 @@ class Api {
 	public static function curlSend(string $type, array $data, array $params = [], $version = 'v4')
 	{
 		if (empty(self::$cf->api_key)){
-			return [];
+			throw new Exception('Empty API key');
 		}
 		$args_pref = [
 			'key'    => self::$cf->api_key,
 			'format' => 'json',
 		];
 
-		try {
-			$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type . '?' . http_build_query($args_pref), [
-				'method' => 'POST',
-				'timeout' => $params['timeout'] ?? 0,
-				'body' => wp_json_encode($data),
-				'headers' => [
-					'Content-Type' => 'application/json',
-					'Accept' => 'application/json',
-				],
-			]);
+		$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type . '?' . http_build_query($args_pref), [
+			'method' => 'POST',
+			'timeout' => $params['timeout'] ?? 0,
+			'body' => wp_json_encode($data),
+			'headers' => [
+				'Content-Type' => 'application/json',
+				'Accept' => 'application/json',
+			],
+		]);
 
-			if (!is_wp_error($response)) {
-				$code = $response['response']['code'];
+		if (!is_wp_error($response)) {
+			$code = $response['response']['code'];
 
-				if ($code === 401) {
-					throw new Exception('Error Unauthorized. Invalid API key!');
-				}
-				elseif ($code != 200) {
-					throw new Exception('Error. Code: ' . $code);
-				}
-				else {
-					return json_decode($response['body'], false);
-				}
-			} else {
-				throw new Exception('Error: ' . $response->get_error_message());
+			if ($code === 401) {
+				throw new Exception('Error Unauthorized. Invalid API key!');
 			}
-		} catch (Exception $e) {
-			self::$cf->fatal($e->getMessage());
+			elseif ($code != 200) {
+				throw new Exception('Error. Code: ' . $code);
+			}
+			else {
+				return json_decode($response['body'], false);
+			}
+		} else {
+			throw new Exception('Error: ' . $response->get_error_message());
 		}
 	}
 
@@ -225,37 +231,33 @@ class Api {
 	public static function curlQuery($type, array $args = [], string $version = 'v4')
 	{
 		if (empty(self::$cf->api_key)){
-			return [];
+			throw new Exception('Empty API key');
 		}
 		$args = array_merge([
 			'key'    => self::$cf->api_key,
 			'format' => 'json',
 		], $args);
 
-		try {
-			$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type, [
-				'method' => 'GET',
-				'timeout' => 30,
-				'body' => $args,
-			]);
+		$response = wp_remote_request('https://api.oasiscatalog.com/' . $version . '/' . $type, [
+			'method' => 'GET',
+			'timeout' => 30,
+			'body' => $args,
+		]);
 
-			if (!is_wp_error($response)) {
-				$code = $response['response']['code'];
+		if (!is_wp_error($response)) {
+			$code = $response['response']['code'];
 
-				if ($code === 401) {
-					throw new Exception('Error Unauthorized. Invalid API key!');
-				}
-				elseif ($code != 200) {
-					throw new Exception('Error. Code: ' . $code);
-				}
-				else {
-					return json_decode($response['body'], false);
-				}
-			} else {
-				throw new Exception('Error: ' . $response->get_error_message());
+			if ($code === 401) {
+				throw new Exception('Error Unauthorized. Invalid API key!');
 			}
-		} catch (Exception $e) {
-			self::$cf->fatal($e->getMessage());
+			elseif ($code != 200) {
+				throw new Exception('Error. Code: ' . $code);
+			}
+			else {
+				return json_decode($response['body'], false);
+			}
+		} else {
+			throw new Exception('Error: ' . $response->get_error_message());
 		}
 	}
 }
