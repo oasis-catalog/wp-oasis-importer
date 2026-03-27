@@ -153,7 +153,7 @@ class Main
 	{
 		$wcProduct = $is_variable ? new WC_Product_Variable() : new WC_Product_Simple();
 
-		$product_name = self::$cf->is_without_quotes ? self::removeQuotes($product->name) : $product->name;
+		$product_name = self::getProductName($product);
 		$wcProduct->set_props([
 			'name'            => $product_name,
 			'description'     => self::preparePostContent($product),
@@ -214,7 +214,7 @@ class Main
 
 		if (self::getNeedUp($dbProduct, $product)) {
 			$wcProduct->set_props([
-				'name'            => self::$cf->is_without_quotes ? self::removeQuotes($product->name) : $product->name,
+				'name'            => self::getProductName($product),
 				'manage_stock'    => true,
 				'backorders'      => $product->rating === 5 ? 'yes' : 'no',
 				'description'     => self::preparePostContent($product),
@@ -241,7 +241,7 @@ class Main
 
 		$up_data = [
 			['status', self::getProductStatus($product, $totalStock)],
-			['stock_quantity', (int)$totalStock],
+			['stock_quantity', $totalStock],
 		];
 		if (!$is_variable) {
 			$dataPrice = self::getDataPrice($product);
@@ -322,7 +322,7 @@ class Main
 				'manage_stock'   => true,
 				'sku'            => $variation->article,
 				'parent_id'      => $productId,
-				'slug'           => self::getUniquePostName($variation->name, 'product_variation'),
+				'slug'           => self::getUniquePostName(self::getProductName($variation), 'product_variation'),
 				'status'         => self::getProductStatus($variation, $stock, true),
 				'stock_quantity' => $stock,
 				'backorders'     => $variation->rating === 5 ? 'yes' : 'no',
@@ -394,7 +394,7 @@ class Main
 		$old_data = $wcVariation->get_data();
 		$stock = self::getStock($variation);
 		foreach ([
-				['status', self::getProductStatus($variation, $stock, true )],
+				['status', self::getProductStatus($variation, $stock, true)],
 				['price', $dataPrice['price']],
 				['regular_price', $dataPrice['regular_price']],
 				['sale_price', $dataPrice['sale_price']],
@@ -581,7 +581,6 @@ class Main
 
 	/**
 	 * Delete woocommerce product
-	 * 
 	 * @param $wcProduct
 	 */
 	private static function deleteWcProduct($wcProduct)
@@ -603,10 +602,9 @@ class Main
 
 	/**
 	 * Delete images for woocommerce product
-	 * 
 	 * @param $wcProduct
 	 */
-	private static function deleteWcProductImages($wcProduct)
+	public static function deleteWcProductImages($wcProduct)
 	{
 		$images = array_merge(
 			[$wcProduct->get_image_id()], 
@@ -617,11 +615,11 @@ class Main
 				$other = self::checkAttachmentOtherPost($image_id, $wcProduct->get_id());
 				if (empty($other)) {
 					wp_delete_attachment($image_id, true);
-					self::$cf->log(' - удален attachment: ' . $image_id);
+					//self::$cf->log(' - удален attachment: ' . $image_id);
 				}
-				else {
-					self::$cf->log(' - не удален attachment: ' . $image_id . ', в других: ' . implode(', ', $other));
-				}
+				// else {
+				// 	self::$cf->log(' - не удален attachment: ' . $image_id . ', в других: ' . implode(', ', $other));
+				// }
 			}
 		}
 	}
@@ -720,7 +718,7 @@ class Main
 				$parents = self::getTermParents($rel_id);
 				$result = array_merge($result, array_map(fn($x) => $x->term_id, $parents));
 			}
-			else{
+			else {
 				$full_categories = self::getOasisParentsCategoriesId($oasis_cat_id);
 
 				foreach ($full_categories as $categoryId) {
@@ -728,7 +726,7 @@ class Main
 				}
 			}
 		}
-		return $result;
+		return array_values(array_unique($result));
 	}
 
 	/**
@@ -764,6 +762,11 @@ class Main
 
 		foreach ($product->attributes as $attr) {
 			switch ($attr->id ?? false) {
+				case self::ATTR_BARCODE_ID:
+				case self::ATTR_MARKING_ID:
+				case self::ATTR_REMOTE_ID:
+					continue 2;
+
 				case self::ATTR_COLOR_ID: // цвет
 					$colorIds = [];
 					$pantones = [];
@@ -883,14 +886,16 @@ class Main
 						$result[$taxonomy] = $term->slug;
 					}
 				}
-				foreach ($product->attributes as $attribute) {
-					if (isset($attribute->id) && $attribute->id == self::ATTR_COLOR_ID) {
-						if ($product->id == $productId) {
-							$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
-							$term = self::getTermByName($attribute->value, $taxonomy);
-							$result[$taxonomy] = $term->slug;
+				if (self::$cf->grouping !== 1) {
+					foreach ($product->attributes as $attribute) {
+						if (($attribute->id ?? null) == self::ATTR_COLOR_ID) {
+							if ($product->id == $productId) {
+								$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
+								$term = self::getTermByName($attribute->value, $taxonomy);
+								$result[$taxonomy] = $term->slug;
+							}
+							break;
 						}
-						break;
 					}
 				}
 			}
@@ -906,11 +911,14 @@ class Main
 	 */
 	public static function getProductAttributeColor($attribute, $models): array
 	{
+		if (self::$cf->grouping === 1) {
+			return [];
+		}
 		$result = [];
 		if (count($models) > 1) {
 			foreach ($models as $model) {
 				foreach ($model->attributes as $attr) {
-					if (isset($attr->id) && $attr->id == self::ATTR_COLOR_ID) {
+					if (($attr->id ?? null) == self::ATTR_COLOR_ID) {
 						$result[] = trim($attr->value);
 						break;
 					}
@@ -1111,11 +1119,13 @@ class Main
 			$result[$taxonomy] = $term->slug;
 		}
 
-		foreach ($variation->attributes as $attribute) {
-			if (isset($attribute->id) && $attribute->id == self::ATTR_COLOR_ID) {
-				$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
-				$term = self::getTermByName($attribute->value, $taxonomy);
-				$result[$taxonomy] = $term->slug;
+		if (self::$cf->grouping !== 1) {
+			foreach ($variation->attributes as $attribute) {
+				if (isset($attribute->id) && $attribute->id == self::ATTR_COLOR_ID) {
+					$taxonomy = sanitize_title('pa_' . self::$attrVariation['color']['slug']);
+					$term = self::getTermByName($attribute->value, $taxonomy);
+					$result[$taxonomy] = $term->slug;
+				}
 			}
 		}
 		return $result;
@@ -1288,6 +1298,17 @@ class Main
 	private static function removeQuotes($text): string
 	{
 		return str_replace(['\'', '"', '«', '»'], ['', '', '', ''], $text);
+	}
+
+	/**
+	 * Get product name
+	 * @param $product
+	 * @return string
+	 */
+	public static function getProductName($product): string
+	{
+		$result = self::$cf->grouping === 1 ? $product->full_name : $product->name;
+		return self::$cf->is_without_quotes ? self::removeQuotes($result) : $result;
 	}
 
 	/**
@@ -1543,14 +1564,11 @@ class Main
 	 * @return string
 	 */
 	public static function getProductStatus($product, $stock, bool $variation = false): string {
-		if ($product->is_deleted === true) {
-			$result = 'trash';
-		} elseif (intval($stock) === 0 || !empty($product->is_stopped)) {
-			$result = $variation ? 'private' : 'draft';
+		if (intval($stock) === 0 || (!self::$cf->is_show_stopped && !empty($product->is_stopped))) {
+			return $variation ? 'private' : 'draft';
 		} else {
-			$result = 'publish';
+			return 'publish';
 		}
-		return $result;
 	}
 
 	/**
@@ -1596,7 +1614,6 @@ class Main
 
 	/**
 	 * Build tree categories
-	 *
 	 * @param $data
 	 * @param array $checkedArr
 	 * @param array $relCategories
@@ -2064,5 +2081,5 @@ class Main
 			}
 		}
 		return false;
-	}	
+	}
 }

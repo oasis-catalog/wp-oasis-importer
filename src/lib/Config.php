@@ -7,7 +7,7 @@ use OasiscatalogImporter\Cli;
 use OasiscatalogImporter\Api;
 
 class Config {
-	public const VERSION = '3.0.1';
+	public const VERSION = '3.0.2';
 
 	public const IMG_SIZE_THUMBNAIL = [80, 60];
 	public const IMG_SIZE_SMALL     = [220, 165];
@@ -41,6 +41,7 @@ class Config {
 	public ?int $limit;
 
 	public ?\DateTime $import_date;
+	public ?\DateTime $stock_date;
 
 	public ?float $price_factor;
 	public ?float $price_increase;
@@ -49,9 +50,11 @@ class Config {
 	public bool $is_no_vat;
 	public bool $is_not_on_order;
 	public bool $is_not_defect;
+	public bool $is_show_stopped;
 	public ?float $price_from;
 	public ?float $price_to;
 	public ?int $rating;
+	public ?int $grouping;
 	public bool $is_not_wh_remote;
 
 	public bool $is_comments;
@@ -65,6 +68,11 @@ class Config {
 
 	private bool $is_init = false;
 	private bool $is_init_rel = false;
+
+	/*
+	private $is_import_run;
+
+	*/
 
 	private static $instance;
 
@@ -121,7 +129,8 @@ class Config {
 			'step_item'  => 0,  // count updated products for step
 			'step_total' => 0,  // count step total products
 			'date'       => '', // date end import
-			'date_step'  => ''  // date end import for step
+			'date_step'  => '', // date end import for step
+			'date_stock' => '', // date end stock
 		]);
 
 		$opt = get_option('oasis_import_options', []);
@@ -156,6 +165,12 @@ class Config {
 		}
 		$this->import_date = $dt;
 
+		$dt = null;
+		if(!empty($this->progress['date_stock'])){
+			$dt = \DateTime::createFromFormat('d.m.Y H:i:s', $this->progress['date_stock']);
+		}
+		$this->stock_date = $dt;
+
 		$this->category_rel       = !empty($opt['category_rel']) ? intval($opt['category_rel']) : null;
 		$this->category_rel_label = '';
 
@@ -163,9 +178,11 @@ class Config {
 		$this->is_no_vat         = !empty($opt['is_no_vat']);
 		$this->is_not_on_order   = !empty($opt['is_not_on_order']);
 		$this->is_not_defect     = !empty($opt['is_not_defect']);
+		$this->is_show_stopped   = !empty($opt['is_show_stopped']);
 		$this->price_from        = !empty($opt['price_from']) ? floatval(str_replace(',', '.', $opt['price_from'])) : null;
 		$this->price_to          = !empty($opt['price_to']) ? floatval(str_replace(',', '.', $opt['price_to'])) : null;
 		$this->rating            = !empty($opt['rating']) ? intval($opt['rating']) : null;
+		$this->grouping          = !empty($opt['grouping']) ? intval($opt['grouping']) : null;
 		$this->is_not_wh_remote  = !empty($opt['is_not_wh_remote']);
 		$this->is_comments       = !empty($opt['is_comments']);
 		$this->is_brands         = !empty($opt['is_brands']);
@@ -252,20 +269,20 @@ class Config {
 		$this->progress['date_step'] = $dt;
 
 		$is_stop_fast_import = false;
-		if($this->limit > 0){
+		if ($this->limit > 0) {
 			$this->progress['item'] += $this->progress['step_item'];
 
-			if(($this->limit * ($this->progress['step'] + 1)) > $this->progress['total']){
+			if(($this->limit * ($this->progress['step'] + 1)) > $this->progress['total']) {
 				$this->progress['step'] = 0;
 				$this->progress['item'] = 0;
 				$this->progress['date'] = $dt;
 				$is_stop_fast_import = true;
 			}
-			else{
+			else {
 				$this->progress['step']++;
 			}
 		}
-		else{
+		else {
 			$this->progress['item'] = 0;
 			$this->progress['date'] = $dt;
 			$is_stop_fast_import = true;
@@ -274,7 +291,7 @@ class Config {
 		$this->progress['step_item'] = 0;
 		$this->progress['step_total'] = 0;
 
-		if($this->is_fast_import && $is_stop_fast_import){
+		if ($this->is_fast_import && $is_stop_fast_import) {
 			$this->is_fast_import = false;
 			$_opt = get_option('oasis_import_options', []);
 			$_opt['is_fast_import'] = false;
@@ -291,6 +308,12 @@ class Config {
 		update_option('oasis_import_progress', $this->progress);
 	}
 
+	public function progressStockEnd() {
+		$dt = (new \DateTime())->format('d.m.Y H:i:s');
+		$this->progress['date_stock'] = $dt;
+		update_option('oasis_import_progress', $this->progress);
+	}
+
 	public function progressClear() {
 		$this->progress['total']      = 0;
 		$this->progress['step']       = 0;
@@ -299,6 +322,7 @@ class Config {
 		$this->progress['step_total'] = 0;
 		$this->progress['date']       = '';
 		$this->progress['date_step']  = '';
+		$this->progress['date_stock'] = '';
 		update_option('oasis_import_progress', $this->progress);
 	}
 
@@ -358,8 +382,17 @@ class Config {
 	public function checkPermissionImport(): bool {
 		if (!$this->is_import_anytime && 
 			$this->import_date &&
-			$this->import_date->format("Y-m-d") == (new \DateTime())->format("Y-m-d")){
+			$this->import_date->format("Y-m-d") == (new \DateTime())->format('Y-m-d')) {
 				return false;
+		}
+		return true;
+	}
+
+	public function checkNeedUpStock(): bool {
+		if (empty($this->import_date) || 
+			($this->stock_date && $this->stock_date->getTimestamp() > ((new \DateTime())->getTimestamp() - 21600))  // 6 часов
+		) {
+			return false;
 		}
 		return true;
 	}

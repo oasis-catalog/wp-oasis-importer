@@ -96,27 +96,12 @@ class Cli {
 				self::$cf->progressOn();
 			}
 
-			$groups = [];
-			$progressStep = 0;
-
-			foreach (Api::getOasisProducts($args) as $product) {
-				if (empty($product->is_deleted)) {
-					if (empty($product->size) && empty($product->colors)) {
-						$groups[$product->id][$product->id] = $product;
-					} else {
-						$groups[$product->group_id][$product->id] = $product;
-					}
-					$progressStep++;
-				} else {
-					Main::checkDeleteProduct($product->id);
-				}
-			}
-			array_walk($groups, fn(&$g) => ksort($g));
+			[$groups, $stepTotal] = self::getGroupsProduct($args);
 
 			if (self::$cf->limit > 0) {
-				self::$cf->progressStart(Api::getStatProducts()->products, $progressStep);
+				self::$cf->progressStart(Api::getStatProducts()->products, $stepTotal);
 			} else {
-				self::$cf->progressStart($progressStep, $progressStep);
+				self::$cf->progressStart($stepTotal, $stepTotal);
 			}
 
 			$total = count($groups);
@@ -218,6 +203,7 @@ class Cli {
 				}
 			}
 
+			self::$cf->progressStockEnd();
 			self::$cf->log('Окончание обновления остатков');
 		} catch (Exception $e) {
 			self::$cf->fatal($e->getMessage());
@@ -343,5 +329,34 @@ class Cli {
 			}
 		}
 		self::$cf->log('Окончание восстановления картинок');
+	}
+
+	private static function getGroupsProduct($args)
+	{
+		$groups = [];
+		$stepTotal = 0;
+		if (self::$cf->grouping === 1) {
+			foreach (Api::getOasisProducts($args) as $product) {
+				if (!empty($product->size) && !empty($product->parent_size_id)) {
+					$groups[$product->parent_size_id][$product->id] = $product;
+				} else {
+					$groups[$product->id][$product->id] = $product;
+				}
+				$stepTotal++;
+			}
+		}
+		else {
+			foreach (Api::getOasisProducts($args) as $product) {
+				if (empty($product->size) && empty($product->colors)) {
+					$groups[$product->id][$product->id] = $product;
+				} else {
+					$groups[$product->group_id][$product->id] = $product;
+				}
+				$stepTotal++;
+			}
+		}
+		array_walk($groups, fn(&$g) => ksort($g));
+
+		return [$groups, $stepTotal];
 	}
 }

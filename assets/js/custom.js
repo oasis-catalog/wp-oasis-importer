@@ -35,12 +35,12 @@ jQuery(function ($) {
 
 	$('#oasis_import_btn_run').on('click', function(){
 		$.get(ajaxurl, {
-			action: 'oasis_import_run',
+			action: 'oasis_import_run'
 		});
 	});
 	$('#oasis_import_btn_up').on('click', function(){
 		$.get(ajaxurl, {
-			action: 'oasis_import_up',
+			action: 'oasis_import_up'
 		});
 	});
 	let i_debbug = 0;
@@ -52,7 +52,7 @@ jQuery(function ($) {
 		}
 	});
 
-	setInterval(() => {
+	function UpProgressBar() {
 		$.ajax({
 			url: ajaxurl,
 			type: 'POST',
@@ -82,10 +82,10 @@ jQuery(function ($) {
 				$('#oasis_import_bar_step').removeClass(['progress-bar-striped', 'progress-bar-animated']);
 			}
 		});
-	}, 20000);
-
+	}
+	setInterval(() => UpProgressBar(), 20000);
 	
-	function ModalRelation(cat_rel_id){
+	function ModalRelation(cat_rel_id) {
 		return new Promise((resolve, reject) => {
 			$.post(ajaxurl, {
 				action: 'oasis_get_all_categories',
@@ -124,18 +124,4 @@ jQuery(function ($) {
 			});
 		});
 	}
-
-
-	window.OASIS_IMPORT = {
-		run: () => {
-			$.get(ajaxurl, {
-				action: 'oasis_import_run',
-			});
-		},
-		stock: () => {
-			$.get(ajaxurl, {
-				action: 'oasis_import_stock',
-			});
-		},
-	};
 });

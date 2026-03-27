@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Import products from the oasiscatalog.com catalog to WooCommerce. Upload orders from WooCommerce to oasiscatalog. Application editing widget.
-Version: 3.0.1
+Version: 3.0.2
 Text Domain: oasiscatalog-importer
 License: GPL2
 
@@ -53,47 +53,34 @@ if (defined('WP_CLI') && WP_CLI) {
 	return;
 }
 
-add_action('oasis_import_schedule_run', function() {
-	Cli::Run('run');
-});
-add_action('oasis_import_schedule_up', function() {
-	Cli::Run('up');
-});
-add_filter('cron_schedules', function ($schedules) {
-	$schedules['oasis_import_2days'] = [
-		'interval' => 172800, // 60×60×24×2
-		'display'  => 'Once every two days'
-	];
-	$schedules['oasis_import_3days'] = [
-		'interval' => 259200, // 60×60×24×3
-		'display'  => 'Once every three days'
-	];
-	$schedules['oasis_import_7days'] = [
-		'interval' => 604800, // 60×60×24×7
-		'display'  => 'Once a week'
-	];
-
-	$schedules['oasis_import_2hours'] = [
-		'interval' => 7200, // 60×60×2
-		'display'  => 'Every 2 hour'
-	];
-	$schedules['oasis_import_3hours'] = [
-		'interval' => 10800, // 60×60×3
-		'display'  => 'Every 3 hours'
-	];
-	$schedules['oasis_import_6hours'] = [
-		'interval' => 21600, // 60×60×6
-		'display'  => 'Every 6 hours'
-	];
-	return $schedules;
+add_action('oasis_import_schedule', function ($com) {
+	if (empty($com)) {
+		$cf = OasisConfig::instance([
+			'init' => true
+		]);
+		if ($cf->checkNeedUpStock()) {
+			Cli::Run('up');
+		} else {
+			Cli::Run('run');
+		}
+	}
+	else {
+		Cli::Run($com, ['info_log' => 1]);
+	}	
 });
 
-add_action('init', 'oasis_import_image_filter');
-function oasis_import_image_filter() {
-	$cf = OasisConfig::instance([
-		'init' => true
-	]);
-	if (!$cf->is_cdn_photo) {
+add_action('init', 'oasis_import_init');
+function oasis_import_init() {
+	add_action('before_delete_post', 'oasis_import_before_delete_post');
+	function oasis_import_before_delete_post($post_id) {
+		$wcProduct = wc_get_product($post_id);
+
+		if ($wcProduct && !empty($wcProduct->get_meta('_oasis_product'))) {
+		    Main::deleteWcProductImages($wcProduct);
+		}
+	}
+
+	if (empty(get_option('oasis_import_options', [])['is_cdn_photo'])) {
 		return;
 	}
 
@@ -179,6 +166,9 @@ if (!is_admin()) {
 }
 require_once __DIR__ . '/src/order.php';
 
+// todo: удалить
+wp_unschedule_hook('oasis_import_schedule_run');
+wp_unschedule_hook('oasis_import_schedule_up');
 
 register_activation_hook(__FILE__, function() {
 	if (!is_plugin_active('woocommerce/woocommerce.php') && current_user_can('activate_plugins')) {
@@ -192,8 +182,7 @@ register_deactivation_hook(__FILE__, function() {
 	$cf = OasisConfig::instance();
 	$cf->deactivate();
 
-	wp_unschedule_hook('oasis_import_schedule_run');
-	wp_unschedule_hook('oasis_import_schedule_up');
+	wp_unschedule_hook('oasis_import_schedule');
 });
 
 
@@ -253,54 +242,45 @@ function oasis_import_settings_init() {
 			if ($isKeyInvalid) {
 				return;
 			}
-
-			$timeRun = wp_next_scheduled('oasis_import_schedule_run');
-			$timeUp = wp_next_scheduled('oasis_import_schedule_up');
-			if (empty($timeRun) || empty($timeUp)) {
-				?>
-				<div class="notice notice-info inline">
-					<p><?php esc_html_e('The product import process runs in the background.', 'oasiscatalog-importer'); ?></p>
-					<p><?php esc_html_e('You can adjust the time using WordPress tools.', 'oasiscatalog-importer'); ?></p><br>
-					<p><?php esc_html_e('Or add the command to your hosting task scheduler.', 'oasiscatalog-importer'); ?></p>
-					<p><?php esc_html_e('This requires WP-CLI. Example for crontab, please ensure the path is correct', 'oasiscatalog-importer'); ?> <strong>/usr/local/bin/wp</strong>:</p>
-					<div class="row">
-						<div class="col-md-4 col-sm-12">
-							<p><?php esc_html_e( 'Download / update products 1 time per day', 'oasiscatalog-importer' ); ?></p>
-						</div>
-						<div class="col-md-8 col-sm-12">
-							<div class="input-group input-group-sm">
-								<input type="text" class="form-control input-cron-task" value="0 0 * * * /usr/local/bin/wp oasis_import run --path=<?php echo esc_attr(ABSPATH); ?>" id="oasis_import_inp_run" readonly="readonly" onFocus="this.select()">
-								<div class="btn btn-primary" id="oasis_import_copy_run" data-bs-toggle="tooltip" data-bs-title="<?php esc_html_e( 'Copy', 'oasiscatalog-importer' ); ?>">
-									<div class="oasis-icon-copy"></div>
-								</div>
-							</div>
-						</div>
+			?>
+			<div class="notice notice-info inline">
+				<p class="js-notice"><?php esc_html_e('The product import process runs in the background.', 'oasiscatalog-importer'); ?></p>
+				<p><?php esc_html_e('You can set it to run through WordPress.', 'oasiscatalog-importer'); ?></p><br>
+				<p><?php esc_html_e('Or add the command to your hosting task scheduler.', 'oasiscatalog-importer'); ?></p>
+				<p><?php esc_html_e('This requires WP-CLI. Example for crontab, please ensure the path is correct', 'oasiscatalog-importer'); ?> <strong>/usr/local/bin/wp</strong>:</p>
+				<div class="row">
+					<div class="col-md-4 col-sm-12">
+						<p><?php esc_html_e( 'Download / update products 1 time per day', 'oasiscatalog-importer' ); ?></p>
 					</div>
-					<div class="row">
-						<div class="col-md-4 col-sm-12">
-							<p><?php esc_html_e( 'Renewal of balances 1 time in 2 hours', 'oasiscatalog-importer' ); ?></p>
-						</div>
-						<div class="col-md-8 col-sm-12">
-							<div class="input-group input-group-sm">
-								<input type="text" class="form-control input-cron-task" value="0 0/2 * * * /usr/local/bin/wp oasis_import up --path=<?php echo esc_attr(ABSPATH); ?>" id="oasis_import_inp_up" readonly="readonly" onFocus="this.select()">
-								<div class="btn btn-primary" id="oasis_import_copy_up" data-bs-toggle="tooltip" data-bs-title="<?php esc_html_e( 'Copy', 'oasiscatalog-importer' ); ?>">
-									<div class="oasis-icon-copy"></div>
-								</div>
+					<div class="col-md-8 col-sm-12">
+						<div class="input-group input-group-sm">
+							<input type="text" class="form-control input-cron-task" value="0 0 * * * /usr/local/bin/wp oasis_import run --path=<?php echo esc_attr(ABSPATH); ?>" id="oasis_import_inp_run" readonly="readonly" onFocus="this.select()">
+							<div class="btn btn-primary" id="oasis_import_copy_run" data-bs-toggle="tooltip" data-bs-title="<?php esc_html_e( 'Copy', 'oasiscatalog-importer' ); ?>">
+								<div class="oasis-icon-copy"></div>
 							</div>
 						</div>
 					</div>
 				</div>
-				<?php
-			}
+				<div class="row">
+					<div class="col-md-4 col-sm-12">
+						<p><?php esc_html_e( 'Renewal of balances 1 time in 2 hours', 'oasiscatalog-importer' ); ?></p>
+					</div>
+					<div class="col-md-8 col-sm-12">
+						<div class="input-group input-group-sm">
+							<input type="text" class="form-control input-cron-task" value="0 0/2 * * * /usr/local/bin/wp oasis_import up --path=<?php echo esc_attr(ABSPATH); ?>" id="oasis_import_inp_up" readonly="readonly" onFocus="this.select()">
+							<div class="btn btn-primary" id="oasis_import_copy_up" data-bs-toggle="tooltip" data-bs-title="<?php esc_html_e( 'Copy', 'oasiscatalog-importer' ); ?>">
+								<div class="oasis-icon-copy"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<?php
 
+			$timeRun = wp_next_scheduled('oasis_import_schedule', [null]);
 			if ($timeRun) {
-				echo '<div class="notice notice-info inline js-notice">'
-					. '<p><strong>' . esc_attr__('Next run of product imports:', 'oasiscatalog-importer') . '</strong> ' . wp_date('d.m.Y H:i', $timeRun). '</p>'
-					. '</div>';
-			}
-			if ($timeUp) {
-				echo '<div class="notice notice-info inline js-notice">'
-					. '<p><strong>' . esc_attr__('Next run of stock update:', 'oasiscatalog-importer') . '</strong> ' . wp_date('d.m.Y H:i', $timeUp). '</p>'
+				echo '<div class="notice notice-info inline">'
+					. '<p><strong>' . esc_attr__('Next run:', 'oasiscatalog-importer') . '</strong> ' . wp_date('d.m.Y H:i', $timeRun). '</p>'
 					. '</div>';
 			}
 		},
@@ -333,53 +313,26 @@ function oasis_import_settings_init() {
 		return;
 	}
 	$cf->initRelation();
-	$optBar = $cf->getOptBar();
 
 	add_settings_field(
-		'run_type',
-		esc_attr__('Schedule of imports of products', 'oasiscatalog-importer'),
-		function() use($options, $optBar) {
+		'is_import_run',
+		esc_attr__('Imports of products', 'oasiscatalog-importer'),
+		function() use($options) {
 			?>
 			<div class="d-flex">
-				<select name="oasis_import_options[run_type]" class="form-select">
-					<option value=""><?php esc_html_e( '---Off---', 'oasiscatalog-importer' ); ?></option>
-					<option value="1" <?php selected( $options['run_type'], 1 ); ?>><?php esc_html_e( 'Every day', 'oasiscatalog-importer' ); ?></option>
-					<option value="2" <?php selected( $options['run_type'], 2 ); ?>><?php esc_html_e( 'Once every two days', 'oasiscatalog-importer' ); ?></option>
-					<option value="3" <?php selected( $options['run_type'], 3 ); ?>><?php esc_html_e( 'Once every three days', 'oasiscatalog-importer' ); ?></option>
-					<option value="4" <?php selected( $options['run_type'], 4 ); ?>><?php esc_html_e( 'Once a week', 'oasiscatalog-importer' ); ?></option>
-				</select>
-				<input class="ms-2" type="time" value="<?php echo esc_attr($options['run_time'] ?? '') ?>" name="oasis_import_options[run_time]">
+				<div>
+					<input type="checkbox" class="code" value="1" name="oasis_import_options[is_import_run]" <?= empty($options['is_import_run']) ? '' : 'checked' ?>/>
+					<p class="description"><?php esc_html_e('Enable product import using WordPress', 'oasiscatalog-importer'); ?></p>
+				</div>
 				<div class="ms-2">
-					<div class="btn btn-sm btn-success ms-2" id="oasis_import_btn_run" style="display: none;">Запустить</div>
+					<div class="btn btn-sm btn-success ms-2" id="oasis_import_btn_run" style="display: none;">Запустить import</div>
+					<div class="btn btn-sm btn-success ms-2" id="oasis_import_btn_up" style="display: none;">Запустить stock</div>
 				</div>
 			</div>
 			<?php
 		},
 		'oasis-import',
 		'oasis-import-run',
-	);
-	add_settings_field(
-		'run_stock_type',
-		esc_attr__('Schedule for updating stock', 'oasiscatalog-importer'),
-		function() use($options) {
-			?>
-			<div class="d-flex">
-				<select name="oasis_import_options[run_stock_type]" class="form-select col-sm-6">
-					<option value=""><?php esc_html_e( '---Off---', 'oasiscatalog-importer' ); ?></option>
-					<option value="1" <?php selected( $options['run_stock_type'], 1 ); ?>><?php esc_html_e( 'Every hour', 'oasiscatalog-importer' ); ?></option>
-					<option value="2" <?php selected( $options['run_stock_type'], 2 ); ?>><?php esc_html_e( 'Every 2 hours', 'oasiscatalog-importer' ); ?></option>
-					<option value="3" <?php selected( $options['run_stock_type'], 3 ); ?>><?php esc_html_e( 'Every 3 hours', 'oasiscatalog-importer' ); ?></option>
-					<option value="4" <?php selected( $options['run_stock_type'], 4 ); ?>><?php esc_html_e( 'Every 6 hours', 'oasiscatalog-importer' ); ?></option>
-					<option value="5" <?php selected( $options['run_stock_type'], 5 ); ?>><?php esc_html_e( 'Every 12 hours', 'oasiscatalog-importer' ); ?></option>
-				</select>
-				<div class="ms-2">
-					<div class="btn btn-sm btn-success ms-2" id="oasis_import_btn_up" style="display: none;">Запустить</div>
-				</div>
-			</div>
-			<?php
-		},
-		'oasis-import',
-		'oasis-import-run'
 	);
 	add_settings_field(
 		'limit',
@@ -486,6 +439,13 @@ function oasis_import_settings_init() {
 		'oasis-import-setting'
 	);
 	add_settings_field(
+		'is_show_stopped',
+		esc_attr__('All remaining products', 'oasiscatalog-importer'),
+		fn() => oasis_import_sf_checbox('is_show_stopped', $cf->is_show_stopped, esc_attr__('Show products that are no longer available (clearance sale)', 'oasiscatalog-importer')),
+		'oasis-import',
+		'oasis-import-setting'
+	);
+	add_settings_field(
 		'is_no_vat',
 		esc_attr__( 'No VAT', 'oasiscatalog-importer' ),
 		fn() => oasis_import_sf_checbox('is_no_vat', $cf->is_no_vat),
@@ -519,11 +479,27 @@ function oasis_import_settings_init() {
 		function() use($cf) {
 			?>
 			<select name="oasis_import_options[rating]" class="form-select col-sm-6">
-				<option value=""><?php esc_html_e( '---Select---', 'oasiscatalog-importer' ); ?></option>
-				<option value="1" <?php selected( $cf->rating, 1 ); ?>><?php esc_html_e( 'Only new items', 'oasiscatalog-importer' ); ?></option>
-				<option value="2" <?php selected( $cf->rating, 2 ); ?>><?php esc_html_e( 'Only hits', 'oasiscatalog-importer' ); ?></option>
-				<option value="3" <?php selected( $cf->rating, 3 ); ?>><?php esc_html_e( 'Discount only', 'oasiscatalog-importer' ); ?></option>
+				<option value=""><?php esc_html_e('---Select---', 'oasiscatalog-importer'); ?></option>
+				<option value="1" <?php selected($cf->rating, 1); ?>><?php esc_html_e('Only new items', 'oasiscatalog-importer'); ?></option>
+				<option value="2" <?php selected($cf->rating, 2); ?>><?php esc_html_e('Only hits', 'oasiscatalog-importer'); ?></option>
+				<option value="3" <?php selected($cf->rating, 3); ?>><?php esc_html_e('Discount only', 'oasiscatalog-importer'); ?></option>
 			</select>
+			<?php
+		},
+		'oasis-import',
+		'oasis-import-setting'
+	);
+	add_settings_field(
+		'grouping',
+		esc_attr__('Type of grouping', 'oasiscatalog-importer'),
+		function() use($cf) {
+			?>
+			<select name="oasis_import_options[grouping]" class="form-select col-sm-6">
+				<option value=""><?php esc_html_e('Default', 'oasiscatalog-importer'); ?></option>
+				<option value="1" <?php selected($cf->grouping, 1); ?>><?php esc_html_e('By color', 'oasiscatalog-importer'); ?></option>
+			</select>
+			<p class="description"><?php esc_html_e('By default, products are grouped by color and size (for example, a T-shirt with color and size options)', 'oasiscatalog-importer') ?></p>
+			<p class="description"><?php esc_html_e('ATTENTION! This option can be changed before importing products. Changing it afterward may result in inconsistent performance', 'oasiscatalog-importer') ?></p>
 			<?php
 		},
 		'oasis-import',
@@ -536,6 +512,7 @@ function oasis_import_settings_init() {
 		'oasis-import',
 		'oasis-import-setting'
 	);
+	// todo: оптимизировать
 	/*add_settings_field(
 		'is_wh_moscow',
 		esc_attr__( 'In stock in Moscow', 'oasiscatalog-importer' ),
@@ -623,7 +600,7 @@ function oasis_import_settings_init() {
 	add_settings_field(
 		'is_up_photo',
 		esc_attr__( 'Up photo', 'oasiscatalog-importer' ),
-		fn() => oasis_import_sf_checbox('is_up_photo', $cf->is_up_photo, esc_attr__( 'Enable update photos', 'oasiscatalog-importer' )),
+		fn() => oasis_import_sf_checbox('is_up_photo', $cf->is_up_photo, esc_attr__( 'Force product photos to be updated (slows down the plugin)', 'oasiscatalog-importer' )),
 		'oasis-import',
 		'oasis-import-extra'
 	);
@@ -676,12 +653,6 @@ function oasis_import_sanitize_data($options) {
 			$val = array_filter($val, fn($x) => !empty($x));
 			$val = array_unique($val);
 		}
-
-		elseif ($name == 'run_time'){
-			if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $val) !== 1) {
-				$val = '01:00';
-			}
-		}
 		elseif ($name == 'categories'){
 			$categories = Api::getCategoriesOasis();
 			$arr_cat	= [];
@@ -719,38 +690,13 @@ function oasis_import_sanitize_data($options) {
 		}
 	}
 
-	if (!oasis_import_check_options($options, get_option('oasis_import_options'), ['run_type', 'run_time', 'run_stock_type'])) {
-		wp_unschedule_hook('oasis_import_schedule_run');
-		wp_unschedule_hook('oasis_import_schedule_up');
-
-		if (!empty($options['run_type'])) {
-			$d = new \DateTime(date('Y-m-d') . ' ' . $options['run_time'], wp_timezone());
-			switch ($options['run_type']) {
-				case '2': $recurrence = 'oasis_import_2days'; break;
-				case '3': $recurrence = 'oasis_import_3days'; break;
-				case '4': $recurrence = 'oasis_import_7days'; break;
-				case '1': 
-				default:
-					$recurrence = 'daily';
-			}
-			wp_reschedule_event($d->getTimestamp(), $recurrence, 'oasis_import_schedule_run');
-		}
-
-		if (!empty($options['run_stock_type'])) {
-			$minute = rand(0,59);
-			$d = new \DateTime(date('Y-m-d') . ' 00:' . ($minute < 10 ? "0{$minute}" : $minute), wp_timezone());
-			switch ($options['run_stock_type']) {
-				case '2': $recurrence = 'oasis_import_2hours'; break;
-				case '3': $recurrence = 'oasis_import_3hours'; break;
-				case '4': $recurrence = 'oasis_import_6hours'; break;
-				case '5': $recurrence = 'twicedaily'; break;
-				case '1': 
-				default:
-					$recurrence = 'hourly';
-			}
-			wp_reschedule_event($d->getTimestamp(), $recurrence, 'oasis_import_schedule_up');
+	if (!oasis_import_check_options($options, get_option('oasis_import_options'), ['is_import_run'])) {
+		wp_unschedule_hook('oasis_import_schedule');
+		if (($options['is_import_run'] ?? null) == 1) {
+			wp_schedule_event(time(), 'hourly', 'oasis_import_schedule', [null]);
 		}
 	}
+
 
 	$cf->progressClear();
 	return $options;
@@ -932,11 +878,11 @@ add_action('wp_ajax_oasis_get_progress_bar', function() {
 });
 
 add_action('wp_ajax_oasis_import_run', function() {
-	wp_schedule_single_event(time(), 'oasis_import_schedule_run');
+	wp_schedule_single_event(time(), 'oasis_import_schedule', ['run']);
 	wp_die();
 });
 add_action('wp_ajax_oasis_import_up', function() {
-	wp_schedule_single_event(time(), 'oasis_import_schedule_up');
+    wp_schedule_single_event(time(), 'oasis_import_schedule', ['up']);
 	wp_die();
 });
 

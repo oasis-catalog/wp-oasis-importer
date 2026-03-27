@@ -16,7 +16,7 @@ class Api {
 	 */
 	public static function getOasisProducts(array $args = []): array
 	{
-		$fields = 'id,article,group_id'
+		$fields = 'id,article,group_id,parent_size_id'
 					. ',is_deleted,is_stopped'
 					. ',name,full_name,description,defect'
 					. ',size,colors,rating'
@@ -29,7 +29,7 @@ class Api {
 		if (self::$cf->is_brands)       $fields .= ',brand_id';
 		if (self::$cf->is_price_dealer) $fields .= ',discount_price';
 
-		$data = [
+		$default = [
 			'format'		=> 'json',
 			'fields'		=> $fields,
 			'not_on_order'	=> self::$cf->is_not_on_order,
@@ -40,8 +40,8 @@ class Api {
 			'price_to'		=> self::$cf->price_to,
 			'rating'		=> self::$cf->rating,
 		];
-		foreach ($data as $key => $value) {
-			if ($value) {
+		foreach ($default as $key => $value) {
+			if ($value && empty($args[$key])) {
 				$args[$key] = $value;
 			}
 		}

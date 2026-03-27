@@ -3,7 +3,7 @@ Contributors: oasisvisheratinnikolay
 Tags: Oasiscatalog, products, catalog, import
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 3.0.1
+Stable tag: 3.0.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -71,7 +71,13 @@ Report bugs on the [GitHub repository](https://github.com/oasis-catalog/wp-oasis
 
 == Changelog ==
 
-= 3.0.1 - 2025-12-23 =
+= 3.0.2 - 2026-03-27 =
+- added option show not available products
+- added option to select grouping
+- changed import mechanism using WordPress
+- fix bug and optimization
+
+= 3.0.1 - 2026-01-30 =
 - fix bug and optimization
 
 = 3.0.0 - 2025-12-23 =
