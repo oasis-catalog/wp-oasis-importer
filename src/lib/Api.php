@@ -16,7 +16,7 @@ class Api {
 	 */
 	public static function getOasisProducts(array $args = []): array
 	{
-		$fields = 'id,article,group_id,parent_size_id'
+		$fields = 'id,article,group_id,color_group_id'
 					. ',is_deleted,is_stopped'
 					. ',name,full_name,description,defect'
 					. ',size,colors,rating'

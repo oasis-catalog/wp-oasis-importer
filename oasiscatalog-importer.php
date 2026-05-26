@@ -3,12 +3,12 @@
 Plugin Name: Oasiscatalog Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Import products from the oasiscatalog.com catalog to WooCommerce. Upload orders from WooCommerce to oasiscatalog. Application editing widget.
-Version: 3.0.2
+Version: 3.0.3
 Text Domain: oasiscatalog-importer
 License: GPL2
 
-WordPress tested:   6.9
-Woocommerce tested: 6.9
+WordPress tested:   7.0
+Woocommerce tested: 10.7
 */
 
 if (!defined('ABSPATH')) {
@@ -499,7 +499,7 @@ function oasis_import_settings_init() {
 				<option value="1" <?php selected($cf->grouping, 1); ?>><?php esc_html_e('By color', 'oasiscatalog-importer'); ?></option>
 			</select>
 			<p class="description"><?php esc_html_e('By default, products are grouped by color and size (for example, a T-shirt with color and size options)', 'oasiscatalog-importer') ?></p>
-			<p class="description"><?php esc_html_e('ATTENTION! This option can be changed before importing products. Changing it afterward may result in inconsistent performance', 'oasiscatalog-importer') ?></p>
+			<p class="description"><?php esc_html_e('ATTENTION! It is recommended to change this option before importing products. If you change it afterward, all current Oasis products will be deleted and re-uploaded', 'oasiscatalog-importer') ?></p>
 			<?php
 		},
 		'oasis-import',
@@ -630,14 +630,16 @@ function oasis_import_settings_init() {
 
 function oasis_import_sf_checbox($opt, $is, $description = '') {
 	echo '<input type="checkbox" class="code" value="1" name="oasis_import_options[' . esc_attr($opt) . ']" ' . ($is ? 'checked' : '') . ' />';
-	if(!empty($description))
+	if (!empty($description)) {
 		echo '<p class="description">' . esc_html($description) . '</p>';
+	}
 }
 
 function oasis_import_sf_number($opt, $v, $step, $description = '') {
 	echo '<input type="number" maxlength="255" style="width: 120px;" name="oasis_import_options[' . esc_attr($opt) . ']" value="' . esc_attr($v ? $v : '') . '" step="' . esc_attr($step) . '" />';
-	if(!empty($description))
+	if (!empty($description)) {
 		echo '<p class="description">' . esc_html($description) . '</p>';
+	}
 }
 
 function oasis_import_sanitize_data($options) {

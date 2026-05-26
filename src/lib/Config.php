@@ -17,6 +17,7 @@ class Config {
 	public bool $is_info = false;
 	public bool $is_info_log = false;
 	public string $mode;
+	public int $opt_bits;
 	public string $upload_path;
 
 	public string $api_key;
@@ -192,6 +193,14 @@ class Config {
 		$this->is_cdn_photo      = !empty($opt['is_cdn_photo']);
 		$this->is_fast_import    = !empty($opt['is_fast_import']);
 		$this->is_without_quotes = !empty($opt['is_without_quotes']);
+
+		$this->opt_bits = 0;
+		if ($this->is_cdn_photo) {
+			$this->opt_bits |= (1 << 0);
+		}
+		if ($this->grouping === 1) {
+			$this->opt_bits |= (1 << 1);
+		}
 
 		$this->is_init = true;
 	}

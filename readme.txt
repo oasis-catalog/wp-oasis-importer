@@ -2,8 +2,8 @@
 Contributors: oasisvisheratinnikolay
 Tags: Oasiscatalog, products, catalog, import
 Requires at least: 5.8
-Tested up to: 6.9
-Stable tag: 3.0.2
+Tested up to: 7.0
+Stable tag: 3.0.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -70,6 +70,11 @@ Report bugs on the [GitHub repository](https://github.com/oasis-catalog/wp-oasis
 4. Run synchronization
 
 == Changelog ==
+
+= 3.0.3 - 2026-05-26 =
+- when upgrading from the old version of the plugin, Oasis products will be deleted and reloaded. Please be prepared for this.
+- fix select grouping
+- optimization
 
 = 3.0.2 - 2026-03-27 =
 - added option show not available products

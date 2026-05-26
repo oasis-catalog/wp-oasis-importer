@@ -98,6 +98,22 @@ class Cli {
 
 			[$groups, $stepTotal] = self::getGroupsProduct($args);
 
+			$dbDataGroup = [];
+			$dbDataProductType = [];
+			foreach (Main::getOasisDbRows() as $dbProduct) {
+				if (Main::getNeedOptUp($dbProduct, 0b10)) {
+					Main::deleteProductForPostId($dbProduct['post_id']);
+				}
+				else {
+					$type      = $dbProduct['type'];
+					$groupId   = $dbProduct['group_id'];
+					$productId = $dbProduct['product_id'];
+
+					$dbDataGroup[$groupId][] = $dbProduct;
+					$dbDataProductType[$groupId][$productId][$type] = $dbProduct;
+				}
+			}
+
 			if (self::$cf->limit > 0) {
 				self::$cf->progressStart(Api::getStatProducts()->products, $stepTotal);
 			} else {
@@ -107,18 +123,18 @@ class Cli {
 			$total = count($groups);
 			$count = 0;
 
-			foreach ($groups as $group_id => $products) {
-				self::$cf->log('Начало обработки модели ' . $group_id);
+			foreach ($groups as $groupId => $products) {
+				self::$cf->log('Начало обработки модели ' . $groupId);
 				$totalStock = array_reduce($products, function($sum, $product) {
     				return $sum + Main::getStock($product);
 				}, 0);
-				$dbGroupProducts = Main::checkGroupProducts($group_id);
+				$dbProducts = $dbDataGroup[$groupId] ?? [];
 
 				if (count($products) === 1) {
 					$product   = reset($products);
-					$dbProduct = reset($dbGroupProducts);
-					if (count($dbGroupProducts) > 1) {
-						Main::deleteProductForPostId(array_map(fn($item) => $item['post_id'], $dbGroupProducts));
+					$dbProduct = reset($dbProducts);
+					if (count($dbProducts) > 1) {
+						Main::deleteProductForPostId(array_map(fn($item) => $item['post_id'], $dbProducts));
 						$dbProduct = null;
 					}	
 
@@ -126,39 +142,50 @@ class Cli {
 						Main::upWcProduct($dbProduct, $product, $products, $totalStock);
 						self::$cf->log('Обновлен товар OAId='.$product->id.', WPId=' . $dbProduct['post_id']);
 					} else {
-						Main::addWcProduct($group_id, $product, $products, $totalStock);
+						Main::addWcProduct($groupId, $product, $products, $totalStock);
 						self::$cf->log('Добавлен товар id '.$product->id);
 					}
 					self::$cf->progressUp();
 				}
 				else {
-					if (count($dbGroupProducts) == 1) {
-						Main::deleteProductForPostId(array_map(fn($item) => $item['post_id'], $dbGroupProducts));
+					if (count($dbProducts) == 1) {
+						Main::checkDeleteGroup($groupId);
+						unset($dbDataProductType[$groupId]);
 					}
-					$product = reset($products);
-					$dbProduct = Main::checkProduct($product->id, 'product');
+					$product          = reset($products);
+					$dbProduct        = $dbDataProductType[$groupId][$product->id]['product'] ?? null;
+					$dbFirstVariation = $dbDataProductType[$groupId][$product->id]['product_variation'] ?? null;
+
+					if ($dbFirstVariation && Main::getNeedOptUp($dbFirstVariation, 0b11)) {
+						Main::deleteProductForPostId($dbFirstVariation['post_id']);
+						unset($dbDataProductType[$groupId][$product->id]['product_variation']);
+					}
 
 					if ($dbProduct) {
 						$wcProductId = $dbProduct['post_id'];
 						Main::upWcProduct($dbProduct, $product, $products, $totalStock, true);
-						self::$cf->log('Обновлен товар OAId='.$product->id.', WPId=' . $wcProductId);
+						self::$cf->log('Обновлен товар OAId=' . $product->id . ', WPId=' . $wcProductId);
 					} else {
-						Main::checkDeleteGroup($group_id);
-						$wcProductId = Main::addWcProduct($group_id, $product, $products, $totalStock, true);
+						if (!empty($dbDataProductType[$groupId])) {
+							Main::checkDeleteGroup($groupId);
+							unset($dbDataProductType[$groupId]);
+						}
+						
+						$wcProductId = Main::addWcProduct($groupId, $product, $products, $totalStock, true);
 						if (!$wcProductId) {
 							continue;
 						}
-						self::$cf->log('Добавлен товар id '.$product->id);
+						self::$cf->log('Добавлен товар id ' . $product->id);
 					}
 
 					foreach ($products as $variation) {
-						$dbVariation = Main::checkProduct($variation->id, 'product_variation');
+						$dbVariation = $dbDataProductType[$groupId][$variation->id]['product_variation'] ?? null;
 
 						if ($dbVariation) {
 							Main::upWcVariation($dbVariation, $variation);
 							self::$cf->log(' - обновлен вариант OAId=' . $variation->id . ', WPId=' . $dbVariation['post_id']);
 						} else {
-							Main::addWcVariation($group_id, $wcProductId, $variation);
+							Main::addWcVariation($groupId, $wcProductId, $variation);
 							self::$cf->log(' - добавлен вариант id ' . $variation->id);
 						}
 						self::$cf->progressUp();
@@ -337,8 +364,8 @@ class Cli {
 		$stepTotal = 0;
 		if (self::$cf->grouping === 1) {
 			foreach (Api::getOasisProducts($args) as $product) {
-				if (!empty($product->size) && !empty($product->parent_size_id)) {
-					$groups[$product->parent_size_id][$product->id] = $product;
+				if (!empty($product->color_group_id)) {
+					$groups[$product->color_group_id][$product->id] = $product;
 				} else {
 					$groups[$product->id][$product->id] = $product;
 				}

@@ -106,7 +106,7 @@ class Main
 	public static function checkProducts($productId, string $type = '')
 	{
 		global $wpdb;
-		$sql = "SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+		$sql = "SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated
 				FROM {$wpdb->prefix}posts p
 				INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
 				INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'
@@ -131,7 +131,7 @@ class Main
 	{
 		global $wpdb;
 		return $wpdb->get_results($wpdb->prepare(
-			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated
 			FROM {$wpdb->prefix}posts p
 			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
 			INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'
@@ -184,7 +184,7 @@ class Main
 
 		$wcProduct->add_meta_data('_oasis_product', $product->id);
 		$wcProduct->add_meta_data('_oasis_group', $group_id);
-		$wcProduct->add_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at);
+		$wcProduct->add_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at . ',' . self::$cf->opt_bits);
 
 		$wcProductId = $wcProduct->save();
 		if(!self::$cf->is_fast_import){
@@ -272,7 +272,7 @@ class Main
 
 		if ($need_save) {
 			$wcProduct->set_date_modified(time());
-			$wcProduct->update_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at);
+			$wcProduct->update_meta_data('_oasis_updated', $product->updated_at . ',' . $product->images_updated_at . ',' . self::$cf->opt_bits);
 			$wcProduct->save();
 		}
 	}
@@ -341,7 +341,7 @@ class Main
 			}
 			$wcVariation->add_meta_data('_oasis_product', $variation->id);
 			$wcVariation->add_meta_data('_oasis_group', $group_id);
-			$wcVariation->add_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at);
+			$wcVariation->add_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at . ',' . self::$cf->opt_bits);
 
 			$wcVariationId = $wcVariation->save();
 
@@ -419,7 +419,7 @@ class Main
 
 		if ($need_save) {
 			$wcVariation->set_date_modified(time());
-			$wcVariation->update_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at);
+			$wcVariation->update_meta_data('_oasis_updated', $variation->updated_at . ',' . $variation->images_updated_at . ',' . self::$cf->opt_bits);
 			$wcVariation->save();
 		}
 	}
@@ -479,7 +479,7 @@ class Main
 	 */
 	public static function getNeedUp($dbProduct, $product): bool
 	{
-		$date = explode(',', $dbProduct['updated_at'] ?? '')[0] ?? '';
+		$date = explode(',', $dbProduct['updated'] ?? '')[0] ?? '';
 		return ($product->updated_at ?? '1') > $date;
 	}
 
@@ -491,8 +491,20 @@ class Main
 	 */
 	public static function getNeedImagesUp($dbProduct, $product): bool
 	{
-		$date = explode(',', $dbProduct['updated_at'] ?? '')[1] ?? '';
-		return ($product->images_updated_at ?? '1') > $date;
+		$date = explode(',', $dbProduct['updated'] ?? '')[1] ?? '';
+		return ($product->images_updated_at ?? '1') > $date || self::getNeedOptUp($dbProduct, 0b01);
+	}
+
+	/**
+	 * Check need update product for site options
+	 * @param $dbProduct
+	 * @param $mask
+	 * @return bool
+	 */
+	public static function getNeedOptUp($dbProduct, $mask): bool
+	{
+		$opt = intval(explode(',', $dbProduct['updated'] ?? '')[2] ?? 0);
+		return (($opt & $mask) !== (self::$cf->opt_bits & $mask));
 	}
 
 	/**
@@ -1022,7 +1034,7 @@ class Main
 	{
 		global $wpdb;
 		return $wpdb->get_results($wpdb->prepare(
-			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated_at
+			"SELECT DISTINCT p.ID as post_id, p.post_type as type, pm_product.meta_value as product_id, pm_group.meta_value as group_id, pm_updated.meta_value as updated
 			FROM {$wpdb->prefix}posts p
 			INNER JOIN {$wpdb->prefix}postmeta pm_product ON p.ID = pm_product.post_id AND pm_product.meta_key = '_oasis_product'
 			INNER JOIN {$wpdb->prefix}postmeta pm_group ON p.ID = pm_group.post_id AND pm_group.meta_key = '_oasis_group'

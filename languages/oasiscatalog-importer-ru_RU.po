@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Oasiscatalog Importer 3.0.2\n"
+"Project-Id-Version: Oasiscatalog Importer 3.0.3\n"
 "Report-Msgid-Bugs-To: https://www.oasiscatalog.com\n"
 "Last-Translator: Nikolay Visheratin\n"
 "Language-Team: https://www.oasiscatalog.com\n"
@@ -84,8 +84,8 @@ msgid "By default, products are grouped by color and size (for example, a T-shir
 msgstr "По умолчанию товар группируется по цвету и размеру (например футболка с вариантами цвета и размера)"
 
 #: oasiscatalog-importer.php:502
-msgid "ATTENTION! This option can be changed before importing products. Changing it afterward may result in inconsistent performance"
-msgstr "ВНИМАНИЕ! Опцию можно менять до импорта товаров. Если изменить после, возможна неккоретная работа"
+msgid "ATTENTION! It is recommended to change this option before importing products. If you change it afterward, all current Oasis products will be deleted and re-uploaded"
+msgstr "ВНИМАНИЕ! Опцию рекомендуется менять до импорта товаров. Если изменить после, все текущие продукты Oasis будут удалены и загружены заново"
 
 #: oasiscatalog-importer.php:510
 msgid "Without a remote warehouse"
