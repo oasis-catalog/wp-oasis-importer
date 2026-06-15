@@ -185,11 +185,12 @@ class Api {
 	 */
 	public static function curlSend(string $type, array $data, array $params = [], $version = 'v4')
 	{
-		if (empty(self::$cf->api_key)){
+		$apiKey = self::$cf->api_key ?? OasisConfig::get('api_key');
+		if (empty($apiKey)){
 			throw new Exception('Empty API key');
 		}
 		$args_pref = [
-			'key'    => self::$cf->api_key,
+			'key'    => $apiKey,
 			'format' => 'json',
 		];
 
@@ -230,11 +231,12 @@ class Api {
 	 */
 	public static function curlQuery($type, array $args = [], string $version = 'v4')
 	{
-		if (empty(self::$cf->api_key)){
+		$apiKey = self::$cf->api_key ?? OasisConfig::get('api_key');
+		if (empty($apiKey)){
 			throw new Exception('Empty API key');
 		}
 		$args = array_merge([
-			'key'    => self::$cf->api_key,
+			'key'    => $apiKey,
 			'format' => 'json',
 		], $args);
 

@@ -3,7 +3,7 @@
 Plugin Name: Oasiscatalog Importer
 Plugin URI: https://www.oasiscatalog.com
 Description: Import products from the oasiscatalog.com catalog to WooCommerce. Upload orders from WooCommerce to oasiscatalog. Application editing widget.
-Version: 3.0.3
+Version: 3.0.4
 Text Domain: oasiscatalog-importer
 License: GPL2
 
@@ -852,6 +852,10 @@ add_filter('plugin_action_links', function ($links, $file) {
 }, 10, 2);
 
 add_action('wp_ajax_oasis_get_progress_bar', function() {
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+
 	$cf = OasisConfig::instance([
 		'init' => true
 	]);
@@ -880,15 +884,24 @@ add_action('wp_ajax_oasis_get_progress_bar', function() {
 });
 
 add_action('wp_ajax_oasis_import_run', function() {
+	if (!current_user_can('manage_options')) {
+		return;
+	}
 	wp_schedule_single_event(time(), 'oasis_import_schedule', ['run']);
 	wp_die();
 });
 add_action('wp_ajax_oasis_import_up', function() {
+	if (!current_user_can('manage_options')) {
+		return;
+	}
     wp_schedule_single_event(time(), 'oasis_import_schedule', ['up']);
 	wp_die();
 });
 
 add_action('wp_ajax_oasis_get_all_categories', function() {
+	if (!current_user_can('manage_options')) {
+		return;
+	}
 	$categories = get_categories( [
 		'taxonomy'   => 'product_cat',
 		'hide_empty' => 0

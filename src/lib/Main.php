@@ -245,11 +245,11 @@ class Main
 		];
 		if (!$is_variable) {
 			$dataPrice = self::getDataPrice($product);
-			$up_data += [
+			$up_data = array_merge($up_data, [
 				['price', $dataPrice['price']],
 				['regular_price', $dataPrice['regular_price']],
 				['sale_price', $dataPrice['sale_price']],
-			];
+			]);
 		}
 
 		foreach ($up_data as $row) {

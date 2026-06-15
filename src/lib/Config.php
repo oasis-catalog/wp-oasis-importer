@@ -7,7 +7,7 @@ use OasiscatalogImporter\Cli;
 use OasiscatalogImporter\Api;
 
 class Config {
-	public const VERSION = '3.0.2';
+	public const VERSION = '3.0.4';
 
 	public const IMG_SIZE_THUMBNAIL = [80, 60];
 	public const IMG_SIZE_SMALL     = [220, 165];
@@ -502,5 +502,10 @@ class Config {
 			}
 		}
 		rmdir($dir);
+	}
+
+	public static function get($key) {
+		$options = get_option('oasis_import_options', []);
+		return $options[$key] ?? null;
 	}
 }

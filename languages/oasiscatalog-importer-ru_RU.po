@@ -7,6 +7,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-06-15T14:01:52+00:00\n"
+"PO-Revision-Date: 2026-06-15T14:01:52+00:00\n"
 "Language: ru\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
@@ -39,7 +41,7 @@ msgid "Currency"
 msgstr "Валюта"
 
 #: oasiscatalog-importer.php:373
-#: oasiscatalog-importer.php:808
+#: oasiscatalog-importer.php:810
 msgid "Categories"
 msgstr "Категории"
 
@@ -196,16 +198,16 @@ msgstr "Только со скидкой"
 msgid "Oasis Import"
 msgstr "Оазис импорт"
 
-#: oasiscatalog-importer.php:720
+#: oasiscatalog-importer.php:722
 msgid "Settings saved"
 msgstr "Настройки сохранены"
 
-#: oasiscatalog-importer.php:742
-#: oasiscatalog-importer.php:871
+#: oasiscatalog-importer.php:744
+#: oasiscatalog-importer.php:877
 msgid "Loading..."
 msgstr "Загрузка..."
 
-#: oasiscatalog-importer.php:741
+#: oasiscatalog-importer.php:743
 msgid "General processing status"
 msgstr "Общий статус обработки"
 
@@ -222,37 +224,37 @@ msgstr "Копировать"
 msgid "Renewal of balances 1 time in 2 hours"
 msgstr "Обновление остатков 1 раз в 2 часа"
 
-#: oasiscatalog-importer.php:799
+#: oasiscatalog-importer.php:801
 msgid "Save settings"
 msgstr "Сохранить настройки"
 
-#: oasiscatalog-importer.php:813
+#: oasiscatalog-importer.php:815
 msgid "Clear"
 msgstr "Очистить"
 
-#: oasiscatalog-importer.php:814
+#: oasiscatalog-importer.php:816
 msgid "Select"
 msgstr "Выбрать"
 
-#: oasiscatalog-importer.php:847
+#: oasiscatalog-importer.php:849
 msgid "Settings"
 msgstr "Настройки"
 
-#: src/order.php:20
-#: src/order.php:54
-#: src/order.php:58
+#: src/order.php:23
+#: src/order.php:55
+#: src/order.php:59
 msgid "Unload"
 msgstr "Выгрузить"
 
-#: src/order.php:38
+#: src/order.php:42
 msgid "Invalid items in the order"
 msgstr "В заказе недопустимые товары"
 
-#: src/order.php:52
+#: src/order.php:53
 msgid "The order is being processed, please wait."
 msgstr "Заказ обрабатывается, ожидайте."
 
-#: src/order.php:54
+#: src/order.php:55
 msgid "Error, please try again."
 msgstr "Ошибка, попробуйте еще раз."
 
@@ -319,29 +321,29 @@ msgid "Cost of branding"
 msgstr "Стоимость нанесения"
 
 #: oasiscatalog-importer.php:387
-#: oasiscatalog-importer.php:908
+#: oasiscatalog-importer.php:923
 msgid "Collapse all"
 msgstr "Свернуть все"
 
 #: oasiscatalog-importer.php:388
-#: oasiscatalog-importer.php:909
+#: oasiscatalog-importer.php:924
 msgid "Expand all"
 msgstr "Развернуть все"
 
 #. translators: status bar is process. 1: current step, 2: all steps
-#: oasiscatalog-importer.php:766
-#: oasiscatalog-importer.php:862
+#: oasiscatalog-importer.php:768
+#: oasiscatalog-importer.php:868
 msgid "%1$s step in progress out of %2$s. Current step status"
 msgstr "Выполняется %1$s шаг из %2$s. Статус текущего шага"
 
 #. translators: status bar, next step. 1: next step, 2: all steps
-#: oasiscatalog-importer.php:769
-#: oasiscatalog-importer.php:865
+#: oasiscatalog-importer.php:771
+#: oasiscatalog-importer.php:871
 msgid "Next step %1$s of %2$s."
 msgstr "Следующий шаг %1$s из %2$s."
 
 #. translators: date last import. 1: date
-#: oasiscatalog-importer.php:789
+#: oasiscatalog-importer.php:791
 msgid "Last import completed: %1$s"
 msgstr "Последний импорт завершен: %1$s"
 

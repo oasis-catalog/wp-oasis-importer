@@ -71,6 +71,10 @@ Report bugs on the [GitHub repository](https://github.com/oasis-catalog/wp-oasis
 
 == Changelog ==
 
+= 3.0.4 - 2026-06-15 =
+- fix branding
+- fix update price
+
 = 3.0.3 - 2026-05-26 =
 - when upgrading from the old version of the plugin, Oasis products will be deleted and reloaded. Please be prepared for this.
 - fix select grouping
